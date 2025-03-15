@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id              String     @id @default(cuid())
+  name            String
+  email           String     @unique
+  phoneNumber     String     @unique
+  passwordHash    String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  customers       Customer[]
+  inventory       Product[]
+  invoices        Invoice[]
+  company         Company?
+}
+
+// Customer model for customer management
+model Customer {
+  id             String    @id @default(cuid())
+  name           String
+  email          String?
+  phoneNumber    String?
+  address        String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices       Invoice[]
+}
+
+// Product model for inventory management
+model Product {
+  id                    String         @id @default(cuid())
+  name                  String
+  description           String?
+  price                 Float
+  quantity              Int            @default(0)
+  sku                   String?
+  disableStockManagement Boolean       @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  userId                String
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceItems          InvoiceItem[]
+}
+
+// Invoice model
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  status          InvoiceStatus @default(DRAFT)
+  subtotal        Float
+  taxRate         Float         @default(0)
+  taxAmount       Float         @default(0)
+  discountRate    Float         @default(0)
+  discountAmount  Float         @default(0)
+  total           Float
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           InvoiceItem[]
+}
+
+// Invoice item model
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  quantity    Int
+  unitPrice   Float
+  amount      Float
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// Invoice status enum
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Company model for business details
+model Company {
+  id                  String    @id @default(cuid())
+  legalName           String
+  ownerName           String
+  registrationNumber  String?
+  taxIdentificationNumber String?
+  email               String?
+  phoneNumber         String?
+  address             String?
+  logoUrl             String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
