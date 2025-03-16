@@ -2,18 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
+// Define the params type according to Next.js 15 requirements
+type Params = { id: string };
 
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: Params }
 ) {
   try {
-    const productId = context.params.id;
+    const productId = params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -58,10 +55,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: Params }
 ) {
   try {
-    const productId = context.params.id;
+    const productId = params.id;
     const productData = await request.json();
     
     // Get auth token from cookies
@@ -128,10 +125,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: Params }
 ) {
   try {
-    const productId = context.params.id;
+    const productId = params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -193,10 +190,10 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: Params }
 ) {
   try {
-    const productId = context.params.id;
+    const productId = params.id;
     const productData = await request.json();
     
     // Get auth token from cookies
