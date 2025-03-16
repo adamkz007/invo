@@ -93,7 +93,7 @@ export function QuickEditDialog({
         <DialogHeader>
           <DialogTitle>Edit Product</DialogTitle>
           <DialogDescription>
-            Update price and quantity for "{product.name}"
+            Update price and quantity for &quot;{product.name}&quot;
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

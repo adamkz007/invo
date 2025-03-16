@@ -28,7 +28,7 @@ const formSchema = z.object({
         return /^1\d{8,9}$/.test(numberWithoutCode);
       },
       {
-        message: 'Please enter a valid Malaysia mobile number starting with +60',
+        message: 'Please enter a valid Malaysia mobile number',
       }
     ),
 });
@@ -160,7 +160,7 @@ export default function RequestTACForm({ onSuccess, isLogin = true }: RequestTAC
             <p className="mt-2">Please ensure:</p>
             <ul className="list-disc pl-5 mt-1 space-y-1 text-sm">
               <li>It starts with Malaysia country code (+60)</li>
-              <li>It's followed by a mobile prefix starting with 1</li>
+              <li>It&apos;s followed by a mobile prefix starting with 1</li>
               <li>It has 9-10 digits after the country code</li>
               <li>Example: +60123456789</li>
             </ul>
