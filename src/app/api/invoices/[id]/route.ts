@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { InvoiceStatus } from '@prisma/client';
 import { verifyToken, parseAuthTokenFromCookie } from '@/lib/auth';
 
+type Params = { params: { id: string } };
+
+// Define invoice status constants to match the schema
+const InvoiceStatus = {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  PAID: 'PAID',
+  PARTIAL: 'PARTIAL',
+  CANCELLED: 'CANCELLED'
+};
+
 // GET a specific invoice
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const { id } = params;
+    const invoiceId = params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -29,10 +36,10 @@ export async function GET(
       }
     }
     
-    // Fetch the invoice with customer details
+    // Find the invoice by ID and ensure it belongs to the user
     const invoice = await prisma.invoice.findFirst({
       where: {
-        id: id,
+        id: invoiceId,
         userId: userId
       },
       include: {
@@ -61,10 +68,7 @@ export async function GET(
 }
 
 // PATCH to update invoice status (cancel or apply payment)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const { id } = await Promise.resolve(params);
     const data = await request.json();
@@ -147,7 +151,7 @@ export async function PATCH(
       }
       
       // Determine the new status based on the payment amount
-      let newStatus: InvoiceStatus;
+      let newStatus: string;
       let newPaidAmount = amountPaid;
       
       // If there's an existing paidAmount, add to it
@@ -199,10 +203,7 @@ export async function PATCH(
 }
 
 // DELETE an invoice
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const { id } = params;
     

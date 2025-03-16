@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+type Params = { params: { id: string } };
+
+export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const customerId = context.params.id;
+    const customerId = params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
