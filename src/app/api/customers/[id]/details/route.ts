@@ -4,10 +4,10 @@ import { verifyToken } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
