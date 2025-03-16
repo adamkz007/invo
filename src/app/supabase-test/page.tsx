@@ -1,9 +1,11 @@
-import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function SupabaseTestPage() {
-  const cookieStore = cookies();
-  const supabase = createClient();
+  // Create a Supabase client directly
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   
   // Test the connection by getting the Supabase system time
   const { data, error } = await supabase.rpc('get_system_time');
