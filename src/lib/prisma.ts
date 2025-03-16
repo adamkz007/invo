@@ -17,7 +17,14 @@ if (!databaseUrl.startsWith('postgresql://') && !databaseUrl.startsWith('postgre
   databaseUrl = `postgresql://${databaseUrl}`;
 }
 
-// Create a new PrismaClient instance
+// Add connection parameters if they don't exist
+if (!databaseUrl.includes('?')) {
+  databaseUrl += '?connection_limit=5&pool_timeout=10&connect_timeout=30&sslmode=require';
+} else if (!databaseUrl.includes('sslmode=')) {
+  databaseUrl += '&sslmode=require';
+}
+
+// Create a new PrismaClient instance with connection retry logic
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
@@ -32,37 +39,99 @@ export const prisma =
 // Attach PrismaClient to the `global` object in development
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-// Add a connection test function
-export async function testConnection() {
-  try {
-    // Test the connection by running a simple query
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('Database connection successful');
-    return true;
-  } catch (error) {
-    console.error('Database connection failed:', error);
-    return false;
-  }
-}
-
-// Helper function for transactions
-export async function withTransaction<T>(
-  fn: (tx: PrismaClient) => Promise<T>
-): Promise<T> {
-  return await prisma.$transaction(async (tx) => {
-    return await fn(tx as unknown as PrismaClient);
-  });
-}
-
-// Helper function to batch database operations
-export async function batchTransactions<T>(operations: (() => Promise<T>)[]): Promise<T[]> {
-  return prisma.$transaction(async (tx) => {
-    const results: T[] = [];
-    for (const operation of operations) {
-      results.push(await operation());
+// Add a connection test function with retry logic
+export async function testConnection(retries = 3, delay = 1000) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Test the connection by running a simple query
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('Database connection successful');
+      return true;
+    } catch (error) {
+      lastError = error;
+      console.error(`Database connection attempt ${attempt} failed:`, error);
+      
+      if (attempt < retries) {
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        // Increase delay for next attempt (exponential backoff)
+        delay *= 2;
+      }
     }
-    return results;
-  });
+  }
+  
+  console.error(`All ${retries} connection attempts failed. Last error:`, lastError);
+  return false;
+}
+
+// Helper function for transactions with retry logic
+export async function withTransaction<T>(
+  fn: (tx: PrismaClient) => Promise<T>,
+  retries = 3
+): Promise<T> {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        return await fn(tx as unknown as PrismaClient);
+      });
+    } catch (error: any) {
+      lastError = error;
+      // Only retry on connection errors
+      if (!error.message?.includes('connection') && !error.message?.includes('timeout')) {
+        throw error;
+      }
+      
+      console.error(`Transaction attempt ${attempt} failed:`, error);
+      
+      if (attempt < retries) {
+        const delay = 1000 * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`Retrying transaction in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+// Helper function to batch database operations with retry logic
+export async function batchTransactions<T>(
+  operations: (() => Promise<T>)[],
+  retries = 3
+): Promise<T[]> {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return prisma.$transaction(async (tx) => {
+        const results: T[] = [];
+        for (const operation of operations) {
+          results.push(await operation());
+        }
+        return results;
+      });
+    } catch (error: any) {
+      lastError = error;
+      // Only retry on connection errors
+      if (!error.message?.includes('connection') && !error.message?.includes('timeout')) {
+        throw error;
+      }
+      
+      console.error(`Batch transaction attempt ${attempt} failed:`, error);
+      
+      if (attempt < retries) {
+        const delay = 1000 * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`Retrying batch transaction in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
 }
 
 // Clean up Prisma connection when the application is shutting down
