@@ -5,10 +5,16 @@ import { PrismaClient } from '@prisma/client';
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 // Get the database URL from environment variables
-const databaseUrl = process.env.DATABASE_URL;
+let databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error('DATABASE_URL environment variable is not set');
+}
+
+// Ensure the URL starts with the correct protocol
+if (!databaseUrl.startsWith('postgresql://') && !databaseUrl.startsWith('postgres://')) {
+  console.warn('DATABASE_URL does not start with postgresql:// or postgres://, adding prefix');
+  databaseUrl = `postgresql://${databaseUrl}`;
 }
 
 // Create a new PrismaClient instance
@@ -20,6 +26,7 @@ export const prisma =
         url: databaseUrl,
       },
     },
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
 // Attach PrismaClient to the `global` object in development

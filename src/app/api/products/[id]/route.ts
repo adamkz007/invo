@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
+interface RouteContext {
+  params: {
+    id: string;
+  };
+}
+
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const productId = context.params.id;
@@ -52,7 +58,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const productId = context.params.id;
@@ -122,7 +128,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const productId = context.params.id;
@@ -187,7 +193,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const productId = context.params.id;

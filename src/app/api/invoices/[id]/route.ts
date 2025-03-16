@@ -11,10 +11,16 @@ const InvoiceStatus = {
   CANCELLED: 'CANCELLED'
 };
 
+interface RouteContext {
+  params: {
+    id: string;
+  };
+}
+
 // GET a specific invoice
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const invoiceId = context.params.id;
@@ -71,7 +77,7 @@ export async function GET(
 // PATCH to update invoice status (cancel or apply payment)
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const invoiceId = context.params.id;
@@ -209,7 +215,7 @@ export async function PATCH(
 // DELETE an invoice
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const invoiceId = context.params.id;
