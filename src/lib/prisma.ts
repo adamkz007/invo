@@ -1,30 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-import path from 'path';
-import fs from 'fs';
-
-// Get the absolute path to the database file
-const dbPath = path.resolve(process.cwd(), 'prisma/dev.db');
-
-// Check if the database file exists
-const dbExists = fs.existsSync(dbPath);
-console.log(`Database file ${dbPath} exists: ${dbExists}`);
-
-// Construct the database URL
-const databaseUrl = `file:${dbPath}`;
-console.log(`Using database URL: ${databaseUrl}`);
 
 // Prevent multiple instances of Prisma Client in development
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-// Create a new PrismaClient with explicit database URL to ensure it's using the correct path
+// Create a new PrismaClient using the DATABASE_URL from environment variables
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    datasources: {
-      db: {
-        url: databaseUrl
-      }
-    },
     log: process.env.NODE_ENV === 'development' 
       ? ['error', 'warn'] // Removed 'query' to reduce logging overhead
       : ['error']
