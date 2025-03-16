@@ -24,10 +24,19 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon, Trash2, Plus, X } from 'lucide-react';
-import { InvoiceStatus } from '@prisma/client';
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues, InvoiceItemFormValues } from '@/types';
 import { useSettings } from '@/contexts/settings-context';
+
+// Define InvoiceStatus locally
+export enum InvoiceStatus {
+  DRAFT = 'DRAFT',
+  SENT = 'SENT',
+  PAID = 'PAID',
+  PARTIAL = 'PARTIAL',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED'
+}
 
 // Mock data for customers and products
 const mockCustomers: CustomerWithRelations[] = [

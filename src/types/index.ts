@@ -1,4 +1,14 @@
-import { User, Customer, Product, Invoice, InvoiceItem, InvoiceStatus } from "@prisma/client";
+import { User, Customer, Product, Invoice, InvoiceItem } from "@prisma/client";
+
+// Define InvoiceStatus locally
+export enum InvoiceStatus {
+  DRAFT = 'DRAFT',
+  SENT = 'SENT',
+  PAID = 'PAID',
+  PARTIAL = 'PARTIAL',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED'
+}
 
 // Extended types with relations
 export type UserWithRelations = User & {
