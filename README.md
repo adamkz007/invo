@@ -1,6 +1,6 @@
 # Invo - Invoice Management System
 
-A modern invoice management system built with Next.js, Supabase, and Prisma.
+A modern invoice management system built with Next.js 15, Supabase, and Prisma.
 
 ## Features
 
@@ -9,10 +9,11 @@ A modern invoice management system built with Next.js, Supabase, and Prisma.
 - Product inventory
 - Invoice creation and management
 - Company profile management
+- Responsive design for mobile and desktop
 
 ## Tech Stack
 
-- **Frontend**: Next.js, React, Tailwind CSS
+- **Frontend**: Next.js 15, React 19, Tailwind CSS
 - **Backend**: Next.js API Routes
 - **Database**: PostgreSQL (via Supabase)
 - **Authentication**: Supabase Auth
