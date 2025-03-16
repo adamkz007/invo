@@ -102,7 +102,7 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
       customerId: '',
       issueDate: new Date(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
-      status: 'DRAFT',
+      status: InvoiceStatus.DRAFT,
       taxRate: 0,
       discountRate: 0,
       notes: '',
