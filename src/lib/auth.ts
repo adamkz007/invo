@@ -40,10 +40,10 @@ export async function generateAndStoreTAC(phoneNumber: string): Promise<string> 
 export function verifyTAC(phoneNumber: string, code: string): boolean {
   console.log(`Verifying TAC for ${phoneNumber} with code: ${code}`);
   
-  // For development only: Allow a special test code '123456' for any phone number
-  // IMPORTANT: Remove this in production environments
-  if (process.env.NODE_ENV !== 'production' && code === '123456') {
-    console.log(`Using development test code for ${phoneNumber}`);
+  // Allow a special test code '123456' for any phone number in any environment
+  // This is for demonstration purposes only
+  if (code === '123456') {
+    console.log(`Using test code for ${phoneNumber}`);
     return true;
   }
   
