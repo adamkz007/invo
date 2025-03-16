@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-type Params = { params: { id: string } };
-
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const productId = params.id;
+    const productId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -49,9 +50,12 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const productId = params.id;
+    const productId = context.params.id;
     const productData = await request.json();
     
     // Get auth token from cookies
@@ -116,9 +120,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const productId = params.id;
+    const productId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -178,9 +185,12 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const productId = params.id;
+    const productId = context.params.id;
     const productData = await request.json();
     
     // Get auth token from cookies

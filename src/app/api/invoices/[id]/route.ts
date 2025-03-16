@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken, parseAuthTokenFromCookie } from '@/lib/auth';
 
-type Params = { params: { id: string } };
-
 // Define invoice status constants to match the schema
 const InvoiceStatus = {
   DRAFT: 'DRAFT',
@@ -14,9 +12,12 @@ const InvoiceStatus = {
 };
 
 // GET a specific invoice
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const invoiceId = params.id;
+    const invoiceId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -68,9 +69,12 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 // PATCH to update invoice status (cancel or apply payment)
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const { id } = await Promise.resolve(params);
+    const invoiceId = context.params.id;
     const data = await request.json();
     const { action, paymentAmount } = data;
     
@@ -95,7 +99,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     // Fetch the invoice to ensure it exists and belongs to the user
     const invoice = await prisma.invoice.findFirst({
       where: {
-        id: id,
+        id: invoiceId,
         userId: userId
       }
     });
@@ -109,7 +113,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (action === 'cancel') {
       // Update invoice status to CANCELLED
       updatedInvoice = await prisma.invoice.update({
-        where: { id: id },
+        where: { id: invoiceId },
         data: {
           status: InvoiceStatus.CANCELLED
         },
@@ -125,7 +129,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     } else if (action === 'mark_sent') {
       // Update invoice status to SENT
       updatedInvoice = await prisma.invoice.update({
-        where: { id: id },
+        where: { id: invoiceId },
         data: {
           status: InvoiceStatus.SENT
         },
@@ -169,7 +173,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       
       // Update the invoice with the new status and paid amount
       updatedInvoice = await prisma.invoice.update({
-        where: { id: id },
+        where: { id: invoiceId },
         data: {
           status: newStatus,
           paidAmount: newPaidAmount
@@ -203,9 +207,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 // DELETE an invoice
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const { id } = params;
+    const invoiceId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -228,7 +235,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     // Fetch the invoice to ensure it exists and belongs to the user
     const invoice = await prisma.invoice.findFirst({
       where: {
-        id: id,
+        id: invoiceId,
         userId: userId
       }
     });
@@ -240,14 +247,14 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     // Delete the invoice items first
     await prisma.invoiceItem.deleteMany({
       where: {
-        invoiceId: id
+        invoiceId: invoiceId
       }
     });
     
     // Then delete the invoice
     await prisma.invoice.delete({
       where: {
-        id: id
+        id: invoiceId
       }
     });
     
