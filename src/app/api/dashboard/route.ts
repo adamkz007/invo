@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, testConnection } from '@/lib/prisma';
-import { InvoiceStatus } from '@prisma/client';
 import { verifyToken, parseAuthTokenFromCookie } from '@/lib/auth';
+
+// Define invoice status constants to match the schema
+const InvoiceStatus = {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  PAID: 'PAID',
+  PARTIAL: 'PARTIAL',
+  CANCELLED: 'CANCELLED',
+  OVERDUE: 'OVERDUE'
+};
 
 interface MonthlyDataPoint {
   month: string;
