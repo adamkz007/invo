@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { generateAndStoreTAC } from '@/lib/auth';
 
 // Local method that doesn't rely on database
 export async function POST(req: NextRequest) {
@@ -16,45 +16,30 @@ export async function POST(req: NextRequest) {
     
     const phoneNumber = body.phoneNumber;
     
-    // Create a Supabase client (without cookies for this specific API endpoint)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    // Generate TAC without checking database
+    const tac = await generateAndStoreTAC(phoneNumber);
     
-    // Request phone verification via Supabase
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: phoneNumber,
-    });
+    // In a real application, this would send an SMS
+    console.log(`TAC for ${phoneNumber}: ${tac}`);
     
-    if (error) {
-      console.error('Phone verification request error:', error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.message || 'Failed to send verification code'
-        },
-        { status: 500 }
-      );
-    }
-    
-    // For development, log the phone number
-    console.log(`Verification code requested for ${phoneNumber}`);
-    
+    // For development, return the TAC directly in the response
     return NextResponse.json({
       success: true,
       data: {
-        message: 'Verification code sent successfully',
+        message: 'TAC sent successfully',
+        // In development mode, return the TAC code directly
+        ...(process.env.NODE_ENV !== 'production' && { tac }),
+        // Always assume user exists to bypass database check
         userExists: true
       }
     });
-  } catch (error: any) {
-    console.error('Error requesting verification code:', error);
+  } catch (error) {
+    console.error('Error requesting TAC:', error);
     
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to send verification code'
+        error: 'Failed to send TAC'
       },
       { status: 500 }
     );

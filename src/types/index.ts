@@ -1,6 +1,6 @@
 import { User, Customer, Product, Invoice, InvoiceItem } from "@prisma/client";
 
-// Define InvoiceStatus locally
+// Define InvoiceStatus enum locally
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
   SENT = 'SENT',

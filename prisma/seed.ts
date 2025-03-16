@@ -1,16 +1,22 @@
 import { PrismaClient } from '@prisma/client';
-import { hashPassword } from '../src/lib/utils';
+import * as crypto from 'crypto';
 
-const prisma = new PrismaClient();
-
-// Define invoice status constants to match the schema
+// Define InvoiceStatus as a simple object
 const InvoiceStatus = {
   DRAFT: 'DRAFT',
   SENT: 'SENT',
   PAID: 'PAID',
   PARTIAL: 'PARTIAL',
+  OVERDUE: 'OVERDUE',
   CANCELLED: 'CANCELLED'
-};
+} as const;
+
+// Define hashPassword function directly
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+const prisma = new PrismaClient();
 
 async function main() {
   // Create a demo user

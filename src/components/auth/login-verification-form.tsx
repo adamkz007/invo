@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { LoginFormValues } from '@/types';
 import { useRouter } from 'next/navigation';
 import { TACInput } from '@/components/ui/tac-input';
-import { supabase } from '@/lib/supabase';
 
 const formSchema = z.object({
   tac: z.string().length(6, 'Authentication code must be 6 digits'),
@@ -67,14 +66,6 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
 
       if (!data.success) {
         throw new Error(data.error || 'Authentication failed');
-      }
-
-      // Set the session in the Supabase client
-      if (data.session) {
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
       }
 
       // Redirect to dashboard on successful login

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { verifyTAC, generateToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// POST /api/auth/login - Login with OTP
+// POST /api/auth/login - Login with TAC
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
@@ -16,29 +16,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication code is required' }, { status: 400 });
     }
     
-    // Create a Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    // Verify TAC without database dependency
+    const isValid = verifyTAC(phoneNumber, tac);
     
-    // Verify OTP and sign in with Supabase
-    const { data: authData, error } = await supabase.auth.verifyOtp({
-      phone: phoneNumber,
-      token: tac,
-      type: 'sms',
-    });
-    
-    if (error) {
-      throw new Error(error.message);
+    if (!isValid) {
+      return NextResponse.json({ error: 'Invalid or expired authentication code' }, { status: 401 });
     }
     
-    if (!authData.user) {
-      throw new Error('Authentication failed');
-    }
-    
-    // Check if user exists in our database
-    let user = await prisma.user.findFirst({
+    // Look up the user in the database
+    let user = await prisma.user.findUnique({
       where: { phoneNumber }
     });
     
@@ -60,28 +46,40 @@ export async function POST(request: NextRequest) {
           passwordHash: tempPasswordHash
         }
       });
-      
-      // Check if company exists for this user
-      const existingCompany = await prisma.company.findUnique({
-        where: { userId: user.id }
-      });
-      
-      // Create company if it doesn't exist
-      if (!existingCompany) {
-        await prisma.company.create({
-          data: {
-            legalName: `${user.name}'s Business`,
-            ownerName: user.name,
-            phoneNumber,
-            user: {
-              connect: { id: user.id }
-            }
-          }
-        });
-      }
     }
     
-    // Create a response with the user data and session
+    // Check if company exists for this user
+    const existingCompany = await prisma.company.findUnique({
+      where: { userId: user.id }
+    });
+    
+    // Create or update company with the phone number
+    if (existingCompany) {
+      // Only update if phone number is not already set
+      if (!existingCompany.phoneNumber) {
+        await prisma.company.update({
+          where: { userId: user.id },
+          data: { phoneNumber }
+        });
+      }
+    } else {
+      // Create a new company record with minimal information
+      await prisma.company.create({
+        data: {
+          legalName: `${user.name}'s Business`,
+          ownerName: user.name,
+          phoneNumber,
+          user: {
+            connect: { id: user.id }
+          }
+        }
+      });
+    }
+    
+    // Generate token with the actual user ID
+    const token = generateToken(user.id);
+    
+    // Create a response with the user data
     const response = NextResponse.json({
       success: true,
       user: {
@@ -89,22 +87,33 @@ export async function POST(request: NextRequest) {
         name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber
-      },
-      session: authData.session
+      }
+    });
+    
+    // Set the auth token cookie
+    response.cookies.set({
+      name: 'auth_token',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      // 7 days expiry
+      maxAge: 60 * 60 * 24 * 7
     });
     
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json({ 
-      error: error.message || 'Authentication failed' 
+      error: error instanceof Error ? error.message : 'Authentication failed' 
     }, { 
       status: 401 
     });
   }
 }
 
-// Request a verification code
+// Request a TAC code
 export async function PUT(request: NextRequest) {
   try {
     const data = await request.json();
@@ -125,10 +134,10 @@ export async function PUT(request: NextRequest) {
     
     const result = await response.json();
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Verification request error:', error);
+  } catch (error) {
+    console.error('TAC request error:', error);
     return NextResponse.json({ 
-      error: error.message || 'Failed to generate authentication code' 
+      error: 'Failed to generate authentication code' 
     }, { 
       status: 500 
     });

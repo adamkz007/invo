@@ -23,14 +23,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon, Trash2, Plus } from 'lucide-react';
-import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
-import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues } from '@/types';
-import CustomerFormDialog from '@/components/customers/customer-form-dialog';
-import ProductFormDialog from '@/components/products/product-form-dialog';
-import { useToast } from '@/components/ui/toast';
-import { Badge } from '@/components/ui/badge';
-
-// Define InvoiceStatus locally
+// Define InvoiceStatus enum locally
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
   SENT = 'SENT',
@@ -39,6 +32,12 @@ export enum InvoiceStatus {
   OVERDUE = 'OVERDUE',
   CANCELLED = 'CANCELLED'
 }
+import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
+import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues } from '@/types';
+import CustomerFormDialog from '@/components/customers/customer-form-dialog';
+import ProductFormDialog from '@/components/products/product-form-dialog';
+import { useToast } from '@/components/ui/toast';
+import { Badge } from '@/components/ui/badge';
 
 // Form validation schema
 const invoiceFormSchema = z.object({

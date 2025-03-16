@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RequestTACFormValues } from '@/types';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 const formSchema = z.object({
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
@@ -23,7 +23,7 @@ export default function RequestTACForm({ onSuccess, isLogin = true }: RequestTAC
   const form = useForm<RequestTACFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      phoneNumber: '',
+      phoneNumber: '+60', // Default to Malaysia country code
     },
   });
 
@@ -79,7 +79,7 @@ export default function RequestTACForm({ onSuccess, isLogin = true }: RequestTAC
               <FormItem>
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
-                  <Input
+                  <PhoneInput
                     placeholder="Enter your phone number"
                     {...field}
                     disabled={isLoading}

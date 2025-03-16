@@ -23,7 +23,6 @@
 # misc
 .DS_Store
 *.pem
-/browser-tools-mcp
 
 # debug
 npm-debug.log*

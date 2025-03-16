@@ -4,11 +4,10 @@ import { verifyToken } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const customerId = id;
+    const customerId = params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -53,12 +52,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const customerId = id;
-    const data = await request.json();
+    const customerId = params.id;
+    const customerData = await request.json();
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -78,7 +76,7 @@ export async function PUT(
       }
     }
     
-    // Find the customer by ID and ensure it belongs to the user
+    // Check if the customer exists and belongs to the user
     const existingCustomer = await prisma.customer.findFirst({
       where: {
         id: customerId,
@@ -96,17 +94,24 @@ export async function PUT(
         id: customerId
       },
       data: {
-        name: data.name,
-        email: data.email,
-        phoneNumber: data.phoneNumber,
-        address: data.address,
-        notes: data.notes
+        ...customerData,
+        userId // Ensure the userId remains the same
       }
     });
     
     return NextResponse.json(updatedCustomer);
   } catch (error) {
     console.error('Error updating customer:', error);
+    
+    // Check for specific Prisma errors
+    if (error instanceof Error) {
+      return NextResponse.json({ 
+        error: `Failed to update customer: ${error.message}` 
+      }, { 
+        status: 500 
+      });
+    }
+    
     return NextResponse.json({ 
       error: 'Failed to update customer' 
     }, { 
@@ -117,11 +122,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const customerId = id;
+    const customerId = params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -141,7 +145,7 @@ export async function DELETE(
       }
     }
     
-    // Find the customer by ID and ensure it belongs to the user
+    // Check if the customer exists and belongs to the user
     const existingCustomer = await prisma.customer.findFirst({
       where: {
         id: customerId,
@@ -160,9 +164,19 @@ export async function DELETE(
       }
     });
     
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ message: 'Customer deleted successfully' });
   } catch (error) {
     console.error('Error deleting customer:', error);
+    
+    // Check for specific Prisma errors
+    if (error instanceof Error) {
+      return NextResponse.json({ 
+        error: `Failed to delete customer: ${error.message}` 
+      }, { 
+        status: 500 
+      });
+    }
+    
     return NextResponse.json({ 
       error: 'Failed to delete customer' 
     }, { 

@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma, testConnection } from '@/lib/prisma';
 import { verifyToken, parseAuthTokenFromCookie } from '@/lib/auth';
 
-// Define invoice status constants to match the schema
-const InvoiceStatus = {
-  DRAFT: 'DRAFT',
-  SENT: 'SENT',
-  PAID: 'PAID',
-  PARTIAL: 'PARTIAL',
-  CANCELLED: 'CANCELLED',
-  OVERDUE: 'OVERDUE'
-};
+// Define InvoiceStatus enum locally
+enum InvoiceStatus {
+  DRAFT = 'DRAFT',
+  SENT = 'SENT',
+  PAID = 'PAID',
+  PARTIAL = 'PARTIAL',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED'
+}
 
 interface MonthlyDataPoint {
   month: string;

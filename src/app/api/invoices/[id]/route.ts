@@ -2,23 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken, parseAuthTokenFromCookie } from '@/lib/auth';
 
-// Define invoice status constants to match the schema
-const InvoiceStatus = {
-  DRAFT: 'DRAFT',
-  SENT: 'SENT',
-  PAID: 'PAID',
-  PARTIAL: 'PARTIAL',
-  CANCELLED: 'CANCELLED'
-};
+// Define InvoiceStatus enum locally
+enum InvoiceStatus {
+  DRAFT = 'DRAFT',
+  SENT = 'SENT',
+  PAID = 'PAID',
+  PARTIAL = 'PARTIAL',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED'
+}
 
 // GET a specific invoice
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const invoiceId = id;
+    const { id } = params;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -38,10 +38,10 @@ export async function GET(
       }
     }
     
-    // Find the invoice by ID and ensure it belongs to the user
+    // Fetch the invoice with customer details
     const invoice = await prisma.invoice.findFirst({
       where: {
-        id: invoiceId,
+        id: id,
         userId: userId
       },
       include: {
@@ -72,11 +72,10 @@ export async function GET(
 // PATCH to update invoice status (cancel or apply payment)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const invoiceId = id;
+    const { id } = await Promise.resolve(params);
     const data = await request.json();
     const { action, paymentAmount } = data;
     
@@ -101,7 +100,7 @@ export async function PATCH(
     // Fetch the invoice to ensure it exists and belongs to the user
     const invoice = await prisma.invoice.findFirst({
       where: {
-        id: invoiceId,
+        id: id,
         userId: userId
       }
     });
@@ -115,7 +114,7 @@ export async function PATCH(
     if (action === 'cancel') {
       // Update invoice status to CANCELLED
       updatedInvoice = await prisma.invoice.update({
-        where: { id: invoiceId },
+        where: { id: id },
         data: {
           status: InvoiceStatus.CANCELLED
         },
@@ -131,7 +130,7 @@ export async function PATCH(
     } else if (action === 'mark_sent') {
       // Update invoice status to SENT
       updatedInvoice = await prisma.invoice.update({
-        where: { id: invoiceId },
+        where: { id: id },
         data: {
           status: InvoiceStatus.SENT
         },
@@ -157,7 +156,7 @@ export async function PATCH(
       }
       
       // Determine the new status based on the payment amount
-      let newStatus: string;
+      let newStatus: InvoiceStatus;
       let newPaidAmount = amountPaid;
       
       // If there's an existing paidAmount, add to it
@@ -175,7 +174,7 @@ export async function PATCH(
       
       // Update the invoice with the new status and paid amount
       updatedInvoice = await prisma.invoice.update({
-        where: { id: invoiceId },
+        where: { id: id },
         data: {
           status: newStatus,
           paidAmount: newPaidAmount
@@ -211,11 +210,10 @@ export async function PATCH(
 // DELETE an invoice
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const invoiceId = id;
+    const { id } = params;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -238,7 +236,7 @@ export async function DELETE(
     // Fetch the invoice to ensure it exists and belongs to the user
     const invoice = await prisma.invoice.findFirst({
       where: {
-        id: invoiceId,
+        id: id,
         userId: userId
       }
     });
@@ -250,14 +248,14 @@ export async function DELETE(
     // Delete the invoice items first
     await prisma.invoiceItem.deleteMany({
       where: {
-        invoiceId: invoiceId
+        invoiceId: id
       }
     });
     
     // Then delete the invoice
     await prisma.invoice.delete({
       where: {
-        id: invoiceId
+        id: id
       }
     });
     
