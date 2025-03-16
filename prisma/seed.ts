@@ -1,7 +1,16 @@
-import { PrismaClient, InvoiceStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../src/lib/utils';
 
 const prisma = new PrismaClient();
+
+// Define invoice status constants to match the schema
+const InvoiceStatus = {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  PAID: 'PAID',
+  PARTIAL: 'PARTIAL',
+  CANCELLED: 'CANCELLED'
+};
 
 async function main() {
   // Create a demo user
