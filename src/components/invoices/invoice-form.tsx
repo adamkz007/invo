@@ -38,12 +38,15 @@ const mockCustomers: CustomerWithRelations[] = [
 ];
 
 const mockProducts: ProductWithRelations[] = [
-  { id: '1', name: 'Web Development', description: 'Custom website development', price: 1200, quantity: 10, sku: 'WEB-001', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '2', name: 'Mobile App Development', description: 'Custom mobile application', price: 2500, quantity: 5, sku: 'APP-001', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '3', name: 'UI/UX Design', description: 'User interface and experience design', price: 800, quantity: 15, sku: 'DESIGN-001', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '4', name: 'SEO Service', description: 'Search engine optimization', price: 500, quantity: 20, sku: 'SEO-001', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '5', name: 'Hosting (Monthly)', description: 'Web hosting service', price: 25, quantity: 100, sku: 'HOST-001', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
+  { id: '1', name: 'Web Development', description: 'Custom website development', price: 1200, quantity: 10, sku: 'WEB-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
+  { id: '2', name: 'Mobile App Development', description: 'Custom mobile application', price: 2500, quantity: 5, sku: 'APP-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
+  { id: '3', name: 'UI/UX Design', description: 'User interface and experience design', price: 800, quantity: 15, sku: 'DESIGN-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
+  { id: '4', name: 'SEO Service', description: 'Search engine optimization', price: 500, quantity: 20, sku: 'SEO-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
+  { id: '5', name: 'Hosting (Monthly)', description: 'Web hosting service', price: 25, quantity: 100, sku: 'HOST-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
 ];
+
+// Define valid invoice statuses
+const INVOICE_STATUSES = ['DRAFT', 'SENT', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED'] as const;
 
 // Form validation schema
 const invoiceFormSchema = z.object({
@@ -60,6 +63,8 @@ const invoiceFormSchema = z.object({
   taxRate: z.coerce.number().min(0).max(100),
   discountRate: z.coerce.number().min(0).max(100),
   notes: z.string().optional(),
+  paidAmount: z.coerce.number().min(0).optional(),
+  userId: z.string().optional(),
 });
 
 interface InvoiceFormProps {
@@ -216,11 +221,11 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="DRAFT">Draft</SelectItem>
-                        <SelectItem value="SENT">Sent</SelectItem>
-                        <SelectItem value="PAID">Paid</SelectItem>
-                        <SelectItem value="OVERDUE">Overdue</SelectItem>
-                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                        {INVOICE_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

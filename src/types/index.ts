@@ -76,6 +76,7 @@ export interface InvoiceFormValues {
   discountRate: number;
   notes?: string;
   items: InvoiceItemFormValues[];
+  paidAmount?: number;
   userId?: string;
 }
 
@@ -126,6 +127,7 @@ export interface InvoiceItemWithDetails {
   };
   quantity: number;
   unitPrice: number;
+  description?: string;
 }
 
 export interface InvoiceWithDetails {
@@ -134,7 +136,9 @@ export interface InvoiceWithDetails {
   customer: {
     id: string;
     name: string;
-    email: string;
+    email: string | null;
+    phoneNumber: string | null;
+    address: string | null;
   };
   issueDate: Date;
   dueDate: Date;
@@ -145,5 +149,7 @@ export interface InvoiceWithDetails {
   discountRate: number;
   discountAmount: number;
   total: number;
+  paidAmount: number;
+  notes?: string;
   items: InvoiceItemWithDetails[];
 }

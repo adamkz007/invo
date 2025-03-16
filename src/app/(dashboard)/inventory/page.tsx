@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,8 @@ import { useSettings } from '@/contexts/settings-context';
 import { QuickEditDialog } from '@/components/inventory/quick-edit-dialog';
 import { Badge } from '@/components/ui/badge';
 
-// Remove mock data and use API
+// Constants for pagination
+const ITEMS_PER_PAGE = 10;
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
@@ -44,12 +45,16 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalInventoryValue, setTotalInventoryValue] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithRelations | null>(null);
+  
   const router = useRouter();
   const { showToast } = useToast();
   const { settings } = useSettings();
   
   // Fetch products from API
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/products', {
@@ -84,14 +89,14 @@ export default function InventoryPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
   
   useEffect(() => {
     fetchProducts();
-  }, [showToast]);
+  }, [fetchProducts]);
 
   // Handle product deletion
-  const handleDeleteProduct = async (productId: string) => {
+  const handleDeleteProduct = useCallback(async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) {
       return;
     }
@@ -105,15 +110,12 @@ export default function InventoryPage() {
         throw new Error('Failed to delete product');
       }
       
-      // Remove the deleted product from the state
-      setProducts(products.filter(product => product.id !== productId));
-      
       showToast({
         message: 'Product deleted successfully',
         variant: 'success',
       });
       
-      // Recalculate inventory value
+      // Refresh the product list
       fetchProducts();
     } catch (err) {
       console.error('Error deleting product:', err);
@@ -122,24 +124,86 @@ export default function InventoryPage() {
         variant: 'error',
       });
     }
-  };
-
+  }, [fetchProducts, showToast]);
+  
+  // Handle quick edit
+  const handleQuickEdit = useCallback((product: ProductWithRelations) => {
+    setSelectedProduct(product);
+    setIsQuickEditOpen(true);
+  }, []);
+  
+  // Handle quick edit save
+  const handleQuickEditSave = useCallback(async (updatedProduct: Partial<ProductWithRelations>) => {
+    if (!selectedProduct) return;
+    
+    try {
+      const response = await fetch(`/api/products/${selectedProduct.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedProduct),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update product');
+      }
+      
+      showToast({
+        message: 'Product updated successfully',
+        variant: 'success',
+      });
+      
+      // Refresh the product list
+      fetchProducts();
+      setIsQuickEditOpen(false);
+    } catch (err) {
+      console.error('Error updating product:', err);
+      showToast({
+        message: 'Failed to update product. Please try again.',
+        variant: 'error',
+      });
+    }
+  }, [selectedProduct, fetchProducts, showToast]);
+  
   // Filter products based on search query
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  return (
-    <div className="flex flex-col gap-4 p-4 md:p-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground">
-            Manage your products and inventory
-          </p>
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (product.sku && product.sku.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [products, searchQuery]);
+  
+  // Calculate pagination
+  const totalPages = useMemo(() => Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), [filteredProducts]);
+  
+  // Get current page items
+  const currentProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
+  
+  // Handle page change
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-100px)] items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+          <p>Loading inventory...</p>
         </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Inventory</h1>
         <Link href="/inventory/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
@@ -147,142 +211,164 @@ export default function InventoryPage() {
           </Button>
         </Link>
       </div>
-
-      {/* Inventory Summary */}
-      <Card className="bg-muted/50">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Package className="h-5 w-5 mr-2 text-muted-foreground" />
-              <span className="font-medium">Total Inventory Value:</span>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Products</CardTitle>
+          <CardDescription>
+            Manage your products and inventory
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-            <span className="font-bold">{formatCurrency(totalInventoryValue, settings)}</span>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="px-3 py-1">
+                Total Value: {formatCurrency(totalInventoryValue, settings)}
+              </Badge>
+            </div>
           </div>
+          
+          {currentProducts.length === 0 ? (
+            <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed">
+              <div className="text-center">
+                <Package className="mx-auto h-10 w-10 text-muted-foreground" />
+                <h3 className="mt-2 text-lg font-medium">No products found</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {products.length === 0
+                    ? "You haven't added any products yet."
+                    : "No products match your search criteria."}
+                </p>
+                {products.length === 0 && (
+                  <Link href="/inventory/new">
+                    <Button className="mt-4" size="sm">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add your first product
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentProducts.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>
+                          {product.disableStockManagement ? (
+                            <Badge variant="secondary">Service</Badge>
+                          ) : (
+                            <Badge variant="outline">Product</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{formatCurrency(product.price, settings)}</TableCell>
+                        <TableCell>
+                          {product.disableStockManagement ? (
+                            <span className="text-muted-foreground">N/A</span>
+                          ) : (
+                            product.quantity
+                          )}
+                        </TableCell>
+                        <TableCell>{product.sku || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Open menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleQuickEdit(product)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Quick Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/inventory/${product.id}`)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteProduct(product.id)}>
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
-
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search products..."
-            className="w-full pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" size="sm">
-          <Filter className="mr-2 h-4 w-4" />
-          Filter
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <p>Loading inventory...</p>
-        </div>
-      ) : error ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center h-64">
-              <p className="text-red-500 mb-4">{error}</p>
-              <Button onClick={() => router.refresh()}>Try Again</Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : filteredProducts.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center h-64">
-              <p className="text-muted-foreground mb-4">
-                {searchQuery ? 'No products match your search' : 'No products found'}
-              </p>
-              <Link href="/inventory/new">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Your First Product
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      ) :
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.sku || 'N/A'}</TableCell>
-                    <TableCell>{formatCurrency(product.price, settings)}</TableCell>
-                    <TableCell>
-                      {product.disableStockManagement ? (
-                        <Badge variant="outline">Unlimited</Badge>
-                      ) : (
-                        product.quantity
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {product.disableStockManagement ? (
-                        <Badge variant="secondary">Service</Badge>
-                      ) : (
-                        <Badge variant="outline">Product</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <QuickEditDialog 
-                          product={product} 
-                          onProductUpdated={fetchProducts} 
-                        />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => router.push(`/inventory/${product.id}`)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteProduct(product.id)}
-                              className="text-red-600"
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-          <CardFooter className="flex justify-between border-t p-4">
-            <div className="text-xs text-muted-foreground">
-              Showing {filteredProducts.length} of {products.length} products
-            </div>
-          </CardFooter>
-        </Card>
-      }
+      
+      {/* Quick Edit Dialog */}
+      {selectedProduct && (
+        <QuickEditDialog
+          open={isQuickEditOpen}
+          onOpenChange={setIsQuickEditOpen}
+          product={selectedProduct}
+          onSave={handleQuickEditSave}
+        />
+      )}
     </div>
   );
 }

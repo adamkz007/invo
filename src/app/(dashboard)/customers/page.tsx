@@ -32,12 +32,15 @@ import { Input } from '@/components/ui/input';
 import { formatRelativeDate } from '@/lib/utils';
 import { CustomerWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
+import { CustomerDetailDialog } from '@/components/customers/customer-detail-dialog';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerWithRelations[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
   
@@ -101,6 +104,12 @@ export default function CustomersPage() {
         variant: 'error',
       });
     }
+  };
+
+  // Handle customer selection
+  const handleCustomerSelect = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setIsDetailDialogOpen(true);
   };
 
   // Filter customers based on search query
@@ -188,7 +197,7 @@ export default function CustomersPage() {
                   </TableRow>
                 ) : (
                   filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id} className="cursor-pointer" onClick={() => router.push(`/customers/${customer.id}`)}>
+                    <TableRow key={customer.id} className="cursor-pointer" onClick={() => handleCustomerSelect(customer.id)}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{customer.phoneNumber}</TableCell>
@@ -248,20 +257,21 @@ export default function CustomersPage() {
             </Table>
           </div>
         </CardContent>
-        <CardFooter className="justify-between">
-          <p className="text-sm text-muted-foreground">
+        <CardFooter className="flex justify-between">
+          <div className="text-sm text-muted-foreground">
             Showing {filteredCustomers.length} of {customers.length} customers
-          </p>
-          <div className="space-x-2">
-            <Button variant="outline" size="sm" disabled>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled>
-              Next
-            </Button>
           </div>
         </CardFooter>
       </Card>
+      
+      {/* Customer Detail Dialog */}
+      {selectedCustomerId && (
+        <CustomerDetailDialog
+          customerId={selectedCustomerId}
+          isOpen={isDetailDialogOpen}
+          onClose={() => setIsDetailDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }

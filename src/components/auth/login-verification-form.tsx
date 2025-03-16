@@ -3,10 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LoginFormValues } from '@/types';
 import { useRouter } from 'next/navigation';
+import { TACInput } from '@/components/ui/tac-input';
+import { supabase } from '@/lib/supabase';
 
 const formSchema = z.object({
   tac: z.string().length(6, 'Authentication code must be 6 digits'),
@@ -68,6 +69,14 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
         throw new Error(data.error || 'Authentication failed');
       }
 
+      // Set the session in the Supabase client
+      if (data.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      }
+
       // Redirect to dashboard on successful login
       console.log('Login successful, redirecting to dashboard...');
       
@@ -99,11 +108,11 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
               <FormItem>
                 <FormLabel>Authentication Code</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="Enter 6-digit code"
-                    {...field}
+                  <TACInput
+                    value={field.value}
+                    onChange={field.onChange}
                     disabled={isLoading}
-                    maxLength={6}
+                    className="mx-auto"
                   />
                 </FormControl>
                 <FormMessage />

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ProfileNotification } from '@/components/ui/profile-notification';
+import { useTheme } from 'next-themes';
 
 interface User {
   id: string;
@@ -47,6 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const { theme } = useTheme();
 
   // TEMPORARILY BYPASSING AUTHENTICATION
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -122,7 +124,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center">
             <Link href="/dashboard">
               <div className="flex items-center space-x-2">
-                <img src="/invo-logo.png" alt="Invo Logo" className="h-6 w-6" />
+                <img 
+                  src={theme === 'dark' ? "/invo-logo-w.png" : "/invo-logo.png"} 
+                  alt="Invo Logo" 
+                  className="h-6 w-6" 
+                />
                 <h1 className="text-xl font-bold">Invo</h1>
               </div>
             </Link>

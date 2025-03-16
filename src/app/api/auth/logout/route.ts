@@ -1,24 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-export async function POST(req: NextRequest) {
-  // Create a response
-  const response = NextResponse.json({
-    success: true,
-    data: { message: 'Logged out successfully' }
-  });
-  
-  // Clear the auth cookie
-  response.cookies.set({
-    name: 'auth_token',
-    value: '',
-    httpOnly: false, // Match the login route setting
-    secure: process.env.NODE_ENV === 'production',
-    expires: new Date(0), // Setting expiry to the past to delete the cookie
-    path: '/',
-    sameSite: 'lax', // Match the login route setting
-  });
-  
-  console.log('Cleared auth_token cookie');
-  
-  return response;
+export async function POST(request: NextRequest) {
+  try {
+    // Create a Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    
+    // Sign out from Supabase
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    // Create a response
+    const response = NextResponse.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+    
+    return response;
+  } catch (error: any) {
+    console.error('Logout error:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Failed to logout' 
+    }, { 
+      status: 500 
+    });
+  }
 }

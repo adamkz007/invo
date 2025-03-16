@@ -1,73 +1,71 @@
 # Invo - Invoice Management System
 
-A modern invoice management system built with Next.js, Prisma, and PostgreSQL.
+A modern invoice management system built with Next.js, Supabase, and Prisma.
 
 ## Features
 
+- User authentication with phone number verification
 - Customer management
 - Product inventory
-- Invoice generation and PDF export
-- Dashboard with business analytics
-- User authentication and authorization
-- Responsive design for all devices
+- Invoice creation and management
+- Company profile management
 
 ## Tech Stack
 
-- **Frontend**: Next.js, React, TailwindCSS, shadcn/ui
-- **Backend**: Next.js API routes
-- **Database**: PostgreSQL (Supabase)
+- **Frontend**: Next.js, React, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: PostgreSQL (via Supabase)
+- **Authentication**: Supabase Auth
 - **ORM**: Prisma
-- **Authentication**: JWT
-- **PDF Generation**: jsPDF
+- **Deployment**: Vercel
 
-## Getting Started
+## Deployment Instructions
 
-### Development
+### Prerequisites
+
+- A [Supabase](https://supabase.com) account
+- A [Vercel](https://vercel.com) account
+- Node.js and npm installed locally
+
+### Step 1: Set up Supabase
+
+1. Create a new Supabase project
+2. Note your Supabase URL and anon key from the project settings
+3. The database schema will be automatically created by Prisma during deployment
+
+### Step 2: Deploy to Vercel
+
+1. Fork or clone this repository to your GitHub account
+2. Connect your GitHub repository to Vercel
+3. Configure the following environment variables in Vercel:
+
+```
+# Database connection
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-ID].supabase.co:5432/postgres
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://[YOUR-PROJECT-ID].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[YOUR-SUPABASE-ANON-KEY]
+
+# Authentication
+JWT_SECRET=[GENERATE-A-SECURE-RANDOM-STRING]
+
+# Application URL
+NEXT_PUBLIC_APP_URL=https://[YOUR-VERCEL-APP-URL].vercel.app
+```
+
+4. Deploy your application
+5. After deployment, run the database migrations by visiting:
+   `https://[YOUR-VERCEL-APP-URL].vercel.app/api/db/setup`
+
+## Local Development
 
 1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up environment variables:
-   - Create a `.env` file with the following variables:
-     ```
-     DATABASE_URL="file:./dev.db"
-     JWT_SECRET="your-development-jwt-secret"
-     NEXT_PUBLIC_APP_URL="http://localhost:3000"
-     ```
-4. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-### Deployment
-
-#### Prerequisites
-
-- Vercel account
-- Supabase account
-
-#### Steps
-
-1. Create a Supabase project and get your PostgreSQL connection string
-2. Set up environment variables in Vercel:
-   - `DATABASE_URL`: Your Supabase PostgreSQL connection string
-   - `JWT_SECRET`: A secure random string for JWT token signing
-   - `NEXT_PUBLIC_APP_URL`: Your Vercel deployment URL
-3. Deploy to Vercel:
-   ```bash
-   vercel
-   ```
-4. For production deployment:
-   ```bash
-   vercel --prod
-   ```
-
-## Database Migrations
-
-The application uses Prisma for database migrations. When deploying to production, migrations will be automatically applied during the build process.
+2. Install dependencies: `npm install`
+3. Copy `.env.example` to `.env.local` and fill in your Supabase credentials
+4. Run the development server: `npm run dev`
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## License
 
-MIT
+[MIT](LICENSE)

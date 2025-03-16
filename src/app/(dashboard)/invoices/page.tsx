@@ -13,7 +13,10 @@ import { Button } from '@/components/ui/button';
 import { 
   Dialog, 
   DialogContent,
-  DialogTitle
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader
 } from '@/components/ui/dialog';
 import { 
   DropdownMenu, 
@@ -34,7 +37,10 @@ import {
   ArrowUpDown,
   Calendar,
   User,
-  DollarSign
+  DollarSign,
+  XCircle,
+  CreditCard,
+  Send
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency, format, formatRelativeDate, calculateDueDays } from '@/lib/utils';
@@ -65,15 +71,39 @@ const getStatusBadge = (status: string, isCompact: boolean = false) => {
   switch (status) {
     case 'PAID':
       return <Badge className={`bg-green-100 text-green-800 hover:bg-green-100 ${baseClasses}`}>Paid</Badge>;
+    case 'PARTIAL':
+      return <Badge className={`bg-amber-100 text-amber-800 hover:bg-amber-100 ${baseClasses}`}>Partial</Badge>;
     case 'OVERDUE':
       return <Badge className={`bg-red-100 text-red-800 hover:bg-red-100 ${baseClasses}`}>Overdue</Badge>;
     case 'SENT':
       return <Badge className={`bg-blue-100 text-blue-800 hover:bg-blue-100 ${baseClasses}`}>Sent</Badge>;
     case 'DRAFT':
       return <Badge className={`bg-gray-100 text-gray-800 hover:bg-gray-100 ${baseClasses}`}>Draft</Badge>;
+    case 'CANCELLED':
+      return <Badge className={`bg-gray-100 text-gray-500 hover:bg-gray-100 ${baseClasses}`}>Cancelled</Badge>;
     default:
       return <Badge variant="outline" className={baseClasses}>{status}</Badge>;
   }
+};
+
+// Helper function to extract paid amount from notes
+const extractPaidAmount = (invoice: InvoiceWithDetails): number => {
+  if ((invoice as any).paidAmount !== undefined) {
+    return (invoice as any).paidAmount;
+  }
+  
+  // If no notes, return 0
+  if (!invoice.notes) return 0;
+  
+  // Try to extract payment information from notes
+  const paymentRegex = /Payment of ([\d.]+) received/;
+  const matches = invoice.notes.match(paymentRegex);
+  
+  if (matches && matches[1]) {
+    return parseFloat(matches[1]);
+  }
+  
+  return 0;
 };
 
 export default function InvoicesPage() {
@@ -83,6 +113,9 @@ export default function InvoicesPage() {
   const { showToast } = useToast();
   const router = useRouter();
   const { settings } = useSettings();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceWithDetails | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
 
   // Fetch company details
   useEffect(() => {
@@ -115,6 +148,116 @@ export default function InvoicesPage() {
   const handleDownloadPDF = (invoice: InvoiceWithDetails) => {
     // Pass company details to the PDF generator
     downloadInvoicePDF(invoice, companyDetails);
+  };
+
+  const handleCancelInvoice = async (invoice: InvoiceWithDetails) => {
+    try {
+      const response = await fetch(`/api/invoices/${invoice.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'cancel'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel invoice');
+      }
+
+      // Refresh the page to show updated data
+      router.refresh();
+      
+      showToast({
+        variant: 'success',
+        message: 'Invoice cancelled successfully'
+      });
+    } catch (error) {
+      console.error('Error cancelling invoice:', error);
+      showToast({
+        variant: 'error',
+        message: 'Failed to cancel invoice'
+      });
+    }
+  };
+
+  const handleOpenPaymentDialog = (invoice: InvoiceWithDetails) => {
+    setSelectedInvoiceForPayment(invoice);
+    setPaymentAmount(invoice.total.toString());
+    setPaymentDialogOpen(true);
+  };
+
+  const handleApplyPayment = async () => {
+    if (!selectedInvoiceForPayment) return;
+    
+    try {
+      const response = await fetch(`/api/invoices/${selectedInvoiceForPayment.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'payment',
+          paymentAmount: parseFloat(paymentAmount)
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to apply payment');
+      }
+
+      // Close the dialog and reset state
+      setPaymentDialogOpen(false);
+      setSelectedInvoiceForPayment(null);
+      setPaymentAmount('');
+      
+      // Refresh the page to show updated data
+      router.refresh();
+      
+      showToast({
+        variant: 'success',
+        message: 'Payment applied successfully'
+      });
+    } catch (error) {
+      console.error('Error applying payment:', error);
+      showToast({
+        variant: 'error',
+        message: 'Failed to apply payment'
+      });
+    }
+  };
+
+  const handleMarkAsSent = async (invoice: InvoiceWithDetails) => {
+    try {
+      const response = await fetch(`/api/invoices/${invoice.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'mark_sent'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark invoice as sent');
+      }
+
+      // Refresh the page to show updated data
+      router.refresh();
+      
+      showToast({
+        variant: 'success',
+        message: 'Invoice marked as sent'
+      });
+    } catch (error) {
+      console.error('Error marking invoice as sent:', error);
+      showToast({
+        variant: 'error',
+        message: 'Failed to mark invoice as sent'
+      });
+    }
   };
 
   return (
@@ -150,6 +293,9 @@ export default function InvoicesPage() {
           searchTerm={searchTerm} 
           onViewInvoice={handleViewInvoice} 
           onDownloadPDF={handleDownloadPDF}
+          onCancelInvoice={handleCancelInvoice}
+          onApplyPayment={handleOpenPaymentDialog}
+          onMarkAsSent={handleMarkAsSent}
           companyDetails={companyDetails}
         />
       </Suspense>
@@ -205,7 +351,12 @@ export default function InvoicesPage() {
           <div className="border-t border-b py-4 my-4">
             <h3 className="text-lg font-semibold mb-2">Bill To</h3>
             <p className="font-bold">{selectedInvoice?.customer.name}</p>
-            <p className="text-muted-foreground">{selectedInvoice?.customer.email}</p>
+            {selectedInvoice?.customer.email && (
+              <p className="text-muted-foreground">{selectedInvoice.customer.email}</p>
+            )}
+            {selectedInvoice?.customer.phoneNumber && (
+              <p className="text-muted-foreground">{selectedInvoice.customer.phoneNumber}</p>
+            )}
           </div>
 
           {/* Invoice Items */}
@@ -259,6 +410,18 @@ export default function InvoicesPage() {
               <span>Total</span>
               <span>{selectedInvoice ? formatCurrency(selectedInvoice.total, settings) : ''}</span>
             </div>
+            {selectedInvoice && ((selectedInvoice.status as string) === 'PAID' || (selectedInvoice.status as string) === 'PARTIAL') && (
+              <div className="flex justify-between text-sm pt-2 text-green-600">
+                <span>Paid</span>
+                <span>{formatCurrency(extractPaidAmount(selectedInvoice), settings)}</span>
+              </div>
+            )}
+            {selectedInvoice && (selectedInvoice.status as string) === 'PARTIAL' && (
+              <div className="flex justify-between text-sm text-amber-600 font-medium">
+                <span>Amount Due</span>
+                <span>{formatCurrency(selectedInvoice.total - extractPaidAmount(selectedInvoice), settings)}</span>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -272,6 +435,65 @@ export default function InvoicesPage() {
               </div>
             </div>
           </div>
+          
+          {/* Download PDF Button */}
+          {selectedInvoice && (
+            <div className="flex justify-center mt-6">
+              <Button 
+                onClick={() => handleDownloadPDF(selectedInvoice)}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Apply Payment</DialogTitle>
+            <DialogDescription>
+              Enter the payment amount for invoice {selectedInvoiceForPayment?.invoiceNumber}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Invoice Total:</span>
+                <span className="font-medium">{selectedInvoiceForPayment ? formatCurrency(selectedInvoiceForPayment.total, settings) : ''}</span>
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="payment-amount" className="text-sm font-medium">
+                  Payment Amount
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="payment-amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={selectedInvoiceForPayment?.total}
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApplyPayment}>
+              Apply Payment
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -283,11 +505,17 @@ function InvoicesList({
   searchTerm, 
   onViewInvoice, 
   onDownloadPDF,
+  onCancelInvoice,
+  onApplyPayment,
+  onMarkAsSent,
   companyDetails
 }: { 
   searchTerm: string, 
   onViewInvoice: (invoice: InvoiceWithDetails) => void,
   onDownloadPDF: (invoice: InvoiceWithDetails) => void,
+  onCancelInvoice: (invoice: InvoiceWithDetails) => void,
+  onApplyPayment: (invoice: InvoiceWithDetails) => void,
+  onMarkAsSent: (invoice: InvoiceWithDetails) => void,
   companyDetails: CompanyDetails | null
 }) {
   const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
@@ -428,6 +656,11 @@ function InvoicesList({
                       <DollarSign className="h-3 w-3 text-muted-foreground" />
                       {formatCurrency(invoice.total, settings).replace('$', '')}
                     </div>
+                    {(invoice.status as string) === 'PARTIAL' && (
+                      <div className="text-xs text-green-600">
+                        Paid: {formatCurrency(extractPaidAmount(invoice), settings)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex space-x-1">
                     <Button 
@@ -446,11 +679,30 @@ function InvoicesList({
                     >
                       <Download className="h-3.5 w-3.5" />
                     </Button>
-                    <Link href={`/invoices/edit/${invoice.id}`}>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                    </Link>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {invoice.status === 'DRAFT' && (
+                          <DropdownMenuItem onSelect={() => onMarkAsSent(invoice)}>
+                            <Send className="mr-2 h-4 w-4" /> Mark as Sent
+                          </DropdownMenuItem>
+                        )}
+                        {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                          <DropdownMenuItem onSelect={() => onApplyPayment(invoice)}>
+                            <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
+                          </DropdownMenuItem>
+                        )}
+                        {invoice.status !== 'CANCELLED' && (
+                          <DropdownMenuItem onSelect={() => onCancelInvoice(invoice)}>
+                            <XCircle className="mr-2 h-4 w-4" /> Cancel Invoice
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
@@ -507,7 +759,14 @@ function InvoicesList({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="font-bold">{formatCurrency(invoice.total, settings)}</span>
+                    <div>
+                      <span className="font-bold">{formatCurrency(invoice.total, settings)}</span>
+                      {(invoice.status as string) === 'PARTIAL' && (
+                        <div className="text-xs text-green-600">
+                          Paid: {formatCurrency(extractPaidAmount(invoice), settings)}
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(invoice.status, true)}</TableCell>
                   <TableCell className="text-right">
@@ -524,11 +783,21 @@ function InvoicesList({
                         <DropdownMenuItem onSelect={() => onDownloadPDF(invoice)}>
                           <Download className="mr-2 h-4 w-4" /> Download PDF
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/invoices/edit/${invoice.id}`}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Invoice
-                          </Link>
-                        </DropdownMenuItem>
+                        {invoice.status === 'DRAFT' && (
+                          <DropdownMenuItem onSelect={() => onMarkAsSent(invoice)}>
+                            <Send className="mr-2 h-4 w-4" /> Mark as Sent
+                          </DropdownMenuItem>
+                        )}
+                        {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                          <DropdownMenuItem onSelect={() => onApplyPayment(invoice)}>
+                            <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
+                          </DropdownMenuItem>
+                        )}
+                        {invoice.status !== 'CANCELLED' && (
+                          <DropdownMenuItem onSelect={() => onCancelInvoice(invoice)}>
+                            <XCircle className="mr-2 h-4 w-4" /> Cancel Invoice
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

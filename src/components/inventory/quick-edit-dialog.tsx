@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +25,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/components/ui/toast';
-import { Edit } from 'lucide-react';
+import { ProductWithRelations } from '@/types';
 
 // Form validation schema
 const quickEditSchema = z.object({
@@ -38,18 +37,18 @@ const quickEditSchema = z.object({
 type QuickEditFormValues = z.infer<typeof quickEditSchema>;
 
 interface QuickEditDialogProps {
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    disableStockManagement: boolean;
-  };
-  onProductUpdated: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  product: ProductWithRelations;
+  onSave: (updatedProduct: Partial<ProductWithRelations>) => Promise<void>;
 }
 
-export function QuickEditDialog({ product, onProductUpdated }: QuickEditDialogProps) {
-  const [open, setOpen] = useState(false);
+export function QuickEditDialog({ 
+  open, 
+  onOpenChange, 
+  product, 
+  onSave 
+}: QuickEditDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
@@ -71,25 +70,12 @@ export function QuickEditDialog({ product, onProductUpdated }: QuickEditDialogPr
     setIsSubmitting(true);
     
     try {
-      const response = await fetch(`/api/products/${product.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update product');
-      }
+      await onSave(values);
       
       showToast({
         message: 'Product updated successfully!',
         variant: 'success',
       });
-      
-      setOpen(false);
-      onProductUpdated();
     } catch (error) {
       console.error('Error updating product:', error);
       showToast({
@@ -102,13 +88,7 @@ export function QuickEditDialog({ product, onProductUpdated }: QuickEditDialogPr
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <Edit className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Product</DialogTitle>
@@ -190,7 +170,7 @@ export function QuickEditDialog({ product, onProductUpdated }: QuickEditDialogPr
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>

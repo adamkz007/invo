@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { InvoiceStatus } from '@prisma/client';
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -28,20 +27,46 @@ export async function GET(request: NextRequest) {
       where: {
         userId: userId
       },
-      include: {
+      select: {
+        id: true,
+        invoiceNumber: true,
+        issueDate: true,
+        dueDate: true,
+        status: true,
+        subtotal: true,
+        taxRate: true,
+        taxAmount: true,
+        discountRate: true,
+        discountAmount: true,
+        total: true,
+        paidAmount: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        customerId: true,
+        userId: true,
         customer: {
           select: {
             id: true,
             name: true,
             email: true,
+            phoneNumber: true,
+            address: true
           }
         },
         items: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            unitPrice: true,
+            amount: true,
+            description: true,
+            productId: true,
             product: {
               select: {
+                id: true,
                 name: true,
-                description: true,
+                description: true
               }
             }
           }
@@ -53,33 +78,40 @@ export async function GET(request: NextRequest) {
     });
 
     // Transform the invoices to match the InvoiceWithDetails type
-    const transformedInvoices = invoices.map(invoice => ({
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      customer: {
-        id: invoice.customer.id,
-        name: invoice.customer.name,
-        email: invoice.customer.email,
-      },
-      issueDate: invoice.issueDate,
-      dueDate: invoice.dueDate,
-      status: invoice.status,
-      subtotal: invoice.subtotal,
-      taxRate: invoice.taxRate,
-      taxAmount: invoice.taxAmount,
-      discountRate: invoice.discountRate,
-      discountAmount: invoice.discountAmount,
-      total: invoice.total,
-      items: invoice.items.map(item => ({
-        id: item.id,
-        product: {
-          name: item.product.name,
-          description: item.product.description || '',
+    const transformedInvoices = invoices.map(invoice => {
+      return {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        customer: {
+          id: invoice.customer.id,
+          name: invoice.customer.name,
+          email: invoice.customer.email,
+          phoneNumber: invoice.customer.phoneNumber,
+          address: invoice.customer.address,
         },
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-      }))
-    }));
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        status: invoice.status,
+        subtotal: invoice.subtotal,
+        taxRate: invoice.taxRate,
+        taxAmount: invoice.taxAmount,
+        discountRate: invoice.discountRate,
+        discountAmount: invoice.discountAmount,
+        total: invoice.total,
+        paidAmount: invoice.paidAmount || 0,
+        notes: invoice.notes,
+        items: invoice.items.map(item => ({
+          id: item.id,
+          product: {
+            name: item.product.name,
+            description: item.product.description || '',
+          },
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          description: item.description || '',
+        }))
+      };
+    });
 
     return NextResponse.json(transformedInvoices);
   } catch (error) {
@@ -121,7 +153,21 @@ export async function POST(request: NextRequest) {
     const invoiceNumber = `INV-${dateStr}-${randomStr}`;
     
     // Extract items from the request
-    const { items, customerId, issueDate, dueDate, status, taxRate, discountRate, notes, subtotal, taxAmount, discountAmount, total } = data;
+    const { 
+      items, 
+      customerId, 
+      issueDate, 
+      dueDate, 
+      status, 
+      taxRate, 
+      discountRate, 
+      notes,
+      includeCustomerAddress, // Extract but don't use
+      subtotal, 
+      taxAmount, 
+      discountAmount, 
+      total 
+    } = data;
     
     // Create invoice with items
     const newInvoice = await prisma.invoice.create({
@@ -129,7 +175,7 @@ export async function POST(request: NextRequest) {
         invoiceNumber,
         issueDate: new Date(issueDate),
         dueDate: new Date(dueDate),
-        status: status as InvoiceStatus,
+        status,
         subtotal,
         taxRate,
         taxAmount,
@@ -156,11 +202,48 @@ export async function POST(request: NextRequest) {
           }))
         }
       },
-      include: {
-        customer: true,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        issueDate: true,
+        dueDate: true,
+        status: true,
+        subtotal: true,
+        taxRate: true,
+        taxAmount: true,
+        discountRate: true,
+        discountAmount: true,
+        total: true,
+        paidAmount: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        customerId: true,
+        userId: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phoneNumber: true,
+            address: true
+          }
+        },
         items: {
-          include: {
-            product: true
+          select: {
+            id: true,
+            quantity: true,
+            unitPrice: true,
+            amount: true,
+            description: true,
+            productId: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
           }
         }
       }

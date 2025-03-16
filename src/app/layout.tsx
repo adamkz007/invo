@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Invo - Simple Invoice Management",
-  description: "Streamlined invoicing and inventory management for small businesses",
+  title: 'Invo - Invoicing for SMEs',
+  description: 'Practical invoicing solution designed for small and medium enterprises',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/invo-logo.png',
   },
 };
 

@@ -22,6 +22,14 @@ import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AppSettings, defaultSettings } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 // Form validation schema
 const companyFormSchema = z.object({
@@ -32,6 +40,7 @@ const companyFormSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email' }).optional().or(z.literal('')),
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
+  termsAndConditions: z.string().optional(),
 });
 
 type CompanyFormValues = z.infer<typeof companyFormSchema>;
@@ -48,6 +57,9 @@ const currencies = [
 export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [formValues, setFormValues] = useState<CompanyFormValues | null>(null);
+  const [fieldsLocked, setFieldsLocked] = useState(false);
   const { settings, updateSettings } = useSettings();
   const { showToast } = useToast();
 
@@ -62,6 +74,7 @@ export default function SettingsPage() {
       email: '',
       phoneNumber: '',
       address: '',
+      termsAndConditions: 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
     },
   });
 
@@ -85,7 +98,13 @@ export default function SettingsPage() {
               email: data.email || '',
               phoneNumber: data.phoneNumber || '',
               address: data.address || '',
+              termsAndConditions: data.termsAndConditions || 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
             });
+            
+            // Check if critical fields are filled to determine if they should be locked
+            if (data.legalName && data.registrationNumber && data.taxIdentificationNumber) {
+              setFieldsLocked(true);
+            }
           }
         }
       } catch (error) {
@@ -103,8 +122,17 @@ export default function SettingsPage() {
   }, [form, showToast]);
 
   // Handle form submission
-  async function onSubmit(values: CompanyFormValues) {
+  const handleSubmit = (values: CompanyFormValues) => {
+    setFormValues(values);
+    setConfirmDialogOpen(true);
+  };
+
+  // Handle confirmation dialog confirm
+  const handleConfirmSave = async () => {
+    if (!formValues) return;
+    
     setIsSaving(true);
+    setConfirmDialogOpen(false);
     
     try {
       const response = await fetch('/api/company', {
@@ -112,7 +140,7 @@ export default function SettingsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(formValues),
       });
       
       if (!response.ok) {
@@ -123,6 +151,14 @@ export default function SettingsPage() {
         message: 'Company details saved successfully',
         variant: 'success'
       });
+      
+      // Lock critical fields if they are all filled
+      if (formValues.legalName && formValues.registrationNumber && formValues.taxIdentificationNumber) {
+        setFieldsLocked(true);
+      }
+      
+      // Refresh the page to reflect changes
+      window.location.reload();
     } catch (error) {
       console.error('Error saving company details:', error);
       showToast({
@@ -132,7 +168,7 @@ export default function SettingsPage() {
     } finally {
       setIsSaving(false);
     }
-  }
+  };
 
   const handleCurrencyChange = async (currencyCode: string) => {
     const selectedCurrency = currencies.find(c => c.code === currencyCode);
@@ -191,7 +227,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -200,8 +236,17 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>Legal Business Name</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={isSaving} />
+                        <Input 
+                          {...field} 
+                          disabled={isSaving || fieldsLocked} 
+                          className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                        />
                       </FormControl>
+                      {fieldsLocked && (
+                        <FormDescription>
+                          This field cannot be changed after confirmation
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -230,10 +275,16 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>Company Registration (SSM) ID</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={isSaving} />
+                        <Input 
+                          {...field} 
+                          disabled={isSaving || fieldsLocked}
+                          className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Alphanumeric ID from your business registration
+                        {fieldsLocked 
+                          ? "This field cannot be changed after confirmation" 
+                          : "Alphanumeric ID from your business registration"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -247,8 +298,17 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>Tax Identification Number</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={isSaving} />
+                        <Input 
+                          {...field} 
+                          disabled={isSaving || fieldsLocked}
+                          className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                        />
                       </FormControl>
+                      {fieldsLocked && (
+                        <FormDescription>
+                          This field cannot be changed after confirmation
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -277,8 +337,15 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={isSaving} />
+                        <Input 
+                          {...field} 
+                          disabled={true}
+                          className="bg-muted text-muted-foreground"
+                        />
                       </FormControl>
+                      <FormDescription>
+                        This field cannot be changed as it is linked to your account
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -299,6 +366,28 @@ export default function SettingsPage() {
                         disabled={isSaving}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="termsAndConditions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Terms & Conditions</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        rows={4} 
+                        placeholder="Enter your invoice terms and conditions" 
+                        {...field} 
+                        disabled={isSaving}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This text will appear in the Terms & Conditions section of your invoices
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -353,6 +442,27 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Changes</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to save these changes? Once confirmed, your Legal Business Name, 
+              Company Registration ID, and Tax Identification Number cannot be changed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmSave}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

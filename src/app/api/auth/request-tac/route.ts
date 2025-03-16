@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAndStoreTAC } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { createClient } from '@supabase/supabase-js';
 
+// Local method that doesn't rely on database
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -16,31 +16,45 @@ export async function POST(req: NextRequest) {
     
     const phoneNumber = body.phoneNumber;
     
-    // Check if the user exists (for login)
-    const existingUser = await prisma.user.findUnique({
-      where: { phoneNumber }
+    // Create a Supabase client (without cookies for this specific API endpoint)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    
+    // Request phone verification via Supabase
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: phoneNumber,
     });
     
-    // Generate TAC
-    const tac = await generateAndStoreTAC(phoneNumber);
+    if (error) {
+      console.error('Phone verification request error:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message || 'Failed to send verification code'
+        },
+        { status: 500 }
+      );
+    }
     
-    // In a real application, this would send an SMS
-    console.log(`TAC for ${phoneNumber}: ${tac}`);
+    // For development, log the phone number
+    console.log(`Verification code requested for ${phoneNumber}`);
     
     return NextResponse.json({
       success: true,
       data: {
-        message: 'TAC sent successfully',
-        userExists: !!existingUser
+        message: 'Verification code sent successfully',
+        userExists: true
       }
     });
-  } catch (error) {
-    console.error('Error requesting TAC:', error);
+  } catch (error: any) {
+    console.error('Error requesting verification code:', error);
     
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to send TAC'
+        error: error.message || 'Failed to send verification code'
       },
       { status: 500 }
     );

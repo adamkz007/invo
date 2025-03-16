@@ -12,18 +12,112 @@ interface CompanyDetails {
   phoneNumber?: string;
   address?: string;
   logoUrl?: string;
+  termsAndConditions?: string;
 }
 
-export function downloadInvoicePDF(
+// Use WeakMap for caching logo images to allow garbage collection
+const logoCache = new WeakMap<object, HTMLImageElement>();
+const logoKeyMap = new Map<string, object>();
+
+/**
+ * Load the logo image with caching
+ */
+function loadLogoImage(logoUrl: string): Promise<HTMLImageElement> {
+  // Create a key object for the WeakMap
+  if (!logoKeyMap.has(logoUrl)) {
+    logoKeyMap.set(logoUrl, {});
+  }
+  
+  const keyObj = logoKeyMap.get(logoUrl)!;
+  
+  // Check if we have a cached image
+  if (logoCache.has(keyObj)) {
+    return Promise.resolve(logoCache.get(keyObj)!);
+  }
+  
+  // Load the image
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    
+    img.onload = () => {
+      logoCache.set(keyObj, img);
+      resolve(img);
+    };
+    
+    img.onerror = (err) => {
+      logoKeyMap.delete(logoUrl); // Clean up on error
+      reject(err);
+    };
+    
+    img.src = logoUrl;
+  });
+}
+
+// Clean up function to remove unused logo cache entries
+export function cleanupLogoCache(): void {
+  // This will allow the garbage collector to clean up any unused logo images
+  for (const [url, keyObj] of logoKeyMap.entries()) {
+    if (!logoCache.has(keyObj)) {
+      logoKeyMap.delete(url);
+    }
+  }
+}
+
+/**
+ * Create a text-based logo as fallback
+ */
+function createTextLogo(doc: jsPDF, x: number, y: number): void {
+  // Create a blue circle
+  doc.setFillColor(0, 51, 153); // Dark blue circle
+  doc.circle(x - 35, y - 1, 4, 'F');
+  
+  // Add "I" in the circle
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255); // White text
+  doc.text('I', x - 35, y, { align: 'center' });
+  
+  // Add "Powered by Invo" text
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('Powered by Invo', x, y, { align: 'right' });
+}
+
+/**
+ * Extract paid amount from invoice notes
+ */
+function extractPaidAmount(invoice: InvoiceWithDetails): number {
+  if ((invoice as any).paidAmount !== undefined) {
+    return (invoice as any).paidAmount;
+  }
+  
+  // If no notes, return 0
+  if (!(invoice as any).notes) return 0;
+  
+  // Try to extract payment information from notes
+  const paymentRegex = /Payment of ([\d.]+) received/;
+  const matches = ((invoice as any).notes as string).match(paymentRegex);
+  
+  if (matches && matches[1]) {
+    return parseFloat(matches[1]);
+  }
+  
+  return 0;
+}
+
+export async function downloadInvoicePDF(
   invoice: InvoiceWithDetails, 
   companyDetails: CompanyDetails | null = null,
   settings: AppSettings = defaultSettings
-) {
+): Promise<void> {
   // Create a new PDF document
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4'
+    format: 'a4',
+    compress: true // Enable compression to reduce file size
   });
   
   // Set up document properties
@@ -91,7 +185,21 @@ export function downloadInvoicePDF(
   doc.text('BALANCE DUE', pageWidth - margin - 80, 50);
   
   doc.setFontSize(14);
-  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, 50, { align: 'right' });
+  // Calculate balance due based on payment status
+  if (invoice.status === 'PARTIAL' || invoice.status === 'PAID') {
+    const paidAmount = extractPaidAmount(invoice);
+    const balanceDue = invoice.total - paidAmount;
+    
+    // If fully paid, show 0 balance
+    if (invoice.status === 'PAID') {
+      doc.text(formatCurrency(0, settings), pageWidth - margin, 50, { align: 'right' });
+    } else {
+      doc.text(formatCurrency(balanceDue, settings), pageWidth - margin, 50, { align: 'right' });
+    }
+  } else {
+    // For unpaid invoices, show the full amount as balance due
+    doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, 50, { align: 'right' });
+  }
   
   // Customer and Invoice Details Section
   const customerY = 70;
@@ -106,17 +214,28 @@ export function downloadInvoicePDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
   
-  // Add customer address if available, otherwise use email
-  const customerAddress = (invoice.customer as any).address;
-  if (customerAddress) {
-    const addressLines = customerAddress.split('\n');
-    let addressY = customerY + 7;
+  // Show customer contact information
+  let yOffset = 7;
+  
+  // Add email
+  if (invoice.customer.email) {
+    doc.text(invoice.customer.email, margin, customerY + yOffset);
+    yOffset += 5;
+  }
+  
+  // Add phone number
+  if (invoice.customer.phoneNumber) {
+    doc.text(invoice.customer.phoneNumber, margin, customerY + yOffset);
+    yOffset += 5;
+  }
+  
+  // Add address if available
+  if (invoice.customer.address) {
+    const addressLines = invoice.customer.address.split('\n');
     addressLines.forEach((line: string) => {
-      doc.text(line, margin, addressY);
-      addressY += 5;
+      doc.text(line, margin, customerY + yOffset);
+      yOffset += 5;
     });
-  } else {
-    doc.text(invoice.customer.email, margin, customerY + 7);
   }
   
   // Invoice details - Right side
@@ -157,6 +276,10 @@ export function downloadInvoicePDF(
       doc.setFillColor(220, 252, 231); // Light green
       doc.setTextColor(22, 101, 52); // Dark green
       break;
+    case 'PARTIAL':
+      doc.setFillColor(254, 243, 199); // Light amber/yellow
+      doc.setTextColor(146, 64, 14); // Dark amber/yellow
+      break;
     case 'OVERDUE':
       doc.setFillColor(254, 226, 226); // Light red
       doc.setTextColor(153, 27, 27); // Dark red
@@ -166,6 +289,10 @@ export function downloadInvoicePDF(
       doc.setTextColor(30, 64, 175); // Dark blue
       break;
     case 'DRAFT':
+      doc.setFillColor(229, 231, 235); // Light gray
+      doc.setTextColor(75, 85, 99); // Dark gray
+      break;
+    case 'CANCELLED':
       doc.setFillColor(229, 231, 235); // Light gray
       doc.setTextColor(75, 85, 99); // Dark gray
       break;
@@ -300,7 +427,34 @@ export function downloadInvoicePDF(
   doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
   
   doc.text('Balance Due', totalsX, currentY);
-  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, currentY, { align: 'right' });
+  
+  // Show paid amount and balance due for partial payments
+  if (invoice.status === 'PARTIAL' || invoice.status === 'PAID') {
+    const paidAmount = extractPaidAmount(invoice);
+    const balanceDue = invoice.total - paidAmount;
+    
+    // If fully paid, show 0 balance
+    if (invoice.status === 'PAID') {
+      doc.text(formatCurrency(0, settings), pageWidth - margin, currentY, { align: 'right' });
+    } else {
+      doc.text(formatCurrency(balanceDue, settings), pageWidth - margin, currentY, { align: 'right' });
+    }
+    
+    // Add paid amount information
+    currentY += 15;
+    doc.setFillColor(220, 252, 231); // Light green for paid amount
+    doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
+    
+    doc.setTextColor(22, 101, 52); // Dark green text
+    doc.text('Amount Paid', totalsX, currentY);
+    doc.text(formatCurrency(paidAmount, settings), pageWidth - margin, currentY, { align: 'right' });
+    
+    // Reset text color
+    doc.setTextColor(50, 50, 50);
+  } else {
+    // For unpaid invoices, show the full amount as balance due
+    doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, currentY, { align: 'right' });
+  }
   
   // Terms & Conditions
   const termsY = currentY + 25;
@@ -310,8 +464,19 @@ export function downloadInvoicePDF(
   
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
-  doc.text('Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the', margin, termsY + 8);
-  doc.text('applicable laws.', margin, termsY + 16);
+  
+  // Use custom terms if provided, otherwise use default
+  const termsText = companyDetails?.termsAndConditions || 
+    'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.';
+  
+  // Split terms into multiple lines if needed
+  const maxWidth = pageWidth - (margin * 2);
+  const termsLines = doc.splitTextToSize(termsText, maxWidth);
+  
+  // Add each line of terms
+  termsLines.forEach((line: string, index: number) => {
+    doc.text(line, margin, termsY + 8 + (index * 6));
+  });
   
   // Footer
   const footerY = pageHeight - 25;
@@ -333,76 +498,27 @@ export function downloadInvoicePDF(
     doc.text('Zylker PC Builds | SSM: 123456-A', margin, footerY + 7);
   }
   
-  // Add "Powered by Invo" with logo
   try {
-    // In a browser environment, we need to use a different approach
-    // since jsPDF can't directly access the file system
+    // In a browser environment, load the logo
     const logoUrl = window.location.origin + '/invo-logo.png';
     
-    // Create an image element to load the logo
-    const img = new Image();
-    img.crossOrigin = 'Anonymous'; // Handle CORS if needed
+    // Use the cached logo loading function
+    const img = await loadLogoImage(logoUrl);
     
-    // Set up onload handler to add the image once it's loaded
-    img.onload = function() {
-      try {
-        doc.addImage(img, 'PNG', pageWidth - margin - 40, footerY - 5, 8, 8);
-        
-        // Add "Powered by Invo" text
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(50, 50, 50);
-        doc.text('Powered by Invo', pageWidth - margin, footerY, { align: 'right' });
-        
-        // Save the PDF after the image is loaded
-        doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
-      } catch (err) {
-        console.error('Error adding image to PDF:', err);
-        // Fallback to text-based logo and save
-        createTextLogo();
-        doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
-      }
-    };
-    
-    // Handle image loading errors
-    img.onerror = function() {
-      console.error('Error loading logo image');
-      // Fallback to text-based logo and save
-      createTextLogo();
-      doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
-    };
-    
-    // Start loading the image
-    img.src = logoUrl;
-    
-    // Don't save the PDF here - it will be saved in the onload or onerror handlers
-    return;
-  } catch (error) {
-    console.error('Error setting up logo:', error);
-    // Fallback to text-based logo
-    createTextLogo();
-    // Continue to save the PDF below
-  }
-  
-  // Function to create a text-based logo
-  function createTextLogo() {
-    // Create a blue circle
-    doc.setFillColor(0, 51, 153); // Dark blue circle
-    doc.circle(pageWidth - margin - 35, footerY - 1, 4, 'F');
-    
-    // Add "I" in the circle
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255); // White text
-    doc.text('I', pageWidth - margin - 35, footerY, { align: 'center' });
+    // Add the logo to the PDF
+    doc.addImage(img, 'PNG', pageWidth - margin - 40, footerY - 5, 8, 8);
     
     // Add "Powered by Invo" text
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(50, 50, 50);
     doc.text('Powered by Invo', pageWidth - margin, footerY, { align: 'right' });
+  } catch (error) {
+    console.error('Error adding logo to PDF:', error);
+    // Fallback to text-based logo
+    createTextLogo(doc, pageWidth - margin, footerY);
   }
   
-  // Save the PDF (this will only be reached if the try block had an error)
+  // Save the PDF
   doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
 }

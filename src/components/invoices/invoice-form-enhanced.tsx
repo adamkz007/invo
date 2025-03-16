@@ -98,25 +98,19 @@ export default function InvoiceFormEnhanced({ defaultValues, isEditing = false }
     fetchData();
   }, []);
 
-  // Initialize form with default values or new invoice values
+  // Initialize form with default values or empty invoice
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: defaultValues || {
       customerId: '',
       issueDate: new Date(),
-      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
-      status: 'DRAFT',
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Default to 30 days from now
+      status: InvoiceStatus.DRAFT,
+      items: [{ productId: '', quantity: 1, unitPrice: 0, description: '' }],
       taxRate: 0,
       discountRate: 0,
       notes: '',
-      items: [
-        {
-          productId: '',
-          quantity: 1,
-          unitPrice: 0,
-          description: '',
-        },
-      ],
+      userId: '',
     },
   });
 
@@ -300,6 +294,7 @@ export default function InvoiceFormEnhanced({ defaultValues, isEditing = false }
                                 {field.value === 'DRAFT' && <Badge className="bg-gray-100 text-gray-800 mr-2">Draft</Badge>}
                                 {field.value === 'SENT' && <Badge className="bg-blue-100 text-blue-800 mr-2">Sent</Badge>}
                                 {field.value === 'PAID' && <Badge className="bg-green-100 text-green-800 mr-2">Paid</Badge>}
+                                {field.value === 'PARTIAL' && <Badge className="bg-amber-100 text-amber-800 mr-2">Partial</Badge>}
                                 {field.value === 'OVERDUE' && <Badge className="bg-red-100 text-red-800 mr-2">Overdue</Badge>}
                                 {field.value === 'CANCELLED' && <Badge className="bg-purple-100 text-purple-800 mr-2">Cancelled</Badge>}
                               </div>
@@ -321,6 +316,11 @@ export default function InvoiceFormEnhanced({ defaultValues, isEditing = false }
                         <SelectItem value="PAID">
                           <div className="flex items-center">
                             <Badge className="bg-green-100 text-green-800 mr-2">Paid</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="PARTIAL">
+                          <div className="flex items-center">
+                            <Badge className="bg-amber-100 text-amber-800 mr-2">Partial</Badge>
                           </div>
                         </SelectItem>
                         <SelectItem value="OVERDUE">

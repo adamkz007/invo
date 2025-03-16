@@ -1,5 +1,0 @@
-# Migration metadata
-# Used for Prisma migration history
-
-migration_name = "production_setup"
-checksum = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" 
