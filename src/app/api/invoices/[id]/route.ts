@@ -11,16 +11,13 @@ const InvoiceStatus = {
   CANCELLED: 'CANCELLED'
 };
 
-// Define the params type according to Next.js 15 requirements
-type Params = { id: string };
-
 // GET a specific invoice
 export async function GET(
   request: NextRequest,
-  { params }: { params: Params }
+  context: { params: { id: string } }
 ) {
   try {
-    const invoiceId = params.id;
+    const invoiceId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -74,10 +71,10 @@ export async function GET(
 // PATCH to update invoice status (cancel or apply payment)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Params }
+  context: { params: { id: string } }
 ) {
   try {
-    const invoiceId = params.id;
+    const invoiceId = context.params.id;
     const data = await request.json();
     const { action, paymentAmount } = data;
     
@@ -212,10 +209,10 @@ export async function PATCH(
 // DELETE an invoice
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Params }
+  context: { params: { id: string } }
 ) {
   try {
-    const invoiceId = params.id;
+    const invoiceId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;

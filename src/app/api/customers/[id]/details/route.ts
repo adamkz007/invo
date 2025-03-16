@@ -2,15 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-// Define the params type according to Next.js 15 requirements
-type Params = { id: string };
-
 export async function GET(
   request: NextRequest,
-  { params }: { params: Params }
+  context: { params: { id: string } }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = context.params.id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
