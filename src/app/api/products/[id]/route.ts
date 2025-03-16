@@ -4,10 +4,11 @@ import { verifyToken } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productId = context.params.id;
+    const { id } = await params;
+    const productId = id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -52,10 +53,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productId = context.params.id;
+    const { id } = await params;
+    const productId = id;
     const productData = await request.json();
     
     // Get auth token from cookies
@@ -122,10 +124,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productId = context.params.id;
+    const { id } = await params;
+    const productId = id;
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -187,10 +190,11 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productId = context.params.id;
+    const { id } = await params;
+    const productId = id;
     const productData = await request.json();
     
     // Get auth token from cookies
