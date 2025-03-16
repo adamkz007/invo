@@ -187,7 +187,7 @@ export default function TaxDeductionsPost() {
 
             <h2 className="mt-10">Vehicle and Travel Expenses</h2>
             <p>
-              Business-related travel expenses are deductible, but many business owners don't track these expenses properly or miss eligible deductions.
+              Business-related travel expenses are deductible, but many business owners don&apos;t track these expenses properly or miss eligible deductions.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">

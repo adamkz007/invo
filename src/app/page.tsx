@@ -61,7 +61,7 @@ export default function LandingPage() {
     {
       icon: <CreditCard className="h-10 w-10 text-primary" />,
       title: "Work Anywhere",
-      description: "Access your business from your phone, tablet, or computer. Keep things running smoothly whether you're in the office or on the go."
+      description: "Access your business from your phone, tablet, or computer. Keep things running smoothly whether you&apos;re in the office or on the go."
     }
   ];
 
@@ -320,7 +320,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="text-3xl md:text-4xl font-bold mb-4"
             >
-              Everything You Need, Nothing You Don't
+              Everything You Need, Nothing You Don&apos;t
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -329,7 +329,7 @@ export default function LandingPage() {
               transition={{ delay: 0.1, duration: 0.5 }}
               className="text-lg text-muted-foreground max-w-2xl mx-auto"
             >
-              We've built Invo specifically for small and medium businesses. No bloated features, just the tools you actually need.
+              We&apos;ve built Invo specifically for small and medium businesses. No bloated features, just the tools you actually need.
             </motion.p>
           </div>
           
@@ -374,7 +374,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="text-3xl md:text-4xl font-bold mb-4"
             >
-              What's Coming Next
+              What&apos;s Coming Next
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -383,7 +383,7 @@ export default function LandingPage() {
               transition={{ delay: 0.1, duration: 0.5 }}
               className="text-lg text-muted-foreground max-w-2xl mx-auto"
             >
-              We're constantly adding new features based on what our customers need
+              We&apos;re constantly adding new features based on what our customers need
             </motion.p>
           </div>
           
@@ -636,12 +636,12 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                quote: "As a small bakery owner, I needed something simple that wouldn't take hours to learn. Invo is perfect - I create invoices in seconds and my customers can pay me right away.",
+                quote: "As a small bakery owner, I needed something simple that wouldn&apos;t take hours to learn. Invo is perfect - I create invoices in seconds and my customers can pay me right away.",
                 author: "Sarah Johnson",
                 role: "Local Bakery Owner"
               },
               {
-                quote: "The inventory tracking alone has saved me so much time. I always know what's in stock and what I need to order. It's like having an extra employee without the cost.",
+                quote: "The inventory tracking alone has saved me so much time. I always know what&apos;s in stock and what I need to order. It&apos;s like having an extra employee without the cost.",
                 author: "Michael Chen",
                 role: "Retail Shop Owner"
               },

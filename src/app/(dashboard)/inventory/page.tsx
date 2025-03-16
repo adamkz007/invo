@@ -244,7 +244,7 @@ export default function InventoryPage() {
                 <h3 className="mt-2 text-lg font-medium">No products found</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {products.length === 0
-                    ? "You haven't added any products yet."
+                    ? "You haven&apos;t added any products yet."
                     : "No products match your search criteria."}
                 </p>
                 {products.length === 0 && (

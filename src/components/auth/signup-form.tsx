@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { SignUpFormValues } from '@/types';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -15,7 +16,7 @@ const formSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: "Passwords don&apos;t match",
   path: ['confirmPassword'],
 });
 
@@ -29,7 +30,7 @@ export default function SignUpForm() {
     defaultValues: {
       name: '',
       email: '',
-      phoneNumber: '',
+      phoneNumber: '+60', // Default to Malaysia country code
       password: '',
       confirmPassword: '',
     },
@@ -73,7 +74,7 @@ export default function SignUpForm() {
       <div className="text-center">
         <h2 className="text-2xl font-bold">Create an Account</h2>
         <p className="text-sm text-muted-foreground mt-2">
-          Sign up to start using INVX for your invoicing needs
+          Sign up to start using Invo for your invoicing needs
         </p>
       </div>
 
@@ -123,7 +124,7 @@ export default function SignUpForm() {
               <FormItem>
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
-                  <Input
+                  <PhoneInput
                     placeholder="Enter your phone number"
                     {...field}
                     disabled={isLoading}

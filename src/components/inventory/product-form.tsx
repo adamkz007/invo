@@ -288,7 +288,7 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
               <div className="space-y-1 leading-none">
                 <FormLabel>Disable Stock Management</FormLabel>
                 <FormDescription>
-                  Enable this for service-based products or items that don't require inventory tracking
+                  Enable this for service-based products or items that don&apos;t require inventory tracking
                 </FormDescription>
               </div>
             </FormItem>
