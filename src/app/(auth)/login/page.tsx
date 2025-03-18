@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import RequestTACForm from '@/components/auth/request-tac-form';
 import LoginVerificationForm from '@/components/auth/login-verification-form';
@@ -10,7 +10,8 @@ import Image from 'next/image';
 import { CheckCircle2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function LoginPage() {
+// Create a client component that uses useSearchParams
+function LoginContent() {
   const [step, setStep] = useState<'request-tac' | 'verify' | 'password'>('request-tac');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -134,5 +135,36 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading component to show while suspense is active
+function LoginLoading() {
+  return (
+    <div className="flex h-screen w-full flex-col items-center justify-center p-4">
+      <div className="mx-auto w-full max-w-md rounded-lg border p-8 shadow-md">
+        <div className="mb-6 text-center">
+          <div className="flex justify-center items-center">
+            <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse mr-2"></div>
+            <div className="h-8 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="mt-2 h-4 w-48 bg-gray-100 rounded mx-auto animate-pulse"></div>
+        </div>
+        <div className="space-y-4">
+          <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+          <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+          <div className="h-10 bg-primary/30 rounded animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginContent />
+    </Suspense>
   );
 }
