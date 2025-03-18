@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CaptionedImage } from '@/components/ui/captioned-image';
+import Image from 'next/image';
 
 export default function MalaysiaEInvoicingPost() {
   // Define related posts
@@ -98,16 +99,19 @@ export default function MalaysiaEInvoicingPost() {
             className="rounded-lg overflow-hidden shadow-xl"
           >
             <figure className="m-0">
-              <img
+              <Image
                 src="/blog/malaysia-e-invoicing.jpg"
                 alt="Malaysia E-Invoicing"
+                width={1200}
+                height={675}
                 className="w-full h-auto"
+                priority
                 onError={(e) => {
-                  e.currentTarget.src = "https://placehold.co/1200x600/02228F/ffffff?text=Malaysia+E-Invoicing";
+                  e.currentTarget.src = "https://placehold.co/1200x675/02228F/ffffff?text=Malaysia+E-Invoicing";
                 }}
               />
               <figcaption className="bg-muted/50 text-center p-3 text-sm text-muted-foreground italic">
-                Malaysia's new e-invoicing regulations will transform how businesses manage their financial documentation
+                Asia Business School lobby
               </figcaption>
             </figure>
           </motion.div>
@@ -348,9 +352,11 @@ export default function MalaysiaEInvoicingPost() {
           <div className="bg-muted/30 rounded-lg p-6 my-8">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex-shrink-0">
-                <img
+                <Image
                   src="/blog/authors/adam.jpg"
                   alt="Adam"
+                  width={64}
+                  height={64}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src = "https://placehold.co/200x200/02228F/ffffff?text=A";
@@ -372,38 +378,34 @@ export default function MalaysiaEInvoicingPost() {
             <h3 className="text-2xl font-bold mb-6">Related Articles</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {relatedPosts.map((post, index) => (
-                <motion.div
-                  key={post.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-all group"
+                <Link 
+                  key={index}
+                  href={`/blog/posts/${post.slug}`}
+                  className="group bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow flex flex-col h-full"
                 >
-                  <Link href={`/blog/posts/${post.slug}`} className="block h-full">
-                    <div className="h-40 overflow-hidden">
-                      <img
-                        src={post.image}
-                        alt={post.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          e.currentTarget.src = `https://placehold.co/600x400/02228F/ffffff?text=${encodeURIComponent(post.category)}`;
-                        }}
-                      />
-                    </div>
-                    <div className="p-4">
-                      <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-2">
-                        {post.category}
-                      </div>
-                      <h4 className="font-bold text-base mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                        {post.title}
-                      </h4>
-                      <div className="flex items-center text-xs text-muted-foreground">
+                  <div className="h-40 overflow-hidden">
+                    <Image
+                      src={post.image}
+                      alt={post.title}
+                      width={400}
+                      height={250}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://placehold.co/400x250/02228F/ffffff?text=Related+Article";
+                      }}
+                    />
+                  </div>
+                  <div className="p-4 flex flex-col flex-grow">
+                    <h4 className="font-bold mb-2 group-hover:text-primary transition-colors">{post.title}</h4>
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.excerpt}</p>
+                    <div className="flex items-center text-xs text-muted-foreground mt-auto">
+                      <div className="flex items-center">
                         <Calendar className="h-3 w-3 mr-1" />
                         <span>{post.date}</span>
                       </div>
                     </div>
-                  </Link>
-                </motion.div>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>

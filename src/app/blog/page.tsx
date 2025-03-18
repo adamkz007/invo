@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowRight, Calendar, Clock, User, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -116,6 +118,31 @@ export default function BlogPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="order-1 lg:order-2"
+              >
+                <Link 
+                  href={`/blog/posts/${featuredPost.slug}`}
+                  className="group block"
+                >
+                  <div className="rounded-lg overflow-hidden shadow-lg">
+                    <Image
+                      src={featuredPost.image}
+                      alt={featuredPost.title}
+                      width={800}
+                      height={500}
+                      className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://placehold.co/800x500/02228F/ffffff?text=${encodeURIComponent(featuredPost.category)}`;
+                      }}
+                    />
+                  </div>
+                </Link>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
                 className="order-2 lg:order-1"
               >
@@ -123,7 +150,12 @@ export default function BlogPage() {
                   {featuredPost.category}
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  {featuredPost.title}
+                  <Link 
+                    href={`/blog/posts/${featuredPost.slug}`}
+                    className="hover:text-primary transition-colors"
+                  >
+                    {featuredPost.title}
+                  </Link>
                 </h2>
                 <p className="text-muted-foreground text-lg mb-6">
                   {featuredPost.excerpt}
@@ -142,29 +174,13 @@ export default function BlogPage() {
                     <span>{featuredPost.readTime}</span>
                   </div>
                 </div>
-                <Link href={`/blog/posts/${featuredPost.slug}`}>
-                  <Button>
-                    Read Full Article
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                <Link 
+                  href={`/blog/posts/${featuredPost.slug}`}
+                  className="inline-flex items-center text-primary font-medium group"
+                >
+                  <span className="group-hover:mr-2 transition-all">Read Full Article</span>
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="order-1 lg:order-2"
-              >
-                <div className="rounded-lg overflow-hidden shadow-lg">
-                  <img
-                    src={featuredPost.image}
-                    alt={featuredPost.title}
-                    className="w-full h-auto"
-                    onError={(e) => {
-                      e.currentTarget.src = `https://placehold.co/800x500/02228F/ffffff?text=${encodeURIComponent(featuredPost.category)}`;
-                    }}
-                  />
-                </div>
               </motion.div>
             </div>
           </div>
@@ -177,32 +193,36 @@ export default function BlogPage() {
           <h2 className="text-3xl font-bold mb-12 text-center">Latest Articles</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {otherPosts.map((post, index) => (
-              <motion.div
-                key={post.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow"
+              <Link 
+                key={index}
+                href={`/blog/posts/${post.slug}`}
+                className="group bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow h-full flex flex-col"
               >
-                <div className="h-48 overflow-hidden">
-                  <img
+                <div className="h-48 overflow-hidden rounded-t-lg relative">
+                  <Image
                     src={post.image}
                     alt={post.title}
-                    className="w-full h-full object-cover"
+                    width={600}
+                    height={400}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.src = `https://placehold.co/600x400/02228F/ffffff?text=${encodeURIComponent(post.category)}`;
                     }}
                   />
                 </div>
-                <div className="p-6">
-                  <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
-                    {post.category}
+                <div className="p-5 flex flex-col flex-grow">
+                  <div className="mb-auto">
+                    <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
+                      {post.category}
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+                      {post.title}
+                    </h3>
+                    <p className="text-muted-foreground line-clamp-3 mb-4">
+                      {post.excerpt}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{post.title}</h3>
-                  <p className="text-muted-foreground mb-4 line-clamp-2">
-                    {post.excerpt}
-                  </p>
-                  <div className="flex items-center text-xs text-muted-foreground mb-4">
+                  <div className="flex items-center text-xs text-muted-foreground mt-4">
                     <div className="flex items-center mr-3">
                       <Calendar className="h-3 w-3 mr-1" />
                       <span>{post.date}</span>
@@ -212,14 +232,12 @@ export default function BlogPage() {
                       <span>{post.readTime}</span>
                     </div>
                   </div>
-                  <Link href={`/blog/posts/${post.slug}`}>
-                    <Button variant="ghost" className="p-0 h-auto font-medium text-primary hover:text-primary/80">
-                      Read More
-                      <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </Link>
+                  <div className="mt-4 text-primary font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform">
+                    Read More
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </div>
                 </div>
-              </motion.div>
+              </Link>
             ))}
           </div>
         </div>

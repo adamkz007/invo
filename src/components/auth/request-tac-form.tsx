@@ -36,9 +36,10 @@ const formSchema = z.object({
 interface RequestTACFormProps {
   onSuccess: (phoneNumber: string) => void;
   isLogin?: boolean;
+  initialPhoneNumber?: string;
 }
 
-export default function RequestTACForm({ onSuccess, isLogin = true }: RequestTACFormProps) {
+export default function RequestTACForm({ onSuccess, isLogin = true, initialPhoneNumber = '+60' }: RequestTACFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showInvalidPhoneWarning, setShowInvalidPhoneWarning] = useState(false);
@@ -47,7 +48,7 @@ export default function RequestTACForm({ onSuccess, isLogin = true }: RequestTAC
   const form = useForm<RequestTACFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      phoneNumber: '+60', // Default to Malaysia country code
+      phoneNumber: initialPhoneNumber || '+60', // Use initialPhoneNumber if provided, otherwise default to Malaysia country code
     },
   });
 

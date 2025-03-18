@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,7 +13,10 @@ const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don&apos;t match",
@@ -23,6 +26,7 @@ const formSchema = z.object({
 export default function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordStrength, setPasswordStrength] = useState(0);
   const router = useRouter();
 
   const form = useForm<SignUpFormValues>({
@@ -35,6 +39,49 @@ export default function SignUpForm() {
       confirmPassword: '',
     },
   });
+
+  // Calculate password strength
+  useEffect(() => {
+    const password = form.watch('password');
+    if (!password) {
+      setPasswordStrength(0);
+      return;
+    }
+    
+    let strength = 0;
+    
+    // Length check
+    if (password.length >= 8) strength += 1;
+    
+    // Contains letters check
+    if (/[a-zA-Z]/.test(password)) strength += 1;
+    
+    // Contains numbers check
+    if (/[0-9]/.test(password)) strength += 1;
+    
+    // Contains special characters check
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 1;
+    
+    setPasswordStrength(strength);
+  }, [form.watch('password')]);
+  
+  // Get the color for the strength indicator
+  const getStrengthColor = () => {
+    if (passwordStrength === 0) return 'bg-slate-200';
+    if (passwordStrength === 1) return 'bg-red-500';
+    if (passwordStrength === 2) return 'bg-orange-500';
+    if (passwordStrength === 3) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+  
+  // Get the label for the strength indicator
+  const getStrengthLabel = () => {
+    if (passwordStrength === 0) return '';
+    if (passwordStrength === 1) return 'Weak';
+    if (passwordStrength === 2) return 'Fair';
+    if (passwordStrength === 3) return 'Good';
+    return 'Strong';
+  };
 
   async function onSubmit(values: SignUpFormValues) {
     setIsLoading(true);
@@ -60,8 +107,8 @@ export default function SignUpForm() {
         throw new Error(data.error || 'Registration failed');
       }
 
-      // Redirect to dashboard on successful registration
-      router.push('/dashboard');
+      // Redirect to login page with success message
+      router.push('/login?status=signup_success');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -149,6 +196,30 @@ export default function SignUpForm() {
                     disabled={isLoading}
                   />
                 </FormControl>
+                {field.value && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex h-2 w-full space-x-1">
+                      <div className={`h-full w-1/4 rounded-full ${passwordStrength >= 1 ? getStrengthColor() : 'bg-slate-200'}`}></div>
+                      <div className={`h-full w-1/4 rounded-full ${passwordStrength >= 2 ? getStrengthColor() : 'bg-slate-200'}`}></div>
+                      <div className={`h-full w-1/4 rounded-full ${passwordStrength >= 3 ? getStrengthColor() : 'bg-slate-200'}`}></div>
+                      <div className={`h-full w-1/4 rounded-full ${passwordStrength >= 4 ? getStrengthColor() : 'bg-slate-200'}`}></div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Password strength: <span className="font-medium">{getStrengthLabel()}</span>
+                    </p>
+                    <ul className="text-xs text-muted-foreground list-disc pl-4">
+                      <li className={field.value.length >= 8 ? "text-green-500" : ""}>
+                        At least 8 characters
+                      </li>
+                      <li className={/[a-zA-Z]/.test(field.value) ? "text-green-500" : ""}>
+                        Contains letters
+                      </li>
+                      <li className={/[0-9]/.test(field.value) ? "text-green-500" : ""}>
+                        Contains numbers
+                      </li>
+                    </ul>
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}

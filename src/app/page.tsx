@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { 
   FileText, 
@@ -142,6 +143,37 @@ export default function LandingPage() {
     }
   ];
 
+  // Blog posts
+  const blogPosts = [
+    {
+      id: 'malaysia-e-invoicing-changes',
+      title: 'Malaysia E-Invoicing: New Changes and How They Impact SMEs',
+      excerpt: 'Learn about the latest e-invoicing regulations in Malaysia and what your small business needs to do to stay compliant.',
+      date: 'March 15, 2023',
+      category: 'Compliance',
+      image: '/blog/malaysia-e-invoicing.jpg',
+      slug: 'malaysia-e-invoicing-changes'
+    },
+    {
+      id: 'invoice-tips-small-business',
+      title: '5 Invoicing Tips Every Small Business Should Know',
+      excerpt: 'Improve your cash flow and get paid faster with these practical invoicing strategies for small businesses.',
+      date: 'February 28, 2023',
+      category: 'Tips & Tricks',
+      image: '/blog/invoice-tips.jpg',
+      slug: 'invoice-tips-small-business'
+    },
+    {
+      id: 'digital-transformation-smes',
+      title: 'Digital Transformation for SMEs: Where to Start',
+      excerpt: 'A step-by-step guide to beginning your digital transformation journey without overwhelming your small business.',
+      date: 'February 15, 2023',
+      category: 'Digital Transformation',
+      image: '/blog/digital-transformation.jpg',
+      slug: 'digital-transformation-smes'
+    }
+  ];
+
   return (
     <div className="min-h-screen">
       {/* Navbar */}
@@ -153,20 +185,15 @@ export default function LandingPage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center space-x-2">
             <div className="relative h-8 w-8">
-              <img 
+              <Image 
                 src="/invo-logo.png" 
                 alt="Invo Logo" 
+                width={32}
+                height={32}
                 className="h-8 w-auto"
               />
             </div>
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="text-xl font-bold text-primary"
-            >
-              Invo
-            </motion.span>
+            <span className={`text-xl font-bold ${isScrolled ? 'text-foreground' : 'text-primary'}`}>Invo</span>
           </Link>
           
           <div className="hidden md:flex items-center space-x-6">
@@ -246,9 +273,11 @@ export default function LandingPage() {
               <div className="relative rounded-lg overflow-hidden shadow-2xl">
                 <div className="bg-gradient-to-br from-primary/10 to-primary/5 absolute inset-0"></div>
                 {/* Desktop image */}
-                <img 
+                <Image 
                   src="/dashboard-preview.png" 
                   alt="Invo Dashboard" 
+                  width={900}
+                  height={600}
                   className="w-full h-auto relative z-10 hidden md:block"
                   onError={(e) => {
                     // Fallback if image doesn't exist
@@ -257,13 +286,15 @@ export default function LandingPage() {
                 />
                 {/* Mobile image with frame */}
                 <div className="relative mx-auto max-w-[340px] md:hidden p-0 my-0">
-                  <img 
+                  <Image 
                     src="/mobile-dashboard-preview.png" 
                     alt="Invo Mobile Dashboard" 
+                    width={340}
+                    height={650}
                     className="w-full h-auto relative z-10 shadow-lg"
                     onError={(e) => {
                       // Fallback if image doesn't exist
-                      e.currentTarget.src = "https://placehold.co/320x640/02228F/ffffff?text=Mobile+Dashboard";
+                      e.currentTarget.src = "https://placehold.co/340x650/02228F/ffffff?text=Invo+Mobile";
                     }}
                   />
                 </div>
@@ -327,29 +358,263 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-lg text-muted-foreground max-w-2xl mx-auto"
+              className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12"
             >
               We&apos;ve built Invo specifically for small and medium businesses. No bloated features, just the tools you actually need.
             </motion.p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="bg-card rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border group hover:border-primary/50"
-              >
-                <div className="mb-4 p-3 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
-                  {feature.icon}
+          {/* Featured Card - Simple Invoicing */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mb-16 rounded-xl overflow-hidden shadow-lg border border-primary/30"
+          >
+            <div className="bg-gradient-to-r from-primary/20 to-primary/5 p-8 md:p-12 relative overflow-hidden">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-10">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                  <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <circle cx="10" cy="10" r="1.5" fill="currentColor" />
+                  </pattern>
+                  <rect width="100%" height="100%" fill="url(#dots)" />
+                </svg>
+              </div>
+              {/* Circular Gradient */}
+              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary/20 blur-3xl"></div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
+                <div>
+                  <div className="p-3 bg-white rounded-full w-fit mb-6 shadow-md">
+                    <FileText className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold mb-4 text-primary">Simple Invoicing</h3>
+                  <p className="text-foreground mb-6">
+                    Create professional invoices in seconds with templates designed for small businesses. No accounting degree needed!
+                  </p>
+                  <ul className="space-y-3 mb-6">
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Customizable invoice templates</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Automated numbering and dating</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Send via email or generate PDFs</span>
+                    </li>
+                    <li className="flex items-start">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                      <span>Track payment status in real-time</span>
+                    </li>
+                  </ul>
+                  <Link href="/signup">
+                    <Button className="group bg-white text-primary hover:bg-primary hover:text-white">
+                      Try Simple Invoicing
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </motion.div>
-            ))}
+                
+                <div className="relative hidden md:block">
+                  <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-xl"></div>
+                  <div className="rounded-lg bg-white/80 backdrop-blur-sm p-6 shadow-xl border border-primary/20 relative z-10">
+                    <div className="flex justify-between items-center mb-4 pb-4 border-b">
+                      <div>
+                        <h4 className="font-bold">Invoice #INV-2023-001</h4>
+                        <p className="text-sm text-muted-foreground">Due: May 15, 2023</p>
+                      </div>
+                      <div className="bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium">
+                        Pending
+                      </div>
+                    </div>
+                    <div className="space-y-3 mb-4">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Website Design</span>
+                        <span className="font-medium">$1,200.00</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Logo Design</span>
+                        <span className="font-medium">$450.00</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">SEO Setup</span>
+                        <span className="font-medium">$350.00</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between pt-3 border-t font-bold">
+                      <span>Total</span>
+                      <span>$2,000.00</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+          
+          {/* Other Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Customer Relationships */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="bg-card rounded-lg p-6 shadow-md border group hover:border-primary/50 hover:shadow-lg transition-all"
+            >
+              <div className="mb-4 p-3 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Customer Relationships</h3>
+              <p className="text-muted-foreground mb-4">
+                Keep track of all your clients in one place. Send personalized messages and build lasting business relationships.
+              </p>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Customer profiles with purchase history</span>
+                </li>
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Communication timeline tracking</span>
+                </li>
+              </ul>
+            </motion.div>
+
+            {/* Smart Inventory */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="bg-card rounded-lg p-6 shadow-md border group hover:border-primary/50 hover:shadow-lg transition-all"
+            >
+              <div className="mb-4 p-3 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
+                <Package className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Smart Inventory</h3>
+              <p className="text-muted-foreground mb-4">
+                Never run out of stock again. Get alerts when inventory is low and track what's selling best for your business.
+              </p>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Real-time inventory tracking</span>
+                </li>
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Customizable low-stock alerts</span>
+                </li>
+              </ul>
+            </motion.div>
+
+            {/* Business Insights */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="bg-card rounded-lg p-6 shadow-md border group hover:border-primary/50 hover:shadow-lg transition-all"
+            >
+              <div className="mb-4 p-3 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
+                <BarChart3 className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Business Insights</h3>
+              <p className="text-muted-foreground mb-4">
+                See how your business is performing with easy-to-understand charts. Make smarter decisions with real data.
+              </p>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Visual dashboards and reporting</span>
+                </li>
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Revenue and expense tracking</span>
+                </li>
+              </ul>
+            </motion.div>
+
+            {/* Time-Saving Tools */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="bg-card rounded-lg p-6 shadow-md border group hover:border-primary/50 hover:shadow-lg transition-all"
+            >
+              <div className="mb-4 p-3 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
+                <Clock className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Time-Saving Tools</h3>
+              <p className="text-muted-foreground mb-4">
+                Set up recurring invoices and automated reminders. Spend less time on paperwork and more time growing your business.
+              </p>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Automated payment reminders</span>
+                </li>
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Recurring invoice scheduling</span>
+                </li>
+              </ul>
+            </motion.div>
+            
+            {/* Work Anywhere */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="bg-card rounded-lg p-6 shadow-md border group hover:border-primary/50 hover:shadow-lg transition-all"
+            >
+              <div className="mb-4 p-3 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
+                <CreditCard className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Work Anywhere</h3>
+              <p className="text-muted-foreground mb-4">
+                Access your business from your phone, tablet, or computer. Keep things running smoothly whether you&apos;re in the office or on the go.
+              </p>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Mobile-friendly interface</span>
+                </li>
+                <li className="flex items-start text-sm">
+                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
+                  <span>Cloud-based data syncing</span>
+                </li>
+              </ul>
+            </motion.div>
+            
+            {/* Try It Free Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+              className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg p-6 shadow-md border border-primary/30 flex flex-col items-center justify-center text-center"
+            >
+              <div className="mb-4 p-3 bg-white rounded-full">
+                <Shield className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Try It Risk-Free</h3>
+              <p className="text-muted-foreground mb-6">
+                Get started with a 14-day free trial. No credit card required. Cancel anytime.
+              </p>
+              <Link href="/signup">
+                <Button size="lg" className="group">
+                  Sign Up Free
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -676,111 +941,63 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Blog Section */}
-      <section className="py-20 bg-muted/30">
+      {/* Blog Posts */}
+      <section id="blog" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full"
-            >
-              <span className="text-sm font-medium text-primary">Latest Insights</span>
-            </motion.div>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-3xl md:text-4xl font-bold mb-4"
-            >
-              From Our Blog
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-lg text-muted-foreground max-w-2xl mx-auto"
-            >
-              Helpful resources and guides to help your business succeed
-            </motion.p>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Latest from Our Blog</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Tips, insights and resources to help you manage your business finances better
+            </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                id: 'malaysia-e-invoicing-changes',
-                title: 'Malaysia E-Invoicing: New Changes and How They Impact SMEs',
-                excerpt: 'Learn about the latest e-invoicing regulations in Malaysia and what your small business needs to do to stay compliant.',
-                date: 'March 15, 2023',
-                category: 'Compliance',
-                image: '/blog/malaysia-e-invoicing.jpg',
-                slug: 'malaysia-e-invoicing-changes'
-              },
-              {
-                id: 'invoice-tips-small-business',
-                title: '5 Invoicing Tips Every Small Business Should Know',
-                excerpt: 'Improve your cash flow and get paid faster with these practical invoicing strategies for small businesses.',
-                date: 'February 28, 2023',
-                category: 'Tips & Tricks',
-                image: '/blog/invoice-tips.jpg',
-                slug: 'invoice-tips-small-business'
-              },
-              {
-                id: 'digital-transformation-smes',
-                title: 'Digital Transformation for SMEs: Where to Start',
-                excerpt: 'A step-by-step guide to beginning your digital transformation journey without overwhelming your small business.',
-                date: 'February 15, 2023',
-                category: 'Digital Transformation',
-                image: '/blog/digital-transformation.jpg',
-                slug: 'digital-transformation-smes'
-              }
-            ].map((post, index) => (
-              <motion.div
-                key={post.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow group"
+            {blogPosts.map((post, index) => (
+              <Link 
+                key={index}
+                href={`/blog/posts/${post.slug}`}
+                className="group bg-background rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow flex flex-col h-full"
               >
                 <div className="h-48 overflow-hidden">
-                  <img
+                  <Image
                     src={post.image}
                     alt={post.title}
+                    width={600}
+                    height={400}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.src = `https://placehold.co/600x400/02228F/ffffff?text=${encodeURIComponent(post.category)}`;
                     }}
                   />
                 </div>
-                <div className="p-6">
-                  <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
-                    {post.category}
+                <div className="p-5 flex flex-col flex-grow">
+                  <div className="mb-auto">
+                    <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
+                      {post.category}
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+                      {post.title}
+                    </h3>
+                    <p className="text-muted-foreground line-clamp-2">
+                      {post.excerpt}
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold mb-2 line-clamp-2">{post.title}</h3>
-                  <p className="text-muted-foreground mb-4 line-clamp-2">
-                    {post.excerpt}
-                  </p>
-                  <div className="flex items-center text-xs text-muted-foreground mb-4">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    <span>{post.date}</span>
-                  </div>
-                  <Link href={`/blog/posts/${post.slug}`}>
-                    <Button variant="ghost" className="p-0 h-auto font-medium text-primary hover:text-primary/80">
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      <span>{post.date}</span>
+                    </div>
+                    <div className="text-primary font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform">
                       Read More
-                      <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </Link>
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </div>
+                  </div>
                 </div>
-              </motion.div>
+              </Link>
             ))}
           </div>
           
-          <div className="mt-12 text-center">
+          <div className="text-center mt-12">
             <Link href="/blog">
               <Button variant="outline" size="lg">
                 View All Articles
@@ -870,7 +1087,7 @@ export default function LandingPage() {
           
           <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <img src="/invo-logo.png" alt="Invo Logo" className="h-8 w-auto mr-2" />
+              <Image src="/invo-logo.png" alt="Invo Logo" width={32} height={32} className="h-8 w-auto mr-2" />
               <span className="font-bold text-primary">Invo</span>
             </div>
             <p className="text-sm text-muted-foreground">

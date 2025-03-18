@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface CaptionedImageProps {
@@ -9,28 +10,36 @@ interface CaptionedImageProps {
   fallbackText?: string;
 }
 
-export function CaptionedImage({
+export const CaptionedImage: React.FC<CaptionedImageProps> = ({
   src,
   alt,
   caption,
-  className,
+  className = '',
   fallbackText
-}: CaptionedImageProps) {
+}) => {
+  const [hasError, setHasError] = useState(false);
+  
   return (
-    <figure className={cn("my-8 overflow-hidden rounded-md", className)}>
-      <img
-        src={src}
-        alt={alt}
-        className="w-full h-auto"
-        onError={(e) => {
-          if (fallbackText) {
-            e.currentTarget.src = `https://placehold.co/800x500/02228F/ffffff?text=${encodeURIComponent(fallbackText)}`;
-          }
-        }}
-      />
-      <figcaption className="bg-muted/50 text-center p-3 text-sm text-muted-foreground italic">
+    <figure className={`my-6 ${className}`}>
+      <div className="overflow-hidden rounded-md bg-muted">
+        {hasError ? (
+          <div className="flex items-center justify-center bg-muted text-muted-foreground h-64 w-full">
+            {fallbackText || alt}
+          </div>
+        ) : (
+          <Image
+            src={src}
+            alt={alt}
+            width={1200}
+            height={675}
+            className="w-full h-auto"
+            onError={() => setHasError(true)}
+          />
+        )}
+      </div>
+      <figcaption className="mt-2 text-center text-sm text-muted-foreground italic">
         {caption}
       </figcaption>
     </figure>
   );
-} 
+}; 

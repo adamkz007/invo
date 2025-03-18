@@ -49,6 +49,7 @@ import { InvoiceWithDetails } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
+import Image from 'next/image';
 
 // Define company details interface
 interface CompanyDetails {
@@ -430,7 +431,7 @@ export default function InvoicesPage() {
             <div className="flex items-center justify-center mt-2">
               <span>Powered by</span>
               <div className="flex items-center ml-1">
-                <img src="/invo-logo.png" alt="Invo Logo" className="h-4 w-4 mr-1" />
+                <Image src="/invo-logo.png" alt="Invo Logo" className="h-4 w-4 mr-1" width={16} height={16} />
                 <span className="font-semibold">Invo</span>
               </div>
             </div>

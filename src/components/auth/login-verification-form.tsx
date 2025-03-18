@@ -71,8 +71,8 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
       // Redirect to dashboard on successful login
       console.log('Login successful, redirecting to dashboard...');
       
-      // Use window.location for a full page reload to ensure cookies are properly set
-      window.location.href = '/dashboard';
+      // Use router.push for consistent navigation with password login
+      router.push('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'An error occurred');

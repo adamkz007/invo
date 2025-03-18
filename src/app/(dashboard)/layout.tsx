@@ -24,6 +24,7 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ProfileNotification } from '@/components/ui/profile-notification';
 import { useTheme } from 'next-themes';
+import Image from 'next/image';
 
 interface User {
   id: string;
@@ -122,15 +123,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/dashboard">
-              <div className="flex items-center space-x-2">
-                <img 
-                  src={theme === 'dark' ? "/invo-logo-w.png" : "/invo-logo.png"} 
-                  alt="Invo Logo" 
-                  className="h-6 w-6" 
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <div className="relative h-8 w-8">
+                <Image 
+                  src="/invo-logo.png" 
+                  alt="Invo" 
+                  width={32} 
+                  height={32}
+                  className="h-8 w-auto"
                 />
-                <h1 className="text-xl font-bold">Invo</h1>
               </div>
+              <span className="font-bold text-xl text-primary">Invo</span>
             </Link>
           </div>
 

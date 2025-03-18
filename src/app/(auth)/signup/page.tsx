@@ -3,11 +3,17 @@
 import SignUpForm from '@/components/auth/signup-form';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ArrowLeft } from 'lucide-react';
 
 export default function SignUpPage() {
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center p-4">
-      <div className="mx-auto w-full max-w-md rounded-lg border p-8 shadow-md">
+      <div className="mx-auto w-full max-w-md rounded-lg border p-8 shadow-md relative">
+        <Link href="/" className="absolute top-4 left-4 text-gray-500 hover:text-gray-800 flex items-center text-sm">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Home
+        </Link>
+        
         <div className="mb-6 text-center">
           <div className="flex justify-center items-center">
             <Image 

@@ -15,23 +15,29 @@ export async function POST(req: NextRequest) {
     
     const { name, email, phoneNumber, password } = body;
     
-    // Register the user
-    const { user, token } = await registerUser(name, email, phoneNumber, password);
+    // Validate password requirements
+    if (password.length < 8) {
+      return NextResponse.json(
+        { success: false, error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      );
+    }
     
-    // Create a response with the token in a cookie
+    // Check for alphanumeric (contains both letters and numbers)
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return NextResponse.json(
+        { success: false, error: 'Password must contain both letters and numbers' },
+        { status: 400 }
+      );
+    }
+    
+    // Register the user
+    const { user } = await registerUser(name, email, phoneNumber, password);
+    
+    // Create a response without setting the auth token cookie
     const response = NextResponse.json({
       success: true,
       data: { user: { id: user.id, name: user.name, email: user.email, phoneNumber: user.phoneNumber } }
-    });
-    
-    // Set the token as an HTTP-only cookie
-    response.cookies.set({
-      name: 'auth_token',
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
     });
     
     return response;
