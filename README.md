@@ -44,11 +44,21 @@ Create a `.env.local` file in the root directory and add necessary environment v
 
 ```
 NEXT_PUBLIC_API_URL=your_api_url
+DATABASE_URL=file:./prisma/dev.db
+JWT_SECRET=your_jwt_secret
 ```
 
 ## Deployment
 
 This application can be easily deployed to Vercel, Netlify, or any other platform that supports Next.js.
+
+### GitHub Repository
+
+The source code is available on GitHub and can be cloned using:
+
+```
+git clone https://github.com/adamkz007/invo.git
+```
 
 ## License
 
