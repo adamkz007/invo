@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/providers/toast-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SettingsProvider } from '@/contexts/settings-context';
+import { PWAProvider } from "@/components/providers/pwa-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,8 +19,34 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Invo - Invoicing for SMEs',
   description: 'Practical invoicing solution designed for small and medium enterprises',
+  manifest: '/manifest.json',
   icons: {
-    icon: '/invo-logo.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/icons/maskable-icon.png',
+      },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Invo',
+  },
+  applicationName: 'Invo',
+  themeColor: '#4f46e5',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
   },
 };
 
@@ -40,9 +67,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SettingsProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <PWAProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </PWAProvider>
           </SettingsProvider>
         </ThemeProvider>
       </body>

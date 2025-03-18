@@ -27,7 +27,7 @@ export default function AboutPage() {
             <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Our Story</h2>
             <div className="prose prose-lg max-w-none">
               <p className="mb-4">
-                Invo was founded in 2023 by a team of entrepreneurs who experienced firsthand the challenges of running a small business in Malaysia.
+                Invo was founded in 2025 by a team of entrepreneurs who experienced firsthand the challenges of running a small business in Malaysia.
               </p>
               <p className="mb-4">
                 After struggling with complicated accounting software and spending countless hours on invoicing and financial management, 

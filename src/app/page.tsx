@@ -344,7 +344,7 @@ export default function LandingPage() {
               transition={{ delay: 0.1, duration: 0.5 }}
               className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12"
             >
-              We&apos;ve built Invo specifically for small and medium businesses. No bloated features, just the tools you actually need.
+              We&apos;ve built Invo specifically for Malaysian SMEs. You can ditch your paper invoices, and get started in seconds.
             </motion.p>
           </div>
           
@@ -1032,8 +1032,6 @@ export default function LandingPage() {
                 <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Help Center</a></li>
                 <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
                 <li><Link href="/guides" className="text-sm text-muted-foreground hover:text-primary">Guides</Link></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Templates</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Webinars</a></li>
               </ul>
             </div>
             <div>
