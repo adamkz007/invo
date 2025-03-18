@@ -2,24 +2,14 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { CaptionedImage } from '@/components/ui/captioned-image';
+import { ArrowLeft, Calendar, Clock, User } from 'lucide-react';
 import Image from 'next/image';
+import { ArticleFooter } from '@/components/blog/article-footer';
+import { ArticleContent, Checklist, Highlight, HighlightBox } from '@/components/blog/article-content';
 
 export default function MalaysiaEInvoicingPost() {
   // Define related posts
-  const relatedPosts: {
-    id: string;
-    title: string;
-    excerpt: string;
-    date: string;
-    author: string;
-    readTime: string;
-    category: string;
-    image: string;
-    slug: string;
-  }[] = [
+  const relatedPosts = [
     {
       id: 'digital-transformation-smes',
       title: 'Digital Transformation for SMEs: Where to Start',
@@ -54,6 +44,11 @@ export default function MalaysiaEInvoicingPost() {
       slug: 'invoice-tips-small-business'
     }
   ];
+
+  // Author information
+  const author = {
+    role: 'Founder'
+  };
 
   return (
     <div className="min-h-screen">
@@ -98,337 +93,178 @@ export default function MalaysiaEInvoicingPost() {
             transition={{ duration: 0.5 }}
             className="rounded-lg overflow-hidden shadow-xl"
           >
-            <figure className="m-0">
-              <Image
-                src="/blog/malaysia-e-invoicing.jpg"
-                alt="Malaysia E-Invoicing"
-                width={1200}
-                height={675}
-                className="w-full h-auto"
-                priority
-                onError={(e) => {
-                  e.currentTarget.src = "https://placehold.co/1200x675/02228F/ffffff?text=Malaysia+E-Invoicing";
-                }}
-              />
-              <figcaption className="bg-muted/50 text-center p-3 text-sm text-muted-foreground italic">
-                Asia Business School lobby
-              </figcaption>
-            </figure>
+            <Image
+              src="/blog/malaysia-e-invoicing.jpg"
+              alt="Malaysia E-Invoicing"
+              width={1200}
+              height={630}
+              className="w-full h-auto"
+              onError={(e) => {
+                e.currentTarget.src = "https://placehold.co/1200x630/02228F/ffffff?text=Malaysia+E-Invoicing";
+              }}
+            />
           </motion.div>
         </div>
       </div>
 
-      {/* Article Content */}
-      <article className="container mx-auto px-4 py-12">
+      {/* Content */}
+      <main className="container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="prose prose-lg max-w-none prose-headings:text-primary prose-headings:font-bold prose-h2:text-2xl md:prose-h2:text-3xl prose-h3:text-xl md:prose-h3:text-2xl prose-p:text-base prose-p:leading-relaxed prose-li:text-base prose-li:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-primary prose-strong:font-bold"
-          >
-            <h2 className="mt-0">Understanding Malaysia's E-Invoicing Initiative</h2>
-            <p>
-              Malaysia is joining the global shift towards digitizing tax administration through the implementation of a comprehensive e-invoicing system. This initiative, led by the Inland Revenue Board of Malaysia (LHDN), aims to enhance tax compliance, reduce tax leakage, and streamline business processes.
-            </p>
-            
-            <CaptionedImage 
-              src="/blog/e-invoicing-system.jpg" 
-              alt="Malaysia E-Invoicing System"
-              caption="The new e-invoicing system will connect businesses directly with Malaysia's tax authorities"
-              fallbackText="E-Invoicing System"
-            />
-            
-            <p>
-              The e-invoicing mandate represents a significant change in how businesses issue, transmit, and store invoices. Instead of traditional paper invoices or simple digital formats like PDFs, businesses will need to generate structured digital invoices that comply with specific technical standards and can be transmitted directly to the tax authorities.
+          <ArticleContent>
+            <p className="lead">
+              Malaysia is set to implement mandatory e-invoicing starting from August 2024, starting with large businesses. This move is part of the government's ongoing effort to digitize tax administration, reduce tax leakage, and improve compliance. For small and medium enterprises (SMEs), this represents both a challenge and an opportunity to modernize financial operations.
             </p>
 
-            <h2 className="mt-10">Key Changes in Malaysia's E-Invoicing Framework</h2>
+            <h2>What is E-Invoicing?</h2>
             <p>
-              The new e-invoicing system in Malaysia introduces several significant changes that businesses need to be aware of:
+              E-invoicing (electronic invoicing) is the exchange of invoice documents between suppliers and buyers in a structured electronic format. Unlike PDF invoices sent via email, true e-invoicing involves the transmission of structured data that can be automatically imported into the receiver's accounting system.
+            </p>
+            <p>
+              The Malaysian e-invoicing system, known as MyInvois, follows the Continuous Transaction Control (CTC) model, where invoices are validated in real-time by the tax authority (Lembaga Hasil Dalam Negeri or LHDN) before or during the exchange between trading partners.
             </p>
 
-            <h3 className="mt-8">1. Phased Implementation Timeline</h3>
-            <div className="bg-primary/5 p-6 rounded-lg my-6">
-              <ul className="space-y-3 my-0">
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">1</span>
-                  <div>
-                    <strong>Phase 1 (August 2023):</strong> Voluntary adoption period for businesses to test and adapt their systems
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">2</span>
-                  <div>
-                    <strong>Phase 2 (January 2024):</strong> Mandatory for businesses with annual revenue exceeding RM 100 million
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">3</span>
-                  <div>
-                    <strong>Phase 3 (July 2024):</strong> Extended to businesses with annual revenue between RM 25 million and RM 100 million
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">4</span>
-                  <div>
-                    <strong>Phase 4 (January 2025):</strong> All remaining businesses including SMEs
-                  </div>
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-5 my-8">
-              <p className="text-sm text-yellow-800 m-0">
-                <strong>Update:</strong> The Malaysian Finance Minister has announced a delay until 1 January 2026 for Phase 3 of mandatory e-invoicing for some SMEs with annual sales between RM500,000 and RM150,000. Businesses below RM 150,000 are exempted from the mandate.
-              </p>
-            </div>
-
-            <h3 className="mt-8">2. Technical Requirements</h3>
+            <h2>Implementation Timeline</h2>
             <p>
-              The Malaysian e-invoicing system will follow a standardized format based on the PEPPOL (Pan-European Public Procurement Online) framework, which includes:
+              The implementation of mandatory e-invoicing in Malaysia will follow a phased approach based on annual business turnover:
             </p>
-            <ul className="my-6">
-              <li className="mb-2">Unique invoice identification</li>
-              <li className="mb-2">Digital signatures for authentication</li>
-              <li className="mb-2">Structured data format (XML/JSON)</li>
-              <li className="mb-2">Specific mandatory fields including tax information</li>
-              <li>Real-time or near real-time transmission to LHDN</li>
+            <ul>
+              <li><strong>Phase 1 (August 1, 2024):</strong> Companies with annual revenue exceeding RM100 million</li>
+              <li><strong>Phase 2 (January 1, 2025):</strong> Companies with annual revenue between RM25 million and RM100 million</li>
+              <li><strong>Phase 3 (July 1, 2025):</strong> Companies with annual revenue between RM5 million and RM25 million</li>
+              <li><strong>Phase 4 (January 1, 2026):</strong> All remaining businesses registered for Sales and Service Tax (SST)</li>
             </ul>
 
-            <h3 className="mt-8">3. Compliance Requirements</h3>
             <p>
-              Under the new framework, businesses must:
+              While many SMEs will only be required to comply in 2025 or 2026, early preparation is advisable to ensure a smooth transition and take advantage of the benefits of e-invoicing.
             </p>
-            <ul className="my-6">
-              <li className="mb-2">Register for the e-invoicing system through the LHDN portal</li>
-              <li className="mb-2">Ensure all invoices comply with the prescribed format</li>
-              <li className="mb-2">Maintain digital records for at least 7 years</li>
-              <li className="mb-2">Implement systems capable of generating and transmitting e-invoices</li>
-              <li>Provide training to staff on the new requirements</li>
+
+            <h2>How Does It Work?</h2>
+            <p>
+              Under the MyInvois system, the e-invoicing process works as follows:
+            </p>
+            <ol>
+              <li>The seller creates an invoice using e-invoicing compatible software</li>
+              <li>The invoice is transmitted to LHDN's MyInvois system for validation</li>
+              <li>LHDN validates the invoice and returns a unique Certification Serial Number and QR code</li>
+              <li>The validated invoice is sent to the buyer</li>
+              <li>Both parties must keep the e-invoice records for at least 7 years</li>
+            </ol>
+
+            <h2>Key Requirements for Compliance</h2>
+            <p>
+              To comply with Malaysia's e-invoicing requirements, businesses must ensure:
+            </p>
+            <ul>
+              <li>Use of e-invoicing compatible software that can generate invoices in the required format (likely based on the PEPPOL standard)</li>
+              <li>Each invoice includes mandatory information such as:
+                <ul>
+                  <li>Seller and buyer details (including tax identification numbers)</li>
+                  <li>Invoice date and number</li>
+                  <li>Description, quantity, and price of goods/services</li>
+                  <li>Tax amount and total amount</li>
+                  <li>Payment terms</li>
+                  <li>The Certification Serial Number and QR code (added after LHDN validation)</li>
+                </ul>
+              </li>
+              <li>Secure transmission of invoice data to LHDN</li>
+              <li>Proper storage of e-invoice records for at least 7 years</li>
             </ul>
 
-            <h2 className="mt-10">How These Changes Impact SMEs</h2>
+            <h2>Impact on SMEs</h2>
+            <p>
+              For SMEs in Malaysia, the transition to e-invoicing will have several significant impacts:
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
-              <div className="bg-red-50 p-6 rounded-lg">
-                <h3 className="text-red-800 mt-0 mb-4">Immediate Challenges</h3>
-                <ul className="space-y-2 my-0 text-red-700">
-                  <li><strong>Technology Investment:</strong> Many small businesses may need to upgrade their existing systems</li>
-                  <li><strong>Learning Curve:</strong> Staff will need training to understand new processes</li>
-                  <li><strong>Initial Setup Costs:</strong> System configuration and integration expenses</li>
-                  <li><strong>Workflow Adjustments:</strong> Existing business processes may need modification</li>
-                </ul>
-              </div>
-              
-              <div className="bg-green-50 p-6 rounded-lg">
-                <h3 className="text-green-800 mt-0 mb-4">Long-term Benefits</h3>
-                <ul className="space-y-2 my-0 text-green-700">
-                  <li><strong>Reduced Admin Work:</strong> Automation reduces manual work and errors</li>
-                  <li><strong>Faster Payments:</strong> E-invoices are processed and paid more quickly</li>
-                  <li><strong>Better Cash Flow:</strong> Real-time visibility into invoice status</li>
-                  <li><strong>Cost Savings:</strong> Reduced printing, postage, and storage costs</li>
-                </ul>
-              </div>
-            </div>
+            <h3>Challenges</h3>
+            <ul>
+              <li><strong>Initial setup costs:</strong> Investment in compatible software or updating existing systems</li>
+              <li><strong>Process changes:</strong> Adaptation of billing workflows and staff training</li>
+              <li><strong>Technical requirements:</strong> Ensuring reliable internet connectivity and digital security measures</li>
+              <li><strong>Integration:</strong> Potential need to integrate e-invoicing with existing accounting and ERP systems</li>
+            </ul>
 
-            <h2 className="mt-10">Preparing Your SME for Malaysia's E-Invoicing</h2>
+            <h3>Benefits</h3>
+            <ul>
+              <li><strong>Cost savings:</strong> Reduced expenses on paper, printing, postage, and storage</li>
+              <li><strong>Efficiency gains:</strong> Automated processing reduces manual data entry and errors</li>
+              <li><strong>Faster payments:</strong> Quicker invoice delivery and approval often leads to improved cash flow</li>
+              <li><strong>Better record-keeping:</strong> Digital storage makes retrieval and auditing easier</li>
+              <li><strong>Environmental impact:</strong> Reduction in paper usage and carbon footprint</li>
+              <li><strong>Simplified tax compliance:</strong> Easier preparation for SST returns with structured digital records</li>
+            </ul>
 
-            <div className="my-8">
-              <h3 className="mt-8">1. Assess Your Current Systems</h3>
-              <p>
-                Start by evaluating your existing invoicing processes and systems. Determine whether they can be upgraded to meet the new requirements or if you need to invest in new solutions.
-              </p>
+            <h2>Preparing Your Business</h2>
+            <p>
+              SMEs should take these steps to prepare for e-invoicing implementation:
+            </p>
 
-              <h3 className="mt-8">2. Choose the Right Solution</h3>
-              <p>
-                Look for invoicing software that:
-              </p>
-              <div className="bg-primary/5 p-6 rounded-lg my-6">
-                <ul className="space-y-3 my-0">
-                  <li className="flex items-start">
-                    <span className="text-primary mr-2">✓</span>
-                    <span>Is compliant with Malaysia's e-invoicing standards</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-primary mr-2">✓</span>
-                    <span>Integrates with your existing accounting and ERP systems</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-primary mr-2">✓</span>
-                    <span>Offers good user experience and support</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-primary mr-2">✓</span>
-                    <span>Provides value for money with scalability as your business grows</span>
-                  </li>
-                </ul>
-              </div>
+            <h3>1. Assess Your Current Invoicing Process</h3>
+            <p>
+              Evaluate your existing invoicing system and identify gaps that need to be addressed. Consider the volume of invoices you issue, your current software capabilities, and your staff's technical expertise.
+            </p>
 
-              <h3 className="mt-8">3. Plan for Implementation</h3>
-              <p>
-                Develop a timeline for implementation that allows for:
-              </p>
-              <ol className="list-decimal pl-5 my-6">
-                <li className="mb-2">System setup and configuration</li>
-                <li className="mb-2">Staff training</li>
-                <li className="mb-2">Testing and troubleshooting</li>
-                <li>Gradual transition from old to new systems</li>
-              </ol>
+            <h3>2. Choose the Right Solution</h3>
+            <p>
+              Several options will be available for SMEs:
+            </p>
+            <ul>
+              <li><strong>E-invoicing service providers:</strong> Third-party platforms that handle the entire e-invoicing process</li>
+              <li><strong>Accounting software with e-invoicing capabilities:</strong> Many accounting packages will update to include Malaysia-compliant e-invoicing</li>
+              <li><strong>ERP system upgrades:</strong> Businesses using ERP systems may need updates or additional modules</li>
+              <li><strong>Free government portal:</strong> LHDN is likely to provide a basic portal for small businesses with low invoice volumes</li>
+            </ul>
 
-              <h3 className="mt-8">4. Stay Informed</h3>
-              <p>
-                Keep up to date with announcements from LHDN regarding any changes or updates to the e-invoicing requirements. Join industry forums or chambers of commerce where these topics are discussed.
-              </p>
-            </div>
+            <h3>3. Plan for Implementation</h3>
+            <p>
+              Develop a timeline for implementation well before your mandated deadline:
+            </p>
+            <ul>
+              <li>Allocate budget for software acquisition or upgrades</li>
+              <li>Schedule staff training</li>
+              <li>Consider running parallel systems temporarily during the transition</li>
+              <li>Communicate changes to customers and suppliers</li>
+            </ul>
 
-            <h2 className="mt-10">How Invo Can Help</h2>
-            <div className="bg-primary/10 p-6 rounded-lg my-6">
+            <h3>4. Stay Informed</h3>
+            <p>
+              Keep up to date with announcements from LHDN regarding any changes or updates to the e-invoicing requirements. Join industry forums or chambers of commerce where these topics are discussed.
+            </p>
+
+            <h2>How Invo Can Help</h2>
+            <HighlightBox>
               <p className="mt-0">
                 At Invo, we're committed to helping SMEs navigate the transition to e-invoicing in Malaysia. Our platform is being updated to fully comply with the new requirements, offering:
               </p>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 my-4">
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
-                  <span>Automatic generation of compliant e-invoices</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
-                  <span>Secure transmission to LHDN</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
-                  <span>Digital storage of all invoice data</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
-                  <span>Easy integration with existing systems</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
-                  <span>User-friendly interface requiring minimal training</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
-                  <span>Affordable pricing plans for SMEs</span>
-                </li>
-              </ul>
-            </div>
+              <Checklist items={[
+                "Automatic generation of compliant e-invoices",
+                "Secure transmission to LHDN",
+                "Digital storage of all invoice data",
+                "Easy integration with existing systems",
+                "User-friendly interface requiring minimal training",
+                "Affordable pricing plans for SMEs"
+              ]} />
+            </HighlightBox>
 
-            <h2 className="mt-10">Conclusion</h2>
+            <h2>Conclusion</h2>
             <p>
               Malaysia's e-invoicing initiative represents a significant shift in how businesses manage their invoicing and tax compliance. While the transition may present initial challenges for SMEs, the long-term benefits in terms of efficiency, cost savings, and improved cash flow management are substantial.
             </p>
             <p>
               By starting preparations early and choosing the right tools and partners, small businesses can not only comply with the new requirements but also leverage e-invoicing as an opportunity to modernize their financial processes and gain a competitive edge.
             </p>
-            <p className="text-lg font-medium text-primary">
+            <Highlight>
               Stay ahead of the curve by beginning your e-invoicing journey today, well before the mandatory implementation date for SMEs.
-            </p>
-          </motion.div>
+            </Highlight>
+          </ArticleContent>
 
-          {/* Share Section */}
-          <div className="border-t border-b py-6 my-8">
-            <div className="flex flex-col sm:flex-row items-center justify-between">
-              <p className="font-medium mb-4 sm:mb-0">Share this article:</p>
-              <div className="flex space-x-4">
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Facebook className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Twitter className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Linkedin className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Author Section */}
-          <div className="bg-muted/30 rounded-lg p-6 my-8">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex-shrink-0">
-                <Image
-                  src="/blog/authors/adam.jpg"
-                  alt="Adam"
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = "https://placehold.co/200x200/02228F/ffffff?text=A";
-                  }}
-                />
-              </div>
-              <div className="text-center sm:text-left">
-                <h3 className="font-bold text-lg">Adam</h3>
-                <p className="text-sm text-muted-foreground mb-2">Founder</p>
-                <p className="text-sm">
-                  Adam consults for both large organizations and SMEs to identify & optimize finance processes. Growing tired of clunky invoice tools available in the market, he sets out to build Invo.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Related Posts */}
-          <div className="my-12">
-            <h3 className="text-2xl font-bold mb-6">Related Articles</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedPosts.map((post, index) => (
-                <Link 
-                  key={index}
-                  href={`/blog/posts/${post.slug}`}
-                  className="group bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow flex flex-col h-full"
-                >
-                  <div className="h-40 overflow-hidden">
-                    <Image
-                      src={post.image}
-                      alt={post.title}
-                      width={400}
-                      height={250}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://placehold.co/400x250/02228F/ffffff?text=Related+Article";
-                      }}
-                    />
-                  </div>
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h4 className="font-bold mb-2 group-hover:text-primary transition-colors">{post.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.excerpt}</p>
-                    <div className="flex items-center text-xs text-muted-foreground mt-auto">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        <span>{post.date}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* CTA Section */}
-          <div className="bg-primary text-white p-8 rounded-lg my-12">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold mb-4">Ready to simplify your e-invoicing compliance?</h3>
-              <p className="mb-6 text-white/90 max-w-2xl mx-auto">
-                Invo makes it easy for Malaysian businesses of all sizes to comply with the new e-invoicing requirements. Get started today and stay ahead of the regulatory changes.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Button variant="secondary" size="lg" asChild>
-                  <Link href="/signup">Start Free Trial</Link>
-                </Button>
-                <Button variant="outline" className="bg-transparent border-white text-white hover:bg-white/10" size="lg" asChild>
-                  <Link href="/contact">Contact Sales</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ArticleFooter 
+            author={author}
+            relatedPosts={relatedPosts}
+            ctaTitle="Ready to simplify your e-invoicing compliance?"
+            ctaDescription="Invo makes it easy for Malaysian businesses of all sizes to comply with the new e-invoicing requirements. Get started today and stay ahead of the regulatory changes."
+          />
         </div>
-      </article>
+      </main>
     </div>
   );
 } 

@@ -19,10 +19,16 @@ import {
   Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [dashboardImageError, setDashboardImageError] = useState(false);
+
+  // Add theme hook to detect dark mode
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
   // Handle scroll event for navbar styling
   useEffect(() => {
@@ -113,7 +119,7 @@ export default function LandingPage() {
     },
     {
       name: "Premium",
-      price: "RM12",
+      price: "RM9",
       period: "per month",
       description: "Ideal for growing businesses",
       features: [
@@ -170,14 +176,14 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center space-x-2">
             <div className="relative h-8 w-8">
               <Image 
-                src="/invo-logo.png" 
+                src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} 
                 alt="Invo Logo" 
                 width={32}
                 height={32}
                 className="h-8 w-auto"
               />
             </div>
-            <span className={`text-xl font-bold ${isScrolled ? 'text-foreground' : 'text-primary'}`}>Invo</span>
+            <span className={`text-xl font-bold ${isDarkMode ? 'text-white' : isScrolled ? 'text-foreground' : 'text-primary'}`}>Invo</span>
           </Link>
           
           <div className="hidden md:flex items-center space-x-6">
@@ -864,7 +870,7 @@ export default function LandingPage() {
                 role: "Operations, YSPOA"
               },
               {
-                quote: "The inventory tracking alone has saved me so much time. I always know what&apos;s in stock and what I need to order. It&apos;s like having an extra employee without the cost.",
+                quote: "The inventory tracking alone has saved me so much time. I always know what's in stock and what I need to order. It's like having an extra employee without the cost.",
                 author: "Michael Chen",
                 role: "Retail Shop Owner"
               },
@@ -1013,7 +1019,6 @@ export default function LandingPage() {
               <ul className="space-y-2">
                 <li><a href="#features" className="text-sm text-muted-foreground hover:text-primary">Features</a></li>
                 <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-primary">Pricing</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Security</a></li>
                 <li><a href="#timeline" className="text-sm text-muted-foreground hover:text-primary">Roadmap</a></li>
               </ul>
             </div>
@@ -1022,16 +1027,13 @@ export default function LandingPage() {
               <ul className="space-y-2">
                 <li><Link href="/about" className="text-sm text-muted-foreground hover:text-primary">About</Link></li>
                 <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Careers</a></li>
                 <li><Link href="/contact" className="text-sm text-muted-foreground hover:text-primary">Contact</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold mb-4">Resources</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Help Center</a></li>
                 <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
-                <li><Link href="/guides" className="text-sm text-muted-foreground hover:text-primary">Guides</Link></li>
               </ul>
             </div>
             <div>
@@ -1046,8 +1048,8 @@ export default function LandingPage() {
           
           <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
-              <Image src="/invo-logo.png" alt="Invo Logo" width={32} height={32} className="h-8 w-auto mr-2" />
-              <span className="font-bold text-primary">Invo</span>
+              <Image src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} alt="Invo Logo" width={32} height={32} className="h-8 w-auto mr-2" />
+              <span className={`font-bold ${isDarkMode ? "text-white" : "text-primary"}`}>Invo</span>
             </div>
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Invo. Created by Halogen Services (002897568-V)

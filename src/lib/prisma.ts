@@ -14,6 +14,11 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
+// Fix EventEmitter memory leak by increasing the max listeners
+if (typeof process !== 'undefined') {
+  process.setMaxListeners(20);
+}
+
 // Add a connection test function
 export async function testConnection() {
   try {

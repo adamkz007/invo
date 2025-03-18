@@ -522,3 +522,270 @@ export async function downloadInvoicePDF(
   // Save the PDF
   doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
 }
+
+/**
+ * Generate and download a receipt for a paid invoice
+ */
+export async function downloadReceiptPDF(
+  invoice: InvoiceWithDetails, 
+  companyDetails: CompanyDetails | null = null,
+  settings: AppSettings = defaultSettings
+): Promise<void> {
+  // Create a new PDF document with elongated receipt size (80mm width, taller height)
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [80, 200], // Custom elongated receipt size (width, height)
+    compress: true
+  });
+  
+  // Set up document properties
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 5; // Smaller margins for receipt
+  const contentWidth = pageWidth - (margin * 2);
+  
+  // Set monospace font for the whole receipt
+  doc.setFont('courier', 'normal');
+  
+  // Format dates properly
+  const formatDate = (date: Date | string) => {
+    if (typeof date === 'string') {
+      date = new Date(date);
+    }
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    });
+  };
+  
+  const formatTime = (date: Date | string) => {
+    if (typeof date === 'string') {
+      date = new Date(date);
+    }
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+  };
+  
+  // Company header (centered)
+  doc.setFontSize(10);
+  doc.setFont('courier', 'bold');
+  doc.text(companyDetails?.legalName || 'Fish & Chips Fast Foods', pageWidth / 2, margin + 5, { align: 'center' });
+  
+  // Company address (centered)
+  doc.setFontSize(8);
+  doc.setFont('courier', 'normal');
+  
+  let yPos = margin + 10;
+  
+  if (companyDetails?.address) {
+    const addressLines = companyDetails.address.split('\n');
+    addressLines.forEach(line => {
+      doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 4;
+    });
+  } else {
+    doc.text('2334, Fish and Chips Street', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    doc.text('New Hill, SC, 34566-454646', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+  }
+  
+  // Phone number
+  doc.text(companyDetails?.phoneNumber || '888-888-8888', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 8;
+  
+  // Order number (centered and bold)
+  doc.setFontSize(10);
+  doc.setFont('courier', 'bold');
+  doc.text(`Order: ${invoice.invoiceNumber}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 8;
+  
+  // Host and date information
+  doc.setFontSize(8);
+  doc.setFont('courier', 'normal');
+  
+  // Get current user/host name - replace with actual user data if available
+  const hostName = companyDetails?.ownerName || 'Host';
+  doc.text(`Host: ${hostName}`, margin, yPos);
+  
+  // Transaction date and time
+  const issueDate = new Date(invoice.issueDate);
+  const formattedDate = formatDate(issueDate);
+  const formattedTime = formatTime(issueDate);
+  
+  // Make sure date and time fit on the same line for narrow receipt
+  doc.text(formattedDate, pageWidth - margin, yPos - 4, { align: 'right' });
+  doc.text(formattedTime, pageWidth - margin, yPos, { align: 'right' });
+  
+  yPos += 4;
+  
+  // Draw a horizontal line
+  doc.setDrawColor(100, 100, 100);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  
+  yPos += 8;
+  
+  // Column headers
+  doc.setFont('courier', 'bold');
+  doc.text('Qty', margin, yPos);
+  doc.text('Item', margin + 8, yPos);
+  doc.text('Price', pageWidth - margin, yPos, { align: 'right' });
+  
+  yPos += 4;
+  
+  // Draw another horizontal line
+  doc.setDrawColor(100, 100, 100);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  
+  yPos += 6;
+  
+  // List items
+  doc.setFont('courier', 'normal');
+  
+  invoice.items.forEach(item => {
+    const quantityText = item.quantity.toString();
+    const priceText = formatCurrency(item.unitPrice * item.quantity, settings);
+    const itemName = item.description || item.product?.name || 'Item';
+    
+    // Handle long item names by wrapping if needed
+    if (itemName.length > 15) {
+      doc.text(quantityText, margin, yPos);
+      
+      const lines = doc.splitTextToSize(itemName, pageWidth - margin - 18);
+      doc.text(lines[0], margin + 8, yPos);
+      
+      doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
+      
+      // If there are more lines, add them
+      if (lines.length > 1) {
+        for (let i = 1; i < lines.length; i++) {
+          yPos += 4;
+          doc.text(lines[i], margin + 8, yPos);
+        }
+      }
+    } else {
+      doc.text(quantityText, margin, yPos);
+      doc.text(itemName, margin + 8, yPos);
+      doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
+    }
+    
+    yPos += 6;
+  });
+  
+  // Draw another horizontal line
+  doc.setDrawColor(100, 100, 100);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  
+  yPos += 8;
+  
+  // Payment details - Changed from VISA to CASH
+  doc.text('CASH', margin, yPos);
+  doc.text('Sale', pageWidth - margin, yPos, { align: 'right' });
+  
+  yPos += 8;
+  
+  // Totals
+  doc.text('Subtotal', margin, yPos);
+  doc.text(formatCurrency(invoice.subtotal, settings), pageWidth - margin, yPos, { align: 'right' });
+  yPos += 6;
+  
+  // Tax
+  const taxAmount = invoice.total - invoice.subtotal;
+  doc.text('Tax', margin, yPos);
+  doc.text(formatCurrency(taxAmount, settings), pageWidth - margin, yPos, { align: 'right' });
+  yPos += 6;
+  
+  // SalesTax (could be duplicate, but keeping with the receipt example)
+  doc.text('SalesTax', margin, yPos);
+  doc.text(formatCurrency(taxAmount, settings), pageWidth - margin, yPos, { align: 'right' });
+  yPos += 6;
+  
+  // Total
+  doc.setFont('courier', 'bold');
+  doc.text('Total:', margin, yPos);
+  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, yPos, { align: 'right' });
+  yPos += 8;
+  
+  // Transaction information
+  doc.setFont('courier', 'normal');
+  doc.text('Transaction Type:', margin, yPos);
+  doc.text('Sale', pageWidth - margin, yPos, { align: 'right' });
+  yPos += 6;
+  
+  doc.text('Authorization:', margin, yPos);
+  doc.text('APPROVED', pageWidth - margin, yPos, { align: 'right' });
+  yPos += 6;
+  
+  // Generate a deterministic but unique payment code and ID for the receipt
+  // based on the invoice ID to ensure they're unique per invoice but consistent
+  // on repeated generation
+  const uniqueStr = invoice.id + new Date(invoice.issueDate).getTime();
+  const paymentCode = 'BS' + Array.from(uniqueStr)
+    .map(c => c.charCodeAt(0))
+    .reduce((a, b) => a + b, 0) 
+    + Math.floor(Math.random() * 1000000);
+  
+  const paymentId = parseInt(invoice.id.replace(/\D/g, '').substring(0, 8) || '0') 
+    + Math.floor(Math.random() * 10000000);
+  
+  doc.text('Payment Code:', margin, yPos);
+  doc.text(paymentCode.toString(), pageWidth - margin, yPos, { align: 'right' });
+  yPos += 6;
+  
+  doc.text('Payment ID:', margin, yPos);
+  doc.text(paymentId.toString(), pageWidth - margin, yPos, { align: 'right' });
+  yPos += 10;
+  
+  // Total after tip (no tip field)
+  doc.setFont('courier', 'bold');
+  doc.text('=Total:', margin, yPos);
+  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, yPos, { align: 'right' });
+  yPos += 12;
+  
+  // Signature line
+  doc.text('X ___________________', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 12;
+  
+  // Footer
+  doc.setFont('courier', 'normal');
+  doc.text('Customer Copy', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 6;
+  doc.text('Thanks for visiting', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 6;
+  doc.text(companyDetails?.legalName || 'Fish & Chips Fast Foods', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 10;
+  
+  // Add "Powered by Invo" at the bottom
+  doc.setFontSize(8);
+  doc.setFont('courier', 'bold');
+  
+  // Try to load the Invo logo
+  try {
+    // In a browser environment, load the logo
+    const logoUrl = window.location.origin + '/invo-logo.png';
+    
+    // Use the cached logo loading function
+    const img = await loadLogoImage(logoUrl);
+    
+    // Add a small logo and "Powered by Invo" text at the bottom
+    doc.addImage(img, 'PNG', pageWidth / 2 - 10, yPos - 2, 4, 4);
+    doc.text('Powered by Invo', pageWidth / 2 + 2, yPos, { align: 'left' });
+  } catch (error) {
+    // If image loading fails, just show text
+    doc.text('Powered by Invo', pageWidth / 2, yPos, { align: 'center' });
+  }
+  
+  // Determine if we need to add more pages based on content height
+  if (yPos > pageHeight - margin) {
+    // Add extra length to the page if needed
+    doc.internal.pageSize.height = yPos + margin + 10;
+  }
+  
+  // Save the PDF with a name including invoice number
+  doc.save(`Receipt-${invoice.invoiceNumber}.pdf`);
+}

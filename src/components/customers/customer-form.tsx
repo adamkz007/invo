@@ -22,9 +22,9 @@ import { useToast } from '@/components/ui/toast';
 
 // Form validation schema
 const customerFormSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Please enter a valid email address' }).optional().or(z.literal('')),
-  phoneNumber: z.string().min(6, { message: 'Please enter a valid phone number' }).optional().or(z.literal('')),
+  name: z.string().min(1, { message: 'Name is required' }),
+  email: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
+  phoneNumber: z.string().min(6, { message: 'Phone number is required' }),
   address: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   userId: z.string().optional(),
@@ -102,6 +102,9 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="mb-4 text-sm text-muted-foreground">
+          Fields marked with <span className="text-red-500">*</span> are required.
+        </div>
         <div className="grid gap-6 md:grid-cols-2">
           {/* Customer Name */}
           <FormField
@@ -109,7 +112,7 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Customer Name</FormLabel>
+                <FormLabel>Customer Name <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter customer name"
@@ -131,7 +134,7 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Email (optional)</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
@@ -154,7 +157,7 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
             name="phoneNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phone Number</FormLabel>
+                <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter phone number"
@@ -176,7 +179,7 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Address</FormLabel>
+                <FormLabel>Address (optional)</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter address"
@@ -199,7 +202,7 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes</FormLabel>
+              <FormLabel>Notes (optional)</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Add any additional information about this customer"

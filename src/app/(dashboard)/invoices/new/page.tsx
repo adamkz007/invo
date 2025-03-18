@@ -4,8 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import InvoiceFormEnhanced from '@/components/invoices/invoice-form-enhanced';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function NewInvoicePage() {
+  // Get customerId from URL query parameters
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get('customerId');
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center">
@@ -27,7 +32,7 @@ export default function NewInvoicePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <InvoiceFormEnhanced />
+          <InvoiceFormEnhanced preSelectedCustomerId={customerId} />
         </CardContent>
       </Card>
     </div>

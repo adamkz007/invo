@@ -305,10 +305,6 @@ export default function InventoryPage() {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Quick Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => router.push(`/inventory/${product.id}`)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Details
-                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDeleteProduct(product.id)}>
                                 <Trash className="mr-2 h-4 w-4" />
                                 Delete

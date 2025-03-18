@@ -1,15 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Clock, User, Home } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, User, Home, X, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function BlogPage() {
   // Blog posts data
   const posts = [
+    {
+      id: 'export-import-opportunities-malaysian-smes',
+      title: 'Export & Import Opportunities for Malaysian SMEs: Your Gateway to Global Markets',
+      excerpt: 'Learn about Malaysia\'s strategic advantages, high-potential export products, and step-by-step guidance to help your business expand into international markets.',
+      date: 'June 12, 2023',
+      author: 'Adam',
+      readTime: '12 min read',
+      category: 'International Trade',
+      featured: true,
+      image: '/blog/export-import.jpg',
+      slug: 'export-import-opportunities-malaysian-smes'
+    },
+    {
+      id: 'malaysian-government-grants-sme',
+      title: 'Complete Guide to Malaysian Government Grants for SMEs in 2023',
+      excerpt: 'Discover the major government grants available for Malaysian SMEs and learn how to improve your chances of securing funding.',
+      date: 'May 5, 2023',
+      author: 'Adam',
+      readTime: '10 min read',
+      category: 'Financing',
+      featured: false,
+      image: '/blog/government-grants.jpg',
+      slug: 'malaysian-government-grants-sme'
+    },
+    {
+      id: 'inventory-management-retail',
+      title: 'Smart Inventory Management for Malaysian Retail Businesses',
+      excerpt: 'Learn how effective inventory management can reduce costs and improve customer satisfaction for Malaysian retailers.',
+      date: 'April 10, 2023',
+      author: 'Adam',
+      readTime: '8 min read',
+      category: 'Inventory Management',
+      featured: false,
+      image: '/blog/inventory-management.jpg',
+      slug: 'inventory-management-retail'
+    },
     {
       id: 'malaysia-e-invoicing-changes',
       title: 'Malaysia E-Invoicing: New Changes and How They Impact SMEs',
@@ -18,7 +54,7 @@ export default function BlogPage() {
       author: 'Adam',
       readTime: '6 min read',
       category: 'Compliance',
-      featured: true,
+      featured: false,
       image: '/blog/malaysia-e-invoicing.jpg',
       slug: 'malaysia-e-invoicing-changes'
     },
@@ -57,25 +93,30 @@ export default function BlogPage() {
       featured: false,
       image: '/blog/tax-deductions.jpg',
       slug: 'tax-deductions-business-expenses'
-    },
-    {
-      id: 'inventory-management-retail',
-      title: 'Inventory Management Best Practices for Retail Businesses',
-      excerpt: 'Learn how to optimize your inventory management to reduce costs and improve customer satisfaction.',
-      date: 'January 15, 2023',
-      author: 'Adam',
-      readTime: '5 min read',
-      category: 'Inventory',
-      featured: false,
-      image: '/blog/inventory-management.jpg',
-      slug: 'inventory-management-retail'
     }
   ];
 
+  // Extract all unique categories
+  const allCategories = Array.from(new Set(posts.map(post => post.category)));
+
+  // State for filtering
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [filteredPosts, setFilteredPosts] = useState(posts);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Apply filters when category changes - fix the dependency array to only include selectedCategory
+  useEffect(() => {
+    if (selectedCategory) {
+      setFilteredPosts(posts.filter(post => post.category === selectedCategory));
+    } else {
+      setFilteredPosts(posts);
+    }
+  }, [selectedCategory]); // Remove posts from dependency array to prevent infinite loop
+
   // Get featured post
-  const featuredPost = posts.find(post => post.featured);
+  const featuredPost = filteredPosts.find(post => post.featured);
   // Get other posts
-  const otherPosts = posts.filter(post => !post.featured);
+  const otherPosts = filteredPosts.filter(post => !post.featured);
 
   return (
     <div className="min-h-screen">
@@ -110,6 +151,53 @@ export default function BlogPage() {
         </div>
       </header>
 
+      {/* Category Filter */}
+      <div className="py-6 bg-muted/20 border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">Filter by Category</h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="md:hidden"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              {isFilterOpen ? 'Hide' : 'Show'} Filters
+            </Button>
+          </div>
+          
+          <div className={`mt-4 flex flex-wrap gap-2 ${isFilterOpen ? 'block' : 'hidden md:flex'}`}>
+            <Button
+              variant={selectedCategory === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(null)}
+              className="rounded-full"
+            >
+              All
+            </Button>
+            
+            {allCategories.map(category => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className="rounded-full"
+              >
+                {category}
+                {selectedCategory === category && (
+                  <X className="ml-1 h-3 w-3" onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedCategory(null);
+                  }} />
+                )}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Featured Post */}
       {featuredPost && (
         <section className="py-16">
@@ -133,7 +221,7 @@ export default function BlogPage() {
                       height={500}
                       className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        e.currentTarget.src = `https://placehold.co/800x500/02228F/ffffff?text=${encodeURIComponent(featuredPost.category)}`;
+                        e.currentTarget.src = `https://placehold.co/800x500/02228F/ffffff?text=${encodeURIComponent(featuredPost.category.replace(/&/g, 'and'))}`;
                       }}
                     />
                   </div>
@@ -190,56 +278,81 @@ export default function BlogPage() {
       {/* All Posts */}
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-12 text-center">Latest Articles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {otherPosts.map((post, index) => (
-              <Link 
-                key={index}
-                href={`/blog/posts/${post.slug}`}
-                className="group bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow h-full flex flex-col"
+          <div className="flex items-center justify-between mb-12">
+            <h2 className="text-3xl font-bold">Latest Articles</h2>
+            {selectedCategory && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setSelectedCategory(null)}
               >
-                <div className="h-48 overflow-hidden rounded-t-lg relative">
-                  <Image
-                    src={post.image}
-                    alt={post.title}
-                    width={600}
-                    height={400}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      e.currentTarget.src = `https://placehold.co/600x400/02228F/ffffff?text=${encodeURIComponent(post.category)}`;
-                    }}
-                  />
-                </div>
-                <div className="p-5 flex flex-col flex-grow">
-                  <div className="mb-auto">
-                    <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
-                      {post.category}
-                    </div>
-                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
-                      {post.title}
-                    </h3>
-                    <p className="text-muted-foreground line-clamp-3 mb-4">
-                      {post.excerpt}
-                    </p>
-                  </div>
-                  <div className="flex items-center text-xs text-muted-foreground mt-4">
-                    <div className="flex items-center mr-3">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>{post.date}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      <span>{post.readTime}</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 text-primary font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform">
-                    Read More
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </div>
-                </div>
-              </Link>
-            ))}
+                Clear Filter <X className="ml-1 h-4 w-4" />
+              </Button>
+            )}
           </div>
+          
+          {otherPosts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {otherPosts.map((post, index) => (
+                <Link 
+                  key={index}
+                  href={`/blog/posts/${post.slug}`}
+                  className="group bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow h-full flex flex-col"
+                >
+                  <div className="h-48 overflow-hidden rounded-t-lg relative">
+                    <Image
+                      src={post.image}
+                      alt={post.title}
+                      width={600}
+                      height={400}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://placehold.co/600x400/02228F/ffffff?text=${encodeURIComponent(post.category.replace(/&/g, 'and'))}`;
+                      }}
+                    />
+                  </div>
+                  <div className="p-5 flex flex-col flex-grow">
+                    <div className="mb-auto">
+                      <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
+                        {post.category}
+                      </div>
+                      <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+                        {post.title}
+                      </h3>
+                      <p className="text-muted-foreground line-clamp-3 mb-4">
+                        {post.excerpt}
+                      </p>
+                    </div>
+                    <div className="flex items-center text-xs text-muted-foreground mt-4">
+                      <div className="flex items-center mr-3">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        <span>{post.date}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        <span>{post.readTime}</span>
+                      </div>
+                    </div>
+                    <div className="mt-4 text-primary font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform">
+                      Read More
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-lg text-muted-foreground mb-4">No articles found for this category.</p>
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedCategory(null)}
+              >
+                View All Articles
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 

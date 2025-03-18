@@ -1,8 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { 
+  FileText, 
+  LayoutDashboard, 
+  LogOut, 
+  Package, 
+  Settings, 
+  Users,
+  PlusCircle,
+  LucideIcon
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,19 +25,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Package,
-  Settings,
-  LogOut,
-  PlusCircle,
-} from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ProfileNotification } from '@/components/ui/profile-notification';
 import { useTheme } from 'next-themes';
-import Image from 'next/image';
 
 interface User {
   id: string;
@@ -50,6 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
   // TEMPORARILY BYPASSING AUTHENTICATION
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -126,14 +130,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard" className="flex items-center space-x-2">
               <div className="relative h-8 w-8">
                 <Image 
-                  src="/invo-logo.png" 
+                  src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} 
                   alt="Invo" 
                   width={32} 
                   height={32}
                   className="h-8 w-auto"
                 />
               </div>
-              <span className="font-bold text-xl text-primary">Invo</span>
+              <span className={`font-bold text-xl ${isDarkMode ? "text-white" : "text-primary"}`}>Invo</span>
             </Link>
           </div>
 

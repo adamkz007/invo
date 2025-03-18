@@ -202,52 +202,29 @@ export async function POST(request: NextRequest) {
           }))
         }
       },
-      select: {
-        id: true,
-        invoiceNumber: true,
-        issueDate: true,
-        dueDate: true,
-        status: true,
-        subtotal: true,
-        taxRate: true,
-        taxAmount: true,
-        discountRate: true,
-        discountAmount: true,
-        total: true,
-        paidAmount: true,
-        notes: true,
-        createdAt: true,
-        updatedAt: true,
-        customerId: true,
-        userId: true,
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phoneNumber: true,
-            address: true
-          }
-        },
+      include: {
         items: {
-          select: {
-            id: true,
-            quantity: true,
-            unitPrice: true,
-            amount: true,
-            description: true,
-            productId: true,
-            product: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
+          include: {
+            product: true
           }
         }
       }
     });
+    
+    // Update product quantities for inventory management
+    // Only reduce quantities for physical products (where disableStockManagement is false)
+    for (const item of newInvoice.items) {
+      if (!item.product.disableStockManagement) {
+        await prisma.product.update({
+          where: { id: item.product.id },
+          data: {
+            quantity: {
+              decrement: item.quantity
+            }
+          }
+        });
+      }
+    }
 
     return NextResponse.json(newInvoice, { status: 201 });
   } catch (error) {

@@ -40,16 +40,18 @@ import {
   DollarSign,
   XCircle,
   CreditCard,
-  Send
+  Send,
+  Receipt
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency, format, formatRelativeDate, calculateDueDays } from '@/lib/utils';
-import { downloadInvoicePDF } from '@/lib/pdf-generator';
+import { downloadInvoicePDF, downloadReceiptPDF } from '@/lib/pdf-generator';
 import { InvoiceWithDetails } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
 import Image from 'next/image';
+import { useTheme } from 'next-themes';
 
 // Define company details interface
 interface CompanyDetails {
@@ -118,6 +120,10 @@ export default function InvoicesPage() {
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceWithDetails | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
+  // Add theme hook to detect dark mode
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
+
   // Fetch company details
   useEffect(() => {
     async function fetchCompanyDetails() {
@@ -149,6 +155,11 @@ export default function InvoicesPage() {
   const handleDownloadPDF = (invoice: InvoiceWithDetails) => {
     // Pass company details to the PDF generator
     downloadInvoicePDF(invoice, companyDetails);
+  };
+
+  const handleGenerateReceipt = (invoice: InvoiceWithDetails) => {
+    // Pass company details to the receipt generator
+    downloadReceiptPDF(invoice, companyDetails, settings);
   };
 
   const handleCancelInvoice = async (invoice: InvoiceWithDetails) => {
@@ -297,131 +308,136 @@ export default function InvoicesPage() {
           onCancelInvoice={handleCancelInvoice}
           onApplyPayment={handleOpenPaymentDialog}
           onMarkAsSent={handleMarkAsSent}
+          onGenerateReceipt={handleGenerateReceipt}
           companyDetails={companyDetails}
         />
       </Suspense>
 
       {/* Invoice Details Dialog */}
       <Dialog open={selectedInvoice !== null} onOpenChange={() => setSelectedInvoice(null)}>
-        <DialogContent className="max-w-xl w-full mx-auto p-6 space-y-6">
+        <DialogContent className="max-w-xl w-full mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[90vh] sm:max-h-[85vh]">
           <DialogTitle className="sr-only">Invoice Details</DialogTitle>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Company Header */}
-            <div>
-              <h2 className="text-2xl font-bold text-primary">
-                {companyDetails?.legalName || 'Invo Solutions'}
-              </h2>
-              {companyDetails?.address && (
-                <p className="text-sm text-muted-foreground">{companyDetails.address}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Customer Information */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-muted-foreground">Bill To:</h3>
+              <p className="font-medium">{selectedInvoice?.customer.name}</p>
+              {selectedInvoice?.customer.email && (
+                <p className="text-sm text-muted-foreground">{selectedInvoice.customer.email}</p>
               )}
-              {companyDetails?.email && (
-                <p className="text-sm text-muted-foreground">{companyDetails.email}</p>
+              {selectedInvoice?.customer.phoneNumber && (
+                <p className="text-sm text-muted-foreground">{selectedInvoice.customer.phoneNumber}</p>
               )}
-              {companyDetails?.phoneNumber && (
-                <p className="text-sm text-muted-foreground">{companyDetails.phoneNumber}</p>
-              )}
-              {!companyDetails && (
-                <>
-                  <p className="text-sm text-muted-foreground">123 Business Street</p>
-                  <p className="text-sm text-muted-foreground">Silicon Valley, CA 94000</p>
-                  <p className="text-sm text-muted-foreground">contact@invo.com</p>
-                </>
+              {selectedInvoice?.customer.address && (
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedInvoice.customer.address}</p>
               )}
             </div>
-
-            {/* Invoice Details */}
-            <div className="text-right">
-              <h1 className="text-3xl font-extrabold">INVOICE</h1>
-              <p className="text-sm mt-2">
-                <span className="font-semibold">Invoice #:</span> {selectedInvoice?.invoiceNumber}
-              </p>
-              <p className="text-sm">
-                <span className="font-semibold">Issue Date:</span> {selectedInvoice ? format(selectedInvoice.issueDate, 'PP') : ''}
-              </p>
-              <p className="text-sm">
-                <span className="font-semibold">Due Date:</span> {selectedInvoice ? format(selectedInvoice.dueDate, 'PP') : ''}
-              </p>
-              <div className="flex justify-end mt-2">
-                <span className="font-semibold mr-2">Status:</span>
-                {selectedInvoice && getStatusBadge(selectedInvoice.status, true)}
+            
+            {/* Invoice Information */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Invoice #{selectedInvoice?.invoiceNumber}</h2>
+                {getStatusBadge(selectedInvoice?.status || '', true)}
+              </div>
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>Issued: {selectedInvoice ? format(new Date(selectedInvoice.issueDate), 'MMMM d, yyyy') : ''}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>Due: {selectedInvoice ? format(new Date(selectedInvoice.dueDate), 'MMMM d, yyyy') : ''}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Customer Details */}
-          <div className="border-t border-b py-4 my-4">
-            <h3 className="text-lg font-semibold mb-2">Bill To</h3>
-            <p className="font-bold">{selectedInvoice?.customer.name}</p>
-            {selectedInvoice?.customer.email && (
-              <p className="text-muted-foreground">{selectedInvoice.customer.email}</p>
+          {/* Company Information */}
+          <div className="mt-4 p-3 bg-muted/50 rounded-md">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-semibold">From:</h3>
+              <span className="font-medium">{companyDetails?.legalName || 'Your Company'}</span>
+            </div>
+            {companyDetails?.email && (
+              <p className="text-xs text-muted-foreground">{companyDetails.email}</p>
             )}
-            {selectedInvoice?.customer.phoneNumber && (
-              <p className="text-muted-foreground">{selectedInvoice.customer.phoneNumber}</p>
+            {companyDetails?.phoneNumber && (
+              <p className="text-xs text-muted-foreground">{companyDetails.phoneNumber}</p>
+            )}
+            {companyDetails?.address && (
+              <p className="text-xs text-muted-foreground">{companyDetails.address}</p>
             )}
           </div>
 
           {/* Invoice Items */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {selectedInvoice?.items.map((item, index) => (
-                <TableRow key={item.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>
-                    <div>{item.product.name}</div>
-                    {item.product.description && (
-                      <div className="text-xs text-muted-foreground">{item.product.description}</div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(item.unitPrice, settings)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(item.quantity * item.unitPrice, settings)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="border rounded-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedInvoice?.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">
+                        {item.product.name}
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.unitPrice, settings)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.quantity * item.unitPrice, settings)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
 
           {/* Totals */}
-          <div className="ml-auto max-w-xs w-full space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{selectedInvoice ? formatCurrency(selectedInvoice.subtotal, settings) : ''}</span>
+          <div className="mt-4 space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(selectedInvoice?.subtotal || 0, settings)}</span>
             </div>
+            
             {selectedInvoice && selectedInvoice.taxRate > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax ({selectedInvoice.taxRate}%)</span>
-                <span>{formatCurrency(selectedInvoice.taxAmount, settings)}</span>
+              <div className="flex justify-between items-center text-sm">
+                <span>Tax ({selectedInvoice.taxRate}%):</span>
+                <span>{formatCurrency(selectedInvoice.taxAmount || 0, settings)}</span>
               </div>
             )}
+            
             {selectedInvoice && selectedInvoice.discountRate > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Discount ({selectedInvoice.discountRate}%)</span>
-                <span>-{formatCurrency(selectedInvoice.discountAmount, settings)}</span>
+              <div className="flex justify-between items-center text-sm">
+                <span>Discount ({selectedInvoice.discountRate}%):</span>
+                <span>-{formatCurrency(selectedInvoice.discountAmount || 0, settings)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-base pt-2 mt-1 border-t">
-              <span>Total</span>
-              <span>{selectedInvoice ? formatCurrency(selectedInvoice.total, settings) : ''}</span>
+            
+            <div className="flex justify-between items-center font-bold text-lg pt-2 border-t">
+              <span>Total:</span>
+              <span>{formatCurrency(selectedInvoice?.total || 0, settings)}</span>
             </div>
-            {selectedInvoice && ((selectedInvoice.status as string) === 'PAID' || (selectedInvoice.status as string) === 'PARTIAL') && (
-              <div className="flex justify-between text-sm pt-2 text-green-600">
-                <span>Paid</span>
-                <span>{formatCurrency(extractPaidAmount(selectedInvoice), settings)}</span>
-              </div>
-            )}
-            {selectedInvoice && (selectedInvoice.status as string) === 'PARTIAL' && (
-              <div className="flex justify-between text-sm text-amber-600 font-medium">
-                <span>Amount Due</span>
-                <span>{formatCurrency(selectedInvoice.total - extractPaidAmount(selectedInvoice), settings)}</span>
-              </div>
+            
+            {selectedInvoice && extractPaidAmount(selectedInvoice) > 0 && (
+              <>
+                <div className="flex justify-between items-center text-sm text-green-600">
+                  <span>Paid:</span>
+                  <span>{formatCurrency(extractPaidAmount(selectedInvoice), settings)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center font-bold">
+                  <span>Balance Due:</span>
+                  <span>{formatCurrency(selectedInvoice.total - extractPaidAmount(selectedInvoice), settings)}</span>
+                </div>
+              </>
             )}
           </div>
 
@@ -431,7 +447,7 @@ export default function InvoicesPage() {
             <div className="flex items-center justify-center mt-2">
               <span>Powered by</span>
               <div className="flex items-center ml-1">
-                <Image src="/invo-logo.png" alt="Invo Logo" className="h-4 w-4 mr-1" width={16} height={16} />
+                <Image src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} alt="Invo Logo" className="h-4 w-4 mr-1" width={16} height={16} />
                 <span className="font-semibold">Invo</span>
               </div>
             </div>
@@ -454,7 +470,7 @@ export default function InvoicesPage() {
 
       {/* Payment Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Apply Payment</DialogTitle>
             <DialogDescription>
@@ -509,6 +525,7 @@ function InvoicesList({
   onCancelInvoice,
   onApplyPayment,
   onMarkAsSent,
+  onGenerateReceipt,
   companyDetails
 }: { 
   searchTerm: string, 
@@ -517,6 +534,7 @@ function InvoicesList({
   onCancelInvoice: (invoice: InvoiceWithDetails) => void,
   onApplyPayment: (invoice: InvoiceWithDetails) => void,
   onMarkAsSent: (invoice: InvoiceWithDetails) => void,
+  onGenerateReceipt: (invoice: InvoiceWithDetails) => void,
   companyDetails: CompanyDetails | null
 }) {
   const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
@@ -697,6 +715,11 @@ function InvoicesList({
                             <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
                           </DropdownMenuItem>
                         )}
+                        {invoice.status === 'PAID' && (
+                          <DropdownMenuItem onSelect={() => onGenerateReceipt(invoice)}>
+                            <Receipt className="mr-2 h-4 w-4" /> Generate Receipt
+                          </DropdownMenuItem>
+                        )}
                         {invoice.status !== 'CANCELLED' && (
                           <DropdownMenuItem onSelect={() => onCancelInvoice(invoice)}>
                             <XCircle className="mr-2 h-4 w-4" /> Cancel Invoice
@@ -792,6 +815,11 @@ function InvoicesList({
                         {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
                           <DropdownMenuItem onSelect={() => onApplyPayment(invoice)}>
                             <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
+                          </DropdownMenuItem>
+                        )}
+                        {invoice.status === 'PAID' && (
+                          <DropdownMenuItem onSelect={() => onGenerateReceipt(invoice)}>
+                            <Receipt className="mr-2 h-4 w-4" /> Generate Receipt
                           </DropdownMenuItem>
                         )}
                         {invoice.status !== 'CANCELLED' && (

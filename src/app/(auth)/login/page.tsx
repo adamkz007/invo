@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useTheme } from 'next-themes';
 import RequestTACForm from '@/components/auth/request-tac-form';
 import LoginVerificationForm from '@/components/auth/login-verification-form';
 import LoginPasswordForm from '@/components/auth/login-password-form';
-import Link from 'next/link';
-import Image from 'next/image';
-import { CheckCircle2, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 // Create a client component that uses useSearchParams
 function LoginContent() {
@@ -17,6 +20,10 @@ function LoginContent() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const searchParams = useSearchParams();
+  
+  // Add theme hook to detect dark mode
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
   
   useEffect(() => {
     // Check if redirected from successful signup or password reset
@@ -70,13 +77,13 @@ function LoginContent() {
         <div className="mb-6 text-center">
           <div className="flex justify-center items-center">
             <Image 
-              src="/invo-logo.png" 
+              src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} 
               alt="Invo Logo" 
               width={40} 
               height={40} 
               className="mr-2"
             />
-            <h1 className="text-3xl font-bold">Invo</h1>
+            <h1 className={`text-3xl font-bold ${isDarkMode ? "text-white" : ""}`}>Invo</h1>
           </div>
           <p className="text-sm text-muted-foreground">Invoice Management Made Simple</p>
         </div>

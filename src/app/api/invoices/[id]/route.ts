@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const id = await Promise.resolve(params.id);
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -75,7 +75,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await Promise.resolve(params);
+    const id = await Promise.resolve(params.id);
     const data = await request.json();
     const { action, paymentAmount } = data;
     
@@ -112,6 +112,38 @@ export async function PATCH(
     let updatedInvoice;
     
     if (action === 'cancel') {
+      // First, get the invoice with its items and products to know what quantities to restore
+      const invoiceWithItems = await prisma.invoice.findFirst({
+        where: { id: id },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+      
+      if (!invoiceWithItems) {
+        return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+      }
+      
+      // Restore product quantities for inventory management if the invoice was PAID or PARTIAL
+      if (invoiceWithItems.status === InvoiceStatus.PAID || invoiceWithItems.status === InvoiceStatus.PARTIAL || invoiceWithItems.status === InvoiceStatus.SENT) {
+        for (const item of invoiceWithItems.items) {
+          if (!item.product.disableStockManagement) {
+            await prisma.product.update({
+              where: { id: item.product.id },
+              data: {
+                quantity: {
+                  increment: item.quantity
+                }
+              }
+            });
+          }
+        }
+      }
+
       // Update invoice status to CANCELLED
       updatedInvoice = await prisma.invoice.update({
         where: { id: id },
@@ -128,6 +160,39 @@ export async function PATCH(
         }
       });
     } else if (action === 'mark_sent') {
+      // Get the current invoice status
+      const currentInvoice = await prisma.invoice.findUnique({
+        where: { id: id },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+      
+      if (!currentInvoice) {
+        return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+      }
+      
+      // If the invoice is being transitioned from DRAFT to SENT, 
+      // we need to reduce the product quantities
+      if (currentInvoice.status === InvoiceStatus.DRAFT) {
+        for (const item of currentInvoice.items) {
+          if (!item.product.disableStockManagement) {
+            await prisma.product.update({
+              where: { id: item.product.id },
+              data: {
+                quantity: {
+                  decrement: item.quantity
+                }
+              }
+            });
+          }
+        }
+      }
+      
       // Update invoice status to SENT
       updatedInvoice = await prisma.invoice.update({
         where: { id: id },
@@ -155,21 +220,54 @@ export async function PATCH(
         });
       }
       
+      // Get the current invoice with items and products
+      const currentInvoice = await prisma.invoice.findUnique({
+        where: { id: id },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+      
+      if (!currentInvoice) {
+        return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+      }
+      
       // Determine the new status based on the payment amount
       let newStatus: InvoiceStatus;
       let newPaidAmount = amountPaid;
       
       // If there's an existing paidAmount, add to it
-      if (invoice.paidAmount) {
-        newPaidAmount += invoice.paidAmount;
+      if (currentInvoice.paidAmount) {
+        newPaidAmount += currentInvoice.paidAmount;
       }
       
-      if (newPaidAmount >= invoice.total) {
+      if (newPaidAmount >= currentInvoice.total) {
         // Full payment
         newStatus = InvoiceStatus.PAID;
       } else {
         // Partial payment
         newStatus = InvoiceStatus.PARTIAL;
+      }
+      
+      // If the invoice is being transitioned from DRAFT to PAID or PARTIAL, 
+      // we need to reduce the product quantities
+      if (currentInvoice.status === InvoiceStatus.DRAFT) {
+        for (const item of currentInvoice.items) {
+          if (!item.product.disableStockManagement) {
+            await prisma.product.update({
+              where: { id: item.product.id },
+              data: {
+                quantity: {
+                  decrement: item.quantity
+                }
+              }
+            });
+          }
+        }
       }
       
       // Update the invoice with the new status and paid amount
@@ -213,7 +311,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const id = await Promise.resolve(params.id);
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -233,16 +331,39 @@ export async function DELETE(
       }
     }
     
-    // Fetch the invoice to ensure it exists and belongs to the user
+    // Fetch the invoice with its items and products to know what quantities to restore
     const invoice = await prisma.invoice.findFirst({
       where: {
         id: id,
         userId: userId
+      },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
       }
     });
     
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+    
+    // If the invoice status is PAID, PARTIAL, or SENT, restore product quantities
+    if (invoice.status === 'PAID' || invoice.status === 'PARTIAL' || invoice.status === 'SENT') {
+      for (const item of invoice.items) {
+        if (!item.product.disableStockManagement) {
+          await prisma.product.update({
+            where: { id: item.product.id },
+            data: {
+              quantity: {
+                increment: item.quantity
+              }
+            }
+          });
+        }
+      }
     }
     
     // Delete the invoice items first

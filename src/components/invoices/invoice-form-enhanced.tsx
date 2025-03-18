@@ -60,9 +60,14 @@ const invoiceFormSchema = z.object({
 interface InvoiceFormProps {
   defaultValues?: InvoiceFormValues;
   isEditing?: boolean;
+  preSelectedCustomerId?: string | null;
 }
 
-export default function InvoiceFormEnhanced({ defaultValues, isEditing = false }: InvoiceFormProps) {
+export default function InvoiceFormEnhanced({ 
+  defaultValues, 
+  isEditing = false,
+  preSelectedCustomerId = null 
+}: InvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customers, setCustomers] = useState<CustomerWithRelations[]>([]);
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
@@ -110,7 +115,7 @@ export default function InvoiceFormEnhanced({ defaultValues, isEditing = false }
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: defaultValues || {
-      customerId: '',
+      customerId: preSelectedCustomerId || '',
       issueDate: new Date(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Default to 30 days from now
       status: InvoiceStatus.DRAFT,
@@ -127,6 +132,13 @@ export default function InvoiceFormEnhanced({ defaultValues, isEditing = false }
     control: form.control,
     name: 'items',
   });
+
+  // Set the selected customer if preSelectedCustomerId changes
+  useEffect(() => {
+    if (preSelectedCustomerId && !isEditing) {
+      form.setValue('customerId', preSelectedCustomerId);
+    }
+  }, [preSelectedCustomerId, form, isEditing]);
 
   // Calculate totals whenever form values change
   useEffect(() => {

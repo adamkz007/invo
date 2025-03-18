@@ -30,7 +30,7 @@ import { useToast } from '@/components/ui/toast';
 const customerFormSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
   email: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
-  phoneNumber: z.string().optional().or(z.literal('')),
+  phoneNumber: z.string().min(6, { message: 'Phone number is required' }),
   address: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   userId: z.string(),
@@ -41,9 +41,14 @@ type CustomerFormValues = z.infer<typeof customerFormSchema>;
 interface CustomerFormDialogProps {
   userId: string;
   onCustomerCreated: (customer: any) => void;
+  renderWithoutDialog?: boolean;
 }
 
-export default function CustomerFormDialog({ userId, onCustomerCreated }: CustomerFormDialogProps) {
+export default function CustomerFormDialog({ 
+  userId, 
+  onCustomerCreated, 
+  renderWithoutDialog = false 
+}: CustomerFormDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { showToast } = useToast();
@@ -94,6 +99,85 @@ export default function CustomerFormDialog({ userId, onCustomerCreated }: Custom
     }
   }
 
+  if (renderWithoutDialog) {
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
+                <FormControl>
+                  <Input placeholder="Customer name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email (optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="Email address" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phoneNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
+                <FormControl>
+                  <Input placeholder="Phone number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address (optional)</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Customer address" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notes (optional)</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Additional notes" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="pt-4">
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Customer'}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -106,7 +190,7 @@ export default function CustomerFormDialog({ userId, onCustomerCreated }: Custom
         <DialogHeader>
           <DialogTitle>Add New Customer</DialogTitle>
           <DialogDescription>
-            Create a new customer to add to your invoices.
+            Create a new customer to add to your invoices. Only Name and Phone Number are required.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -116,7 +200,7 @@ export default function CustomerFormDialog({ userId, onCustomerCreated }: Custom
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="Customer name" {...field} />
                   </FormControl>
@@ -129,7 +213,7 @@ export default function CustomerFormDialog({ userId, onCustomerCreated }: Custom
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email (optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="Email address" {...field} />
                   </FormControl>
@@ -142,7 +226,7 @@ export default function CustomerFormDialog({ userId, onCustomerCreated }: Custom
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="Phone number" {...field} />
                   </FormControl>
@@ -155,7 +239,7 @@ export default function CustomerFormDialog({ userId, onCustomerCreated }: Custom
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Address (optional)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Customer address" {...field} />
                   </FormControl>
@@ -168,7 +252,7 @@ export default function CustomerFormDialog({ userId, onCustomerCreated }: Custom
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>Notes (optional)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Additional notes" {...field} />
                   </FormControl>
