@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import dashboardImage from '../../public/dash.png';
 import { 
   FileText, 
   Users, 
@@ -21,6 +22,7 @@ import { Button } from '@/components/ui/button';
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [dashboardImageError, setDashboardImageError] = useState(false);
 
   // Handle scroll event for navbar styling
   useEffect(() => {
@@ -69,27 +71,27 @@ export default function LandingPage() {
   // Timeline data for future releases
   const timelineItems = [
     {
-      date: "Q3 2023",
-      title: "Online Payment Integration",
-      description: "Let customers pay you directly through invoices with credit cards and digital wallets. Get paid faster, with less hassle.",
+      date: "Q2 2025",
+      title: "Receipts",
+      description: "Issue receipts in seconds for cash payments. Store it forever.",
       status: "Coming Soon"
     },
     {
-      date: "Q4 2023",
+      date: "Q3 2025",
       title: "Malaysia e-Invoicing Compliance",
-      description: "Automatically meet Malaysia's e-Invoicing requirements with one-click submission to tax authorities. Stay compliant without the headache.",
+      description: "Automatically meet Malaysia's e-Invoicing requirements with one-click submission to MyInvois Portal. Stay compliant without the headache.",
       status: "In Development"
     },
     {
-      date: "Q1 2024",
-      title: "Advanced Tax Management",
-      description: "Handle complex tax scenarios with ease. Perfect for businesses that operate across multiple regions or deal with various tax rates.",
+      date: "Q4 2025",
+      title: "Customer Loyalty",
+      description: "Engage your top-spending customers like never before, with personalized offers and exclusive rewards.",
       status: "Planned"
     },
     {
-      date: "Q2 2024",
-      title: "Integration Marketplace",
-      description: "Connect Invo with your favorite business tools. Sync with accounting software, e-commerce platforms, and more.",
+      date: "Q1 2026",
+      title: "API & Integration",
+      description: "Connect Invo with your favorite business tools. Sync with POS, accounting software, e-commerce, and more.",
       status: "Planned"
     }
   ];
@@ -103,43 +105,25 @@ export default function LandingPage() {
       description: "Perfect for micro SMEs",
       features: [
         "Up to 5 clients",
-        "Up to 5 invoices per month",
-        "Basic reporting"
+        "Up to 15 invoices per month",
+        "Partial payments, taxes, and discounts"
       ],
       cta: "Get Started",
       highlighted: false
     },
     {
       name: "Premium",
-      price: "RM9",
+      price: "RM12",
       period: "per month",
       description: "Ideal for growing businesses",
       features: [
         "Unlimited clients",
         "Unlimited invoices",
         "Advanced reporting",
-        "Priority support",
-        "Custom branding",
-        "Team access (up to 3 users)"
+        "Custom logo & branding"
       ],
       cta: "Start Free Trial",
       highlighted: true
-    },
-    {
-      name: "Enterprise",
-      price: "RMxx",
-      period: "per month",
-      description: "For established businesses with complex needs",
-      features: [
-        "Everything in Professional",
-        "Unlimited team members",
-        "API access",
-        "Dedicated account manager",
-        "Custom integrations",
-        "Advanced security features"
-      ],
-      cta: "Contact Sales",
-      highlighted: false
     }
   ];
 
@@ -233,7 +217,7 @@ export default function LandingPage() {
               className="text-center md:text-left"
             >
               <div className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full">
-                <span className="text-sm font-medium text-primary">Made for Small & Medium Businesses</span>
+                <span className="text-sm font-medium text-primary">Made for Malaysian freelancers & SMEs</span>
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
                 Invoicing that <span className="text-primary relative">
@@ -244,7 +228,7 @@ export default function LandingPage() {
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-lg mx-auto md:mx-0">
-                No complicated software. No accounting degree needed. Just simple, practical tools that help your business get paid faster.
+                No complicated software. Just practical tools that help your business get paid faster.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <Link href="/signup">
@@ -259,8 +243,11 @@ export default function LandingPage() {
                   </Button>
                 </a>
               </div>
-              <p className="mt-4 text-sm text-muted-foreground">
+              <p className="mt-4 text-sm text-muted-foreground line-through">
                 No credit card required. 14-day free trial.
+              </p>
+              <p className="mt-2 text-sm font-medium bg-green-100/40 text-green-800 px-3 py-1 rounded-full inline-block">
+                We're in beta! Enjoy all features free for a limited time
               </p>
             </motion.div>
             
@@ -273,17 +260,14 @@ export default function LandingPage() {
               <div className="relative rounded-lg overflow-hidden shadow-2xl">
                 <div className="bg-gradient-to-br from-primary/10 to-primary/5 absolute inset-0"></div>
                 {/* Desktop image */}
-                <Image 
-                  src="/dashboard-preview.png" 
-                  alt="Invo Dashboard" 
-                  width={900}
-                  height={600}
-                  className="w-full h-auto relative z-10 hidden md:block"
-                  onError={(e) => {
-                    // Fallback if image doesn't exist
-                    e.currentTarget.src = "https://placehold.co/600x400/02228F/ffffff?text=Invo+Dashboard";
-                  }}
-                />
+                <div className="hidden md:block relative z-10">
+                  <Image 
+                    src={dashboardImage}
+                    alt="Invo Dashboard" 
+                    className="w-full h-auto"
+                    priority
+                  />
+                </div>
                 {/* Mobile image with frame */}
                 <div className="relative mx-auto max-w-[340px] md:hidden p-0 my-0">
                   <Image 
@@ -397,7 +381,7 @@ export default function LandingPage() {
                   <ul className="space-y-3 mb-6">
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Customizable invoice templates</span>
+                      <span>Create invoices in seconds</span>
                     </li>
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
@@ -409,7 +393,7 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-start">
                       <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Track payment status in real-time</span>
+                      <span>Support partial payments, discounts, and taxes</span>
                     </li>
                   </ul>
                   <Link href="/signup">
@@ -420,13 +404,14 @@ export default function LandingPage() {
                   </Link>
                 </div>
                 
-                <div className="relative hidden md:block">
-                  <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-xl"></div>
-                  <div className="rounded-lg bg-white/80 backdrop-blur-sm p-6 shadow-xl border border-primary/20 relative z-10">
+                {/* Invoice example - now visible on both mobile and desktop */}
+                <div className="relative">
+                  <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-xl hidden md:block"></div>
+                  <div className="rounded-lg bg-white/80 backdrop-blur-sm p-6 shadow-xl border border-primary/20 relative z-10 mt-8 md:mt-0">
                     <div className="flex justify-between items-center mb-4 pb-4 border-b">
                       <div>
                         <h4 className="font-bold">Invoice #INV-2023-001</h4>
-                        <p className="text-sm text-muted-foreground">Due: May 15, 2023</p>
+                        <p className="text-sm text-muted-foreground">Due: Mar 15, 2025</p>
                       </div>
                       <div className="bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium">
                         Pending
@@ -435,20 +420,20 @@ export default function LandingPage() {
                     <div className="space-y-3 mb-4">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Website Design</span>
-                        <span className="font-medium">$1,200.00</span>
+                        <span className="font-medium">RM2,500.00</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Logo Design</span>
-                        <span className="font-medium">$450.00</span>
+                        <span className="font-medium">RM450.00</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">SEO Setup</span>
-                        <span className="font-medium">$350.00</span>
+                        <span className="font-medium">RM550.00</span>
                       </div>
                     </div>
                     <div className="flex justify-between pt-3 border-t font-bold">
                       <span>Total</span>
-                      <span>$2,000.00</span>
+                      <span>RM3,500.00</span>
                     </div>
                   </div>
                 </div>
@@ -481,33 +466,6 @@ export default function LandingPage() {
                 <li className="flex items-start text-sm">
                   <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
                   <span>Communication timeline tracking</span>
-                </li>
-              </ul>
-            </motion.div>
-
-            {/* Smart Inventory */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="bg-card rounded-lg p-6 shadow-md border group hover:border-primary/50 hover:shadow-lg transition-all"
-            >
-              <div className="mb-4 p-3 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
-                <Package className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Smart Inventory</h3>
-              <p className="text-muted-foreground mb-4">
-                Never run out of stock again. Get alerts when inventory is low and track what's selling best for your business.
-              </p>
-              <ul className="space-y-2 mb-4">
-                <li className="flex items-start text-sm">
-                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Real-time inventory tracking</span>
-                </li>
-                <li className="flex items-start text-sm">
-                  <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Customizable low-stock alerts</span>
                 </li>
               </ul>
             </motion.div>
@@ -620,7 +578,7 @@ export default function LandingPage() {
       </section>
 
       {/* Roadmap/Timeline Section */}
-      <section className="py-20">
+      <section id="timeline" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -901,9 +859,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                quote: "As a small bakery owner, I needed something simple that wouldn&apos;t take hours to learn. Invo is perfect - I create invoices in seconds and my customers can pay me right away.",
-                author: "Sarah Johnson",
-                role: "Local Bakery Owner"
+                quote: "The interface is very intuitive and easy to use. Nice!",
+                author: "Harith Azdi",
+                role: "Operations, YSPOA"
               },
               {
                 quote: "The inventory tracking alone has saved me so much time. I always know what&apos;s in stock and what I need to order. It&apos;s like having an extra employee without the cost.",
@@ -972,25 +930,25 @@ export default function LandingPage() {
                 </div>
                 <div className="p-5 flex flex-col flex-grow">
                   <div className="mb-auto">
-                    <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
-                      {post.category}
-                    </div>
+                  <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
+                    {post.category}
+                  </div>
                     <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
                       {post.title}
                     </h3>
                     <p className="text-muted-foreground line-clamp-2">
-                      {post.excerpt}
-                    </p>
+                    {post.excerpt}
+                  </p>
                   </div>
                   <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
                     <div className="flex items-center text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>{post.date}</span>
-                    </div>
+                    <Calendar className="h-3 w-3 mr-1" />
+                    <span>{post.date}</span>
+                  </div>
                     <div className="text-primary font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform">
                       Read More
                       <ArrowRight className="h-4 w-4 ml-1" />
-                    </div>
+                </div>
                   </div>
                 </div>
               </Link>
@@ -1035,8 +993,11 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <p className="mt-4 text-sm opacity-80">
+              <p className="mt-4 text-sm opacity-80 line-through">
                 No credit card required. 14-day free trial.
+              </p>
+              <p className="mt-2 text-sm font-medium bg-white/20 rounded-full px-3 py-1 inline-block">
+                We're in beta! Enjoy all features free for a limited time
               </p>
             </div>
           </motion.div>
@@ -1053,16 +1014,16 @@ export default function LandingPage() {
                 <li><a href="#features" className="text-sm text-muted-foreground hover:text-primary">Features</a></li>
                 <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-primary">Pricing</a></li>
                 <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Security</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Roadmap</a></li>
+                <li><a href="#timeline" className="text-sm text-muted-foreground hover:text-primary">Roadmap</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold mb-4">Company</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">About</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Blog</a></li>
+                <li><Link href="/about" className="text-sm text-muted-foreground hover:text-primary">About</Link></li>
+                <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
                 <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Careers</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Contact</a></li>
+                <li><Link href="/contact" className="text-sm text-muted-foreground hover:text-primary">Contact</Link></li>
               </ul>
             </div>
             <div>
@@ -1070,7 +1031,7 @@ export default function LandingPage() {
               <ul className="space-y-2">
                 <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Help Center</a></li>
                 <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Guides</a></li>
+                <li><Link href="/guides" className="text-sm text-muted-foreground hover:text-primary">Guides</Link></li>
                 <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Templates</a></li>
                 <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Webinars</a></li>
               </ul>
@@ -1078,9 +1039,9 @@ export default function LandingPage() {
             <div>
               <h3 className="font-bold mb-4">Legal</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Privacy</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Terms</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Cookie Policy</a></li>
+                <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary">Privacy</Link></li>
+                <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-primary">Terms</Link></li>
+                <li><Link href="/cookie-policy" className="text-sm text-muted-foreground hover:text-primary">Cookie Policy</Link></li>
               </ul>
             </div>
           </div>
@@ -1091,7 +1052,7 @@ export default function LandingPage() {
               <span className="font-bold text-primary">Invo</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Invo. All rights reserved.
+              © {new Date().getFullYear()} Invo. Created by Halogen Services (002897568-V)
             </p>
           </div>
         </div>

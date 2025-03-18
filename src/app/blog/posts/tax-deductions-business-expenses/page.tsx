@@ -111,7 +111,7 @@ export default function TaxDeductionsPost() {
                 }}
               />
               <figcaption className="bg-muted/50 text-center p-3 text-sm text-muted-foreground italic">
-                Understanding tax deductions can save your Malaysian business thousands of ringgit each year
+                Lobby at Doubletree by Hilton, Putrajaya Lakeside
               </figcaption>
             </figure>
           </motion.div>

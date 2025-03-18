@@ -110,7 +110,7 @@ export default function DigitalTransformationPost() {
                 }}
               />
               <figcaption className="bg-muted/50 text-center p-3 text-sm text-muted-foreground italic">
-                Digital transformation offers Malaysian SMEs a competitive edge in today's rapidly evolving business landscape
+                Interior ceiling details at Convivencia Cafe, ISTAC KL
               </figcaption>
             </figure>
           </motion.div>

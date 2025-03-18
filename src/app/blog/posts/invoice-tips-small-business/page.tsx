@@ -110,7 +110,7 @@ export default function InvoiceTipsPost() {
                 }}
               />
               <figcaption className="bg-muted/50 text-center p-3 text-sm text-muted-foreground italic">
-                Effective invoicing strategies can significantly improve cash flow for small businesses
+                A receipt from my visit to Yuzu 
               </figcaption>
             </figure>
           </motion.div>
