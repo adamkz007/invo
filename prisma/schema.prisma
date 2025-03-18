@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  // If environment variable doesn't exist, use SQLite
+  // This is useful for local development
+  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {

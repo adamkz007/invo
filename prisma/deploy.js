@@ -1,34 +1,26 @@
-// Script to handle Prisma deployment in production
+// This script is used to deploy the database schema to production
 const { execSync } = require('child_process');
 
-// Function to execute shell commands
-function executeCommand(command) {
+// Check if we're in production environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+async function main() {
   try {
-    execSync(command, { stdio: 'inherit' });
+    // In production, we use db push to avoid migration history issues
+    if (isProduction) {
+      console.log('Running database push in production environment...');
+      execSync('npx prisma db push', { stdio: 'inherit' });
+    } else {
+      // In development, we can use migrations
+      console.log('Running database migrations in development environment...');
+      execSync('npx prisma migrate dev', { stdio: 'inherit' });
+    }
+    
+    console.log('Database deployment completed successfully');
   } catch (error) {
-    console.error(`Error executing command: ${command}`);
-    console.error(error);
+    console.error('Error deploying database:', error);
     process.exit(1);
   }
 }
 
-// Main deployment function
-async function deploy() {
-  console.log('🚀 Starting database deployment...');
-  
-  // Generate Prisma client
-  console.log('📦 Generating Prisma client...');
-  executeCommand('npx prisma generate');
-  
-  // Push schema changes to the database (safer than migrate in production)
-  console.log('🔄 Pushing schema changes to database...');
-  executeCommand('npx prisma db push --accept-data-loss');
-  
-  console.log('✅ Database deployment completed successfully!');
-}
-
-// Run the deployment
-deploy().catch(err => {
-  console.error('❌ Deployment failed:', err);
-  process.exit(1);
-}); 
+main(); 
