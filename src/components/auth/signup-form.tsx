@@ -88,6 +88,8 @@ export default function SignUpForm() {
     setError(null);
 
     try {
+      console.log('Submitting registration form for:', values.email);
+      
       // Register the user
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -103,35 +105,56 @@ export default function SignUpForm() {
       });
 
       const data = await response.json();
+      console.log('Registration response:', { 
+        status: response.status, 
+        success: data.success, 
+        error: data.error,
+        details: data.details 
+      });
 
       if (!data.success) {
+        // Format detailed validation errors if available
+        if (data.details && Array.isArray(data.details)) {
+          throw new Error(data.details.join(', '));
+        }
         throw new Error(data.error || 'Registration failed');
       }
 
       // Automatically log the user in
-      const loginResponse = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-        }),
-      });
+      try {
+        console.log('Attempting auto-login after successful registration');
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: values.email,
+            password: values.password,
+          }),
+        });
 
-      const loginData = await loginResponse.json();
+        const loginData = await loginResponse.json();
+        console.log('Login response status:', loginResponse.status);
 
-      if (loginData.success) {
-        // Redirect to the settings page to complete their profile
-        router.push('/settings');
-      } else {
-        // If auto-login fails, redirect to login page with success message
+        if (loginData.success) {
+          console.log('Auto-login successful, redirecting to settings');
+          // Redirect to the settings page to complete their profile
+          router.push('/settings');
+        } else {
+          console.log('Auto-login failed, redirecting to login page');
+          // If auto-login fails, redirect to login page with success message
+          router.push('/login?status=signup_success');
+        }
+      } catch (loginErr) {
+        console.error('Auto-login error:', loginErr);
+        // If auto-login throws an error, still redirect to login page
         router.push('/login?status=signup_success');
       }
 
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      console.error('Registration error:', err);
+      setError(err.message || 'An error occurred during registration. Please try again.');
     } finally {
       setIsLoading(false);
     }

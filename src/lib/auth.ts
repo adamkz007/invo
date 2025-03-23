@@ -79,7 +79,10 @@ export async function register({
   phoneNumber: string;
   password: string;
 }): Promise<{ success: boolean; error?: string; userId?: string }> {
+  console.log('Starting registration process for:', { name, email, phoneNumber });
+  
   if (!name || !email || !phoneNumber || !password) {
+    console.log('Registration validation failed: Missing required fields');
     return {
       success: false,
       error: 'Missing required fields',
@@ -88,9 +91,11 @@ export async function register({
 
   try {
     // Hash the password
+    console.log('Hashing password');
     const passwordHash = await hashPassword(password);
 
     // Check if user exists
+    console.log('Checking if user already exists');
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [{ email }, { phoneNumber }],
@@ -98,6 +103,7 @@ export async function register({
     });
 
     if (existingUser) {
+      console.log('User already exists:', { email, phoneNumber });
       return {
         success: false,
         error: 'User with this email or phone number already exists',
@@ -105,6 +111,7 @@ export async function register({
     }
 
     // Create the user
+    console.log('Creating new user');
     const user = await prisma.user.create({
       data: {
         name,
@@ -113,8 +120,10 @@ export async function register({
         passwordHash,
       },
     });
+    console.log('User created successfully with ID:', user.id);
 
     // Create a basic company record for the user with their email
+    console.log('Creating company record for user');
     await prisma.company.create({
       data: {
         legalName: name, // Default to user's name initially
@@ -123,13 +132,27 @@ export async function register({
         userId: user.id,
       },
     });
+    console.log('Company record created successfully');
 
     return {
       success: true,
       userId: user.id,
     };
   } catch (error) {
-    console.error('Error registering user', error);
+    console.error('Error registering user:', error);
+    // Check if it's a Prisma error
+    if (error instanceof Error) {
+      if (error.message.includes('connect') || error.message.includes('database')) {
+        return {
+          success: false,
+          error: 'Database connection error. Please try again later.',
+        };
+      }
+      return {
+        success: false,
+        error: `Registration failed: ${error.message}`,
+      };
+    }
     return {
       success: false,
       error: 'Failed to register user',
