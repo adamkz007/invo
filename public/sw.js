@@ -1,6 +1,6 @@
-// This is a simple service worker file for PWA support
+// This is a service worker for PWA support with improved routing
 const CACHE_NAME = 'invo-cache-v1';
-const urlsToCache = [
+const STATIC_ASSETS = [
   '/',
   '/manifest.json',
   '/favicon.ico',
@@ -10,42 +10,126 @@ const urlsToCache = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/maskable-icon.png',
-  // Add more URLs to cache as needed
+  // Add more static assets to cache as needed
 ];
 
+// Install handler: cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(urlsToCache);
+        return cache.addAll(STATIC_ASSETS);
       })
   );
+  self.skipWaiting(); // Ensure the new service worker activates immediately
 });
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
-  );
-});
-
+// Activate handler: clean up old caches
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
+          if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Take control of all clients
+  );
+});
+
+// Fetch handler with improved strategy for handling redirects
+self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // For HTML navigation requests (routes) - Network first, fallback to cache
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Don't cache redirects or error responses
+          if (response.redirected || !response.ok) {
+            return response;
+          }
+          
+          // Clone the response because it's a stream that can only be consumed once
+          const responseToCache = response.clone();
+          
+          caches.open(CACHE_NAME)
+            .then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+            
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request)
+            .then(cachedResponse => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              // If no cached response, fall back to the homepage
+              return caches.match('/');
+            });
+        })
+    );
+    return;
+  }
+
+  // For static assets - Cache first, network fallback
+  if (STATIC_ASSETS.some(asset => event.request.url.endsWith(asset))) {
+    event.respondWith(
+      caches.match(event.request)
+        .then(cachedResponse => {
+          return cachedResponse || fetch(event.request)
+            .then(response => {
+              // Don't cache redirects or error responses
+              if (response.redirected || !response.ok) {
+                return response;
+              }
+              
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME)
+                .then(cache => {
+                  cache.put(event.request, responseToCache);
+                });
+                
+              return response;
+            });
+        })
+    );
+    return;
+  }
+
+  // For API requests or other dynamic content - Network first with timeout
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        // Don't cache redirects or error responses for API calls
+        if (response.redirected || !response.ok) {
+          return response;
+        }
+        
+        // Clone and cache successful responses
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME)
+          .then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+          
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 }); 
