@@ -61,12 +61,20 @@ export async function hashPassword(password: string): Promise<string> {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Generate invoice number (format: INV-{year}-{5-digit number})
+// Generate invoice number (format: INV-{sequential number}-{timestamp})
 export function generateInvoiceNumber(userId: string): string {
-  const year = new Date().getFullYear();
-  const randomPart = Math.floor(10000 + Math.random() * 90000);
+  // In a real implementation, we would fetch the latest invoice number
+  // from the database and increment it. For this utility function,
+  // we'll use a timestamp-based approach for demonstration.
   
-  return `INV-${year}-${randomPart}`;
+  // Use the last 4 digits of the timestamp for the suffix
+  const timestamp = Date.now().toString().slice(-4);
+  
+  // For demonstration, we'll use a random 4-digit number
+  // In a real implementation, this would be fetched from the database
+  const sequentialNumber = Math.floor(1000 + Math.random() * 9000);
+  
+  return `INV-${sequentialNumber.toString().padStart(4, '0')}-${timestamp}`;
 }
 
 // Calculate invoice totals

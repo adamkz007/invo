@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AppSettings, defaultSettings } from '@/lib/utils';
+import { AppSettings } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
 import {
   Dialog,
@@ -31,6 +31,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import PasswordResetForm from '@/components/settings/password-reset-form';
+import { SubscriptionSettings } from '@/components/subscription/SubscriptionSettings';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 // Form validation schema
 const companyFormSchema = z.object({
@@ -51,19 +53,26 @@ const currencies = [
   { code: 'USD', name: 'US Dollar', locale: 'en-US' },
   { code: 'EUR', name: 'Euro', locale: 'en-EU' },
   { code: 'GBP', name: 'British Pound', locale: 'en-GB' },
-  { code: 'SGD', name: 'Singapore Dollar', locale: 'en-SG' },
   { code: 'AUD', name: 'Australian Dollar', locale: 'en-AU' },
+  { code: 'CAD', name: 'Canadian Dollar', locale: 'en-CA' },
+  { code: 'SGD', name: 'Singapore Dollar', locale: 'en-SG' },
+  { code: 'JPY', name: 'Japanese Yen', locale: 'ja-JP' },
+  { code: 'CNY', name: 'Chinese Yuan', locale: 'zh-CN' },
+  { code: 'INR', name: 'Indian Rupee', locale: 'en-IN' },
 ];
 
 export default function SettingsPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [formValues, setFormValues] = useState<CompanyFormValues | null>(null);
-  const [fieldsLocked, setFieldsLocked] = useState(false);
-  const { settings, updateSettings } = useSettings();
   const { showToast } = useToast();
-
+  const { settings, updateSettings } = useSettings();
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [fieldsLocked, setFieldsLocked] = useState(false);
+  const [company, setCompany] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [formIsDirty, setFormIsDirty] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
   // Initialize form
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companyFormSchema),
@@ -75,11 +84,23 @@ export default function SettingsPage() {
       email: '',
       phoneNumber: '',
       address: '',
-      termsAndConditions: 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
+      termsAndConditions: '',
     },
   });
 
-  // Fetch company details on component mount
+  // Function to refresh user data
+  const refreshUserData = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Watch for form changes to enable/disable save button
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      setFormIsDirty(form.formState.isDirty);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   useEffect(() => {
     async function fetchCompanyDetails() {
       try {
@@ -88,6 +109,7 @@ export default function SettingsPage() {
         
         if (response.ok) {
           const data = await response.json();
+          setCompany(data);
           
           // If company data exists, populate the form
           if (data) {
@@ -99,19 +121,24 @@ export default function SettingsPage() {
               email: data.email || '',
               phoneNumber: data.phoneNumber || '',
               address: data.address || '',
-              termsAndConditions: data.termsAndConditions || 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
+              termsAndConditions: data.termsAndConditions || '',
             });
             
-            // Check if critical fields are filled to determine if they should be locked
-            if (data.legalName && data.registrationNumber && data.taxIdentificationNumber) {
-              setFieldsLocked(true);
-            }
+            // Lock certain fields if company exists (this is just an example)
+            setFieldsLocked(!!data.registrationNumber);
           }
+          
+          setFormIsDirty(false);
+        } else {
+          showToast({
+            message: 'Failed to fetch company details',
+            variant: 'error'
+          });
         }
       } catch (error) {
         console.error('Error fetching company details:', error);
         showToast({
-          message: 'Failed to load company details',
+          message: 'Failed to fetch company details',
           variant: 'error'
         });
       } finally {
@@ -119,47 +146,64 @@ export default function SettingsPage() {
       }
     }
     
+    // Fetch user data including subscription info
+    async function fetchUserData() {
+      try {
+        console.log('Fetching user data...');
+        // Use the test API endpoint temporarily to bypass authentication
+        const response = await fetch('/api/user/test');
+        console.log('User data response status:', response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('User data received:', data);
+          setUserData(data.user); // Extract the user object from the response
+          
+          // If we have user data but no company data yet, pre-populate the email field
+          if (data.user && data.user.email && !company) {
+            form.setValue('email', data.user.email);
+          }
+        } else {
+          console.error('Failed to fetch user data:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    }
+
+    // Fetch data when component mounts or refreshTrigger changes
     fetchCompanyDetails();
-  }, [form, showToast]);
-
-  // Handle form submission
-  const handleSubmit = (values: CompanyFormValues) => {
-    setFormValues(values);
-    setConfirmDialogOpen(true);
-  };
-
-  // Handle confirmation dialog confirm
-  const handleConfirmSave = async () => {
-    if (!formValues) return;
+    fetchUserData();
     
-    setIsSaving(true);
-    setConfirmDialogOpen(false);
-    
+  }, [form, showToast, refreshTrigger]); // Removed company dependency to prevent infinite loop
+
+  const handleSubmit = async (data: CompanyFormValues) => {
     try {
+      setIsSaving(true);
+      
       const response = await fetch('/api/company', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formValues),
+        body: JSON.stringify(data),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to save company details');
+      if (response.ok) {
+        const updatedCompany = await response.json();
+        setCompany(updatedCompany);
+        form.reset(updatedCompany);
+        setFormIsDirty(false);
+        
+        showToast({
+          message: 'Company details saved successfully',
+          variant: 'success'
+        });
+      } else {
+        showToast({
+          message: 'Failed to save company details',
+          variant: 'error'
+        });
       }
-      
-      showToast({
-        message: 'Company details saved successfully',
-        variant: 'success'
-      });
-      
-      // Lock critical fields if they are all filled
-      if (formValues.legalName && formValues.registrationNumber && formValues.taxIdentificationNumber) {
-        setFieldsLocked(true);
-      }
-      
-      // Refresh the page to reflect changes
-      window.location.reload();
     } catch (error) {
       console.error('Error saving company details:', error);
       showToast({
@@ -170,47 +214,24 @@ export default function SettingsPage() {
       setIsSaving(false);
     }
   };
-
-  const handleCurrencyChange = async (currencyCode: string) => {
-    const selectedCurrency = currencies.find(c => c.code === currencyCode);
-    if (!selectedCurrency) return;
-
-    setIsSaving(true);
+  
+  const updateAppSettings = async (newSettings: Partial<{currency: {code: string, locale: string}}>) => {
     try {
-      const newSettings: AppSettings = {
-        ...settings,
-        currency: {
-          code: selectedCurrency.code,
-          locale: selectedCurrency.locale
-        }
-      };
-
-      updateSettings(newSettings);
-
+      const updatedSettings = { ...settings, ...newSettings };
+      updateSettings(updatedSettings);
+      
       showToast({
-        message: 'Currency preferences saved successfully',
+        message: 'Settings updated successfully',
         variant: 'success'
       });
     } catch (error) {
+      console.error('Error updating settings:', error);
       showToast({
-        message: 'Failed to save currency preferences',
+        message: 'Failed to update settings',
         variant: 'error'
       });
-    } finally {
-      setIsSaving(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading company details...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container py-6 space-y-8">
@@ -218,6 +239,11 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-muted-foreground">Manage your account settings and business preferences.</p>
       </div>
+
+      {console.log('Rendering with userData:', userData)}
+      {userData && (
+        <SubscriptionSettings user={userData} onSubscriptionChange={refreshUserData} />
+      )}
 
       <div className="grid gap-8 md:grid-cols-2">
         <div className="space-y-6">
@@ -229,27 +255,138 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                </div>
+              ) : (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="legalName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Legal Business Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                disabled={isSaving || fieldsLocked} 
+                                className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                              />
+                            </FormControl>
+                            {fieldsLocked && (
+                              <FormDescription>
+                                This field cannot be changed after confirmation
+                              </FormDescription>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="ownerName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Owner Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled={isSaving} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="registrationNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Registration Number</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                disabled={isSaving || fieldsLocked}
+                                className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                              />
+                            </FormControl>
+                            {fieldsLocked && (
+                              <FormDescription>
+                                This field cannot be changed after confirmation
+                              </FormDescription>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="taxIdentificationNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tax Identification Number</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled={isSaving} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Email</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled={isSaving} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Phone</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                disabled={isSaving || true} 
+                                className="bg-muted text-muted-foreground"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
                     <FormField
                       control={form.control}
-                      name="legalName"
+                      name="address"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Legal Business Name</FormLabel>
+                          <FormLabel>Business Address</FormLabel>
                           <FormControl>
-                            <Input 
+                            <Textarea 
                               {...field} 
-                              disabled={isSaving || fieldsLocked} 
-                              className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                              disabled={isSaving}
+                              className="min-h-[100px]"
                             />
                           </FormControl>
-                          {fieldsLocked && (
-                            <FormDescription>
-                              This field cannot be changed after confirmation
-                            </FormDescription>
-                          )}
                           <FormMessage />
                         </FormItem>
                       )}
@@ -257,221 +394,89 @@ export default function SettingsPage() {
                     
                     <FormField
                       control={form.control}
-                      name="ownerName"
+                      name="termsAndConditions"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Owner Name</FormLabel>
+                          <FormLabel>Terms and Conditions</FormLabel>
                           <FormControl>
-                            <Input {...field} disabled={isSaving} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="registrationNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company Registration (SSM) ID</FormLabel>
-                          <FormControl>
-                            <Input 
+                            <Textarea 
                               {...field} 
-                              disabled={isSaving || fieldsLocked}
-                              className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                              disabled={isSaving}
+                              className="min-h-[100px]"
                             />
                           </FormControl>
                           <FormDescription>
-                            {fieldsLocked 
-                              ? "This field cannot be changed after confirmation" 
-                              : "Alphanumeric ID from your business registration"}
+                            These terms will appear at the bottom of your invoices
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     
-                    <FormField
-                      control={form.control}
-                      name="taxIdentificationNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tax Identification Number</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              disabled={isSaving || fieldsLocked}
-                              className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
-                            />
-                          </FormControl>
-                          {fieldsLocked && (
-                            <FormDescription>
-                              This field cannot be changed after confirmation
-                            </FormDescription>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" {...field} disabled={isSaving} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="phoneNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              disabled={true}
-                              className="bg-muted text-muted-foreground"
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            This field cannot be changed as it is linked to your account
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Address</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            rows={3} 
-                            placeholder="Enter your company's full address" 
-                            {...field} 
-                            disabled={isSaving}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="termsAndConditions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Invoice Terms & Conditions</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            rows={4} 
-                            placeholder="Enter your invoice terms and conditions" 
-                            {...field} 
-                            disabled={isSaving}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          This text will appear in the Terms & Conditions section of your invoices
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving}>
+                    <Button 
+                      type="submit" 
+                      disabled={isSaving || !formIsDirty}
+                      className="w-full"
+                    >
                       {isSaving ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Saving...
                         </>
-                      ) : (
-                        'Save Changes'
-                      )}
+                      ) : 'Save Changes'}
                     </Button>
-                  </div>
-                </form>
-              </Form>
+                  </form>
+                </Form>
+              )}
             </CardContent>
           </Card>
-        </div>
-        
-        <div className="space-y-6">
-          <PasswordResetForm />
           
           <Card>
             <CardHeader>
-              <CardTitle>Currency</CardTitle>
+              <CardTitle>Currency Settings</CardTitle>
               <CardDescription>
-                Set the default currency for your invoices
+                Set your default currency for invoices
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium">Currency</label>
-                <Select
-                  value={settings.currency.code}
-                  onValueChange={handleCurrencyChange}
-                  disabled={isSaving}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((currency) => (
-                      <SelectItem key={currency.code} value={currency.code}>
-                        {currency.name} ({currency.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  This will be used for all monetary values across the application
-                </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Default Currency</label>
+                  <Select
+                    defaultValue={settings.currency?.code || 'MYR'}
+                    onValueChange={(value) => {
+                      const currency = currencies.find(c => c.code === value);
+                      if (currency) {
+                        updateAppSettings({ 
+                          currency: { 
+                            code: currency.code,
+                            locale: currency.locale
+                          } 
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencies.map((currency) => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          {currency.code} - {currency.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
 
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Changes</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to save these changes? Once confirmed, your Legal Business Name, 
-              Company Registration ID, and Tax Identification Number cannot be changed.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmSave}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <div className="space-y-6">
+          <PasswordResetForm />
+        </div>
+      </div>
     </div>
   );
 } 

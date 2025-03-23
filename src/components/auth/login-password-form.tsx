@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,6 +20,8 @@ interface LoginPasswordFormProps {
 }
 
 export default function LoginPasswordForm({ initialPhoneNumber = '+60' }: LoginPasswordFormProps) {
+  console.log('LoginPasswordForm render - initialPhoneNumber:', initialPhoneNumber);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -31,8 +33,13 @@ export default function LoginPasswordForm({ initialPhoneNumber = '+60' }: LoginP
       password: '',
     },
   });
+  
+  useEffect(() => {
+    console.log('LoginPasswordForm - Form values:', form.getValues());
+  }, [form]);
 
   async function onSubmit(values: LoginPasswordFormValues) {
+    console.log('LoginPasswordForm - onSubmit values:', values);
     setIsLoading(true);
     setError(null);
 
@@ -58,6 +65,7 @@ export default function LoginPasswordForm({ initialPhoneNumber = '+60' }: LoginP
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
+      console.error('LoginPasswordForm - Error:', err);
     } finally {
       setIsLoading(false);
     }

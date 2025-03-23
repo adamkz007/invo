@@ -88,6 +88,7 @@ export default function SignUpForm() {
     setError(null);
 
     try {
+      // Register the user
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -107,8 +108,28 @@ export default function SignUpForm() {
         throw new Error(data.error || 'Registration failed');
       }
 
-      // Redirect to login page with success message
-      router.push('/login?status=signup_success');
+      // Automatically log the user in
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
+      });
+
+      const loginData = await loginResponse.json();
+
+      if (loginData.success) {
+        // Redirect to the settings page to complete their profile
+        router.push('/settings');
+      } else {
+        // If auto-login fails, redirect to login page with success message
+        router.push('/login?status=signup_success');
+      }
+
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

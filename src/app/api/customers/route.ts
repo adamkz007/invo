@@ -1,100 +1,124 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
+import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
+import { User } from '@prisma/client';
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Find customers for this user
+
     const customers = await prisma.customer.findMany({
       where: {
-        userId: userId
+        userId: user.id,
       },
       orderBy: {
-        name: 'asc'
-      }
+        createdAt: 'desc',
+      },
     });
 
     return NextResponse.json(customers);
   } catch (error) {
-    console.error('Error fetching customers:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch customers' 
-    }, { 
-      status: 500 
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Failed to fetch customers' }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const customerData = await request.json();
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Use the provided user ID or default to a demo user ID if no token is found
-    let userId = customerData.userId || '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Ensure userId is set in the customer data
-    const customerWithUserId = {
-      ...customerData,
-      userId
-    };
-    
-    console.log('Creating customer with data:', customerWithUserId);
-    
-    // Create customer using Prisma
-    const newCustomer = await prisma.customer.create({
-      data: customerWithUserId
+
+    // Get the complete user from the database with subscription info
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id }
     });
 
-    return NextResponse.json(newCustomer, { status: 201 });
-  } catch (error) {
-    console.error('Error creating customer:', error);
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Cast the user to include subscription fields and use fallbacks
+    const fullUser = dbUser as User & { 
+      subscriptionStatus?: string | null;
+      trialEndDate?: Date | null;
+    };
+
+    // Check subscription status
+    const subscriptionStatus = fullUser.subscriptionStatus || 'FREE';
+    const isTrialExpired = hasTrialExpired(fullUser.trialEndDate);
     
-    // Check for specific Prisma errors
-    if (error instanceof Error) {
-      return NextResponse.json({ 
-        error: `Failed to create customer: ${error.message}` 
-      }, { 
-        status: 500 
+    // If trial has expired and user is still on trial, set to FREE
+    if (isTrialExpired && subscriptionStatus === 'TRIAL') {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { subscriptionStatus: 'FREE' } as any
       });
     }
-    
-    return NextResponse.json({ 
-      error: 'Failed to create customer' 
-    }, { 
-      status: 500 
+
+    // Count existing customers
+    const customerCount = await prisma.customer.count({
+      where: { userId: user.id }
     });
+
+    // Check if user has reached limit (if not on trial and not premium)
+    if (subscriptionStatus !== 'ACTIVE' && (isTrialExpired || subscriptionStatus === 'FREE')) {
+      const hasReachedCustomerLimit = hasReachedLimit(
+        subscriptionStatus,
+        'customers',
+        customerCount
+      );
+
+      if (hasReachedCustomerLimit) {
+        return NextResponse.json(
+          { 
+            error: 'You have reached your customer limit. Please upgrade to premium or delete existing customers to proceed.',
+            limitReached: true,
+            currentCount: customerCount,
+            limit: PLAN_LIMITS.FREE.customers
+          }, 
+          { status: 403 }
+        );
+      }
+    }
+
+    // Proceed with creating customer
+    const data = await req.json();
+    
+    // Check if a customer with the same phone number already exists
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        userId: user.id,
+        phoneNumber: data.phoneNumber,
+      }
+    });
+
+    if (existingCustomer) {
+      return NextResponse.json(
+        { 
+          error: 'A customer with this phone number already exists', 
+          duplicatePhone: true,
+        }, 
+        { status: 409 }
+      );
+    }
+    
+    // Create the customer
+    const customer = await prisma.customer.create({
+      data: {
+        ...data,
+        userId: user.id,
+      },
+    });
+
+    return NextResponse.json(customer);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 });
   }
 } 

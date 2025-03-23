@@ -40,17 +40,34 @@ function loadLogoImage(logoUrl: string): Promise<HTMLImageElement> {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     
+    // Set a timeout in case the image loading gets stuck
+    const timeoutId = setTimeout(() => {
+      console.warn('Logo image loading timed out');
+      logoKeyMap.delete(logoUrl); // Clean up on timeout
+      reject(new Error('Image loading timed out'));
+    }, 3000); // 3 second timeout
+    
     img.onload = () => {
+      clearTimeout(timeoutId);
       logoCache.set(keyObj, img);
       resolve(img);
     };
     
     img.onerror = (err) => {
+      clearTimeout(timeoutId);
+      console.warn('Failed to load logo image:', logoUrl);
       logoKeyMap.delete(logoUrl); // Clean up on error
       reject(err);
     };
     
-    img.src = logoUrl;
+    // Try to load the image with better error handling
+    try {
+      img.src = logoUrl;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('Error setting image source:', error);
+      reject(error);
+    }
   });
 }
 
@@ -67,23 +84,35 @@ export function cleanupLogoCache(): void {
 /**
  * Create a text-based logo as fallback
  */
-function createTextLogo(doc: jsPDF, x: number, y: number): void {
-  // Create a blue circle
+function createTextLogo(doc: jsPDF, pageWidth: number, y: number): void {
+  // Calculate positions for centered logo and text
+  const textWidth = 30; // Approximate text width
+  const logoRadius = 4;
+  const combinedWidth = (logoRadius * 2) + 2 + textWidth; // Logo + spacing + text
+  const startX = (pageWidth / 2) - (combinedWidth / 2);
+  
+  // Create a blue circle for logo
   doc.setFillColor(0, 51, 153); // Dark blue circle
-  doc.circle(x - 35, y - 1, 4, 'F');
+  doc.circle(startX + logoRadius, y - 1, logoRadius, 'F');
   
   // Add "I" in the circle
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255); // White text
-  doc.text('I', x - 35, y, { align: 'center' });
+  doc.text('I', startX + logoRadius, y, { align: 'center' });
   
-  // Add "Powered by Invo" text
+  // Add "Powered by Invo" text to the right
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(50, 50, 50);
-  doc.text('Powered by Invo', x, y, { align: 'right' });
+  doc.text('Powered by Invo', startX + (logoRadius * 2) + 2, y, { align: 'left' });
 }
+
+/**
+ * A minimal base64 encoded PNG logo as fallback
+ * This is a simple blue circle with "I" in it as a data URL
+ */
+const FALLBACK_LOGO_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAABl0lEQVR4nO2UvUtCURjGf9dLF7W0xaVFXIOWoCFoaGjIJYKGoL/AJYKGoKEhaAgagoYIGoKGoEFoCBqChqAhaAgaIsharuV9ek/cbtdrej3deuDZzjnP+5zfOed8B/5rTJl9qFQq5oWFxb7X60XXXXieF9O0hWihUOiZJmi329NGo8GtVqtddrsiNpaLRqN0Op0nFyMmk0k2NDS8PD4+TgE4QDmZTPbm5+ckn8+TMYqurKzspdPpgcViQYzAPjs7S6vVIsCKLYFgMMjc3BwAa5qW8vl8yJiPD3I4HNzd3Y0CDPJutxvL2q45nU7q9TqAf2pqSubm5vB6vRwdHT3yYlwzEAigqiqFQoGlpSWWl5c5Pz8HwGaz8ZPkcjmq1SpXV1cuoOrxeGRsbIzh4WHC4TBer5fj42NisRiapsWBs263K8/PzzIyMiLAiMPh4Pb2lkQiQTwe5+DggJubGwDW19d5eHiQRCLB6emppFIpASbGx8dlampK1tfXqdVqMjExIYAK7NqAXcva/v5+rlAo/Mm+OhwODvn9/qjZP5ef6jUB3yB8LF/8kOgAAAAASUVORK5CYII=';
 
 /**
  * Extract paid amount from invoice notes
@@ -265,54 +294,77 @@ export async function downloadInvoicePDF(
   doc.text('Status', invoiceDetailsX, customerY + 30);
   
   // Add colored status badge
-  const statusX = invoiceDetailsValueX - 30;
+  const statusX = invoiceDetailsValueX - 40; // Make the badge wider
   const statusY = customerY + 30;
-  const statusWidth = 30;
-  const statusHeight = 6;
+  const statusWidth = 40; // Increased width
+  const statusHeight = 8; // Increased height
   
   // Set status badge color based on status
+  let statusText = '';
+  let borderR = 0, borderG = 0, borderB = 0; // Variables to store border colors
+  
   switch (invoice.status) {
     case 'PAID':
       doc.setFillColor(220, 252, 231); // Light green
       doc.setTextColor(22, 101, 52); // Dark green
+      borderR = 22; borderG = 101; borderB = 52;
+      statusText = 'PAID';
       break;
     case 'PARTIAL':
       doc.setFillColor(254, 243, 199); // Light amber/yellow
       doc.setTextColor(146, 64, 14); // Dark amber/yellow
+      borderR = 146; borderG = 64; borderB = 14;
+      statusText = 'PARTIAL';
       break;
     case 'OVERDUE':
       doc.setFillColor(254, 226, 226); // Light red
       doc.setTextColor(153, 27, 27); // Dark red
+      borderR = 153; borderG = 27; borderB = 27;
+      statusText = 'OVERDUE';
       break;
     case 'SENT':
       doc.setFillColor(219, 234, 254); // Light blue
       doc.setTextColor(30, 64, 175); // Dark blue
+      borderR = 30; borderG = 64; borderB = 175;
+      statusText = 'SENT';
       break;
     case 'DRAFT':
       doc.setFillColor(229, 231, 235); // Light gray
       doc.setTextColor(75, 85, 99); // Dark gray
+      borderR = 75; borderG = 85; borderB = 99;
+      statusText = 'DRAFT';
       break;
     case 'CANCELLED':
-      doc.setFillColor(229, 231, 235); // Light gray
-      doc.setTextColor(75, 85, 99); // Dark gray
+      doc.setFillColor(239, 215, 239); // Light purple
+      doc.setTextColor(112, 26, 117); // Dark purple
+      borderR = 112; borderG = 26; borderB = 117;
+      statusText = 'CANCELLED';
       break;
     default:
       doc.setFillColor(243, 244, 246); // Light gray
       doc.setTextColor(75, 85, 99); // Dark gray
+      borderR = 75; borderG = 85; borderB = 99;
+      statusText = invoice.status;
   }
   
-  // Draw status badge background
-  doc.roundedRect(statusX, statusY - 5, statusWidth, statusHeight, 1, 1, 'F');
+  // Draw status badge background with border
+  doc.roundedRect(statusX, statusY - 5, statusWidth, statusHeight, 2, 2, 'F');
+  
+  // Add a subtle border around the badge
+  doc.setDrawColor(borderR, borderG, borderB);
+  doc.setLineWidth(0.1);
+  doc.roundedRect(statusX, statusY - 5, statusWidth, statusHeight, 2, 2, 'S');
   
   // Add status text
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text(invoice.status.charAt(0) + invoice.status.slice(1).toLowerCase(), statusX + statusWidth / 2, statusY, { 
+  doc.text(statusText, statusX + statusWidth / 2, statusY, { 
     align: 'center'
   });
   
-  // Reset text color
+  // Reset text color and line width
   doc.setTextColor(80, 80, 80);
+  doc.setLineWidth(0.3);
   
   // Invoice Items Table
   const tableTop = 110;
@@ -327,12 +379,12 @@ export async function downloadInvoicePDF(
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(50, 50, 50);
   
-  // Define column widths
+  // Define column widths - adjusted for better visibility of quantity and price
   const colWidths = {
     item: contentWidth * 0.05,
-    description: contentWidth * 0.45,
-    quantity: contentWidth * 0.15,
-    unitPrice: contentWidth * 0.15,
+    description: contentWidth * 0.35, // Reduced to give more space to other columns
+    quantity: contentWidth * 0.20,
+    unitPrice: contentWidth * 0.20,
     amount: contentWidth * 0.20
   };
   
@@ -358,41 +410,59 @@ export async function downloadInvoicePDF(
   let yPos = tableTop + tableRowHeight + 5;
   
   // Draw table rows
-  invoice.items.forEach((item, index) => {
-    xPos = margin;
-    
-    // Item number
-    doc.text(`${index + 1}`, xPos + 5, yPos);
-    xPos += colWidths.item;
-    
-    // Item name and description
-    doc.setFont('helvetica', 'bold');
-    doc.text(item.product.name, xPos, yPos);
-    doc.setFont('helvetica', 'normal');
-    
-    if (item.product.description) {
-      yPos += 5;
-      doc.text(item.product.description, xPos, yPos);
-    }
-    
-    xPos += colWidths.description;
-    
-    // Reset yPos if we added a description line
-    if (item.product.description) {
-      yPos -= 5;
-    }
-    
-    // Quantity, unit price, and amount
-    doc.text(`${item.quantity} Piece`, xPos, yPos, { align: 'right' });
-    xPos += colWidths.quantity;
-    
-    doc.text(formatCurrency(item.unitPrice, settings).replace(settings.currency.code, ''), xPos, yPos, { align: 'right' });
-    xPos += colWidths.unitPrice;
-    
-    doc.text(formatCurrency(item.quantity * item.unitPrice, settings).replace(settings.currency.code, ''), pageWidth - margin, yPos, { align: 'right' });
-    
+  if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
+    invoice.items.forEach((item, index) => {
+      xPos = margin;
+      
+      // Item number
+      doc.text(`${index + 1}`, xPos + 5, yPos);
+      xPos += colWidths.item;
+      
+      // Item name and description
+      doc.setFont('helvetica', 'bold');
+      doc.text(item.product?.name || 'Item', xPos, yPos);
+      doc.setFont('helvetica', 'normal');
+      
+      if (item.description) {
+        yPos += 5;
+        doc.text(item.description || '', xPos, yPos);
+      }
+      
+      xPos += colWidths.description;
+      
+      // Reset yPos if we added a description line
+      if (item.description) {
+        yPos -= 5;
+      }
+      
+      // Quantity - make it more prominent
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${item.quantity}`, xPos, yPos, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      xPos += colWidths.quantity;
+      
+      // Unit price - make it more prominent
+      doc.setFont('helvetica', 'bold');
+      doc.text(formatCurrency(item.unitPrice, settings), xPos, yPos, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      xPos += colWidths.unitPrice;
+      
+      // Amount - make it more prominent
+      doc.setFont('helvetica', 'bold');
+      doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin, yPos, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      
+      yPos += tableRowHeight + 5;
+    });
+  } else {
+    // No items - display a message
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('No items in this invoice', margin + contentWidth / 2, yPos, { align: 'center' });
     yPos += tableRowHeight + 5;
-  });
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+  }
   
   // Totals Section
   const totalsWidth = 80;
@@ -481,42 +551,99 @@ export async function downloadInvoicePDF(
   // Footer
   const footerY = pageHeight - 25;
   
-  // Add a light gray footer bar
+  // Add a light gray footer bar that extends to the bottom of the page
   doc.setFillColor(245, 245, 245);
-  doc.rect(0, footerY - 15, pageWidth, 25, 'F');
+  doc.rect(0, footerY - 15, pageWidth, 25 + 15, 'F'); // Increased height to reach bottom of page
   
   // Thanks for your business and company details
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
-  doc.text('Thanks for your business.', margin, footerY);
+  // Center the "Thank you" text
+  doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
   
-  // Company name and SSM number
+  // Company name and registration number - centered
   if (companyDetails?.registrationNumber) {
-    doc.text(`${companyDetails.legalName} | SSM: ${companyDetails.registrationNumber}`, margin, footerY + 7);
+    doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, footerY + 7, { align: 'center' });
   } else {
-    doc.text('Zylker PC Builds | SSM: 123456-A', margin, footerY + 7);
+    doc.text('Your Company Name | SSM: 123456-A', pageWidth / 2, footerY + 7, { align: 'center' });
   }
   
   try {
     // In a browser environment, load the logo
-    const logoUrl = window.location.origin + '/invo-logo.png';
+    let logoUrl = window.location.origin + '/invo-logo.png';
     
-    // Use the cached logo loading function
-    const img = await loadLogoImage(logoUrl);
+    // Use custom logo if provided in company details
+    if (companyDetails?.logoUrl) {
+      logoUrl = companyDetails.logoUrl;
+    }
     
-    // Add the logo to the PDF
-    doc.addImage(img, 'PNG', pageWidth - margin - 40, footerY - 5, 8, 8);
-    
-    // Add "Powered by Invo" text
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(50, 50, 50);
-    doc.text('Powered by Invo', pageWidth - margin, footerY, { align: 'right' });
+    // Try to load the logo image with proper error handling
+    let img;
+    try {
+      img = await loadLogoImage(logoUrl);
+      
+      // Add "Powered by Invo" text
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(50, 50, 50);
+      
+      // Position the logo to the left of "Powered by Invo" text
+      const logoWidth = 8;
+      const textWidth = 30; // Approximate text width
+      const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
+      const startX = (pageWidth / 2) - (combinedWidth / 2);
+      
+      // Add logo on the left
+      doc.addImage(img, 'PNG', startX, footerY + 10, logoWidth, 8);
+      
+      // Add text to the right of the logo with a small gap
+      doc.text('Powered by Invo', startX + logoWidth + 2, footerY + 14, { align: 'left' });
+    } catch (logoError) {
+      console.warn('Primary logo loading failed, trying alternate path:', logoError);
+      
+      // Try alternative path (relative URL)
+      try {
+        const altLogoUrl = '/invo-logo.png';
+        img = await loadLogoImage(altLogoUrl);
+        
+        // Position the logo to the left of "Powered by Invo" text
+        const logoWidth = 8;
+        const textWidth = 30; // Approximate text width
+        const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
+        const startX = (pageWidth / 2) - (combinedWidth / 2);
+        
+        // Add logo on the left
+        doc.addImage(img, 'PNG', startX, footerY + 10, logoWidth, 8);
+        
+        // Add text to the right of the logo with a small gap
+        doc.text('Powered by Invo', startX + logoWidth + 2, footerY + 14, { align: 'left' });
+      } catch (altLogoError) {
+        console.warn('Alternative logo loading failed, using data URL fallback:', altLogoError);
+        
+        // Try using the embedded data URL as a last resort
+        try {
+          // Position the logo to the left of "Powered by Invo" text
+          const logoWidth = 8;
+          const textWidth = 30; // Approximate text width
+          const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
+          const startX = (pageWidth / 2) - (combinedWidth / 2);
+          
+          // Add logo on the left
+          doc.addImage(FALLBACK_LOGO_DATA_URL, 'PNG', startX, footerY + 10, logoWidth, 8);
+          
+          // Add text to the right of the logo with a small gap
+          doc.text('Powered by Invo', startX + logoWidth + 2, footerY + 14, { align: 'left' });
+        } catch (dataUrlError) {
+          // All attempts failed, fall back to text-based logo
+          throw dataUrlError;
+        }
+      }
+    }
   } catch (error) {
-    console.error('Error adding logo to PDF:', error);
+    console.error('Error adding logo to PDF, using text fallback:', error);
     // Fallback to text-based logo
-    createTextLogo(doc, pageWidth - margin, footerY);
+    createTextLogo(doc, pageWidth, footerY + 14);
   }
   
   // Save the PDF
@@ -647,35 +774,68 @@ export async function downloadReceiptPDF(
   // List items
   doc.setFont('courier', 'normal');
   
-  invoice.items.forEach(item => {
-    const quantityText = item.quantity.toString();
-    const priceText = formatCurrency(item.unitPrice * item.quantity, settings);
-    const itemName = item.description || item.product?.name || 'Item';
-    
-    // Handle long item names by wrapping if needed
-    if (itemName.length > 15) {
-      doc.text(quantityText, margin, yPos);
+  if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
+    invoice.items.forEach(item => {
+      const quantityText = item.quantity.toString();
+      const priceText = formatCurrency(item.unitPrice * item.quantity, settings);
+      const itemName = item.description || item.product?.name || 'Item';
+      const unitPriceText = formatCurrency(item.unitPrice, settings);
       
-      const lines = doc.splitTextToSize(itemName, pageWidth - margin - 18);
-      doc.text(lines[0], margin + 8, yPos);
-      
-      doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
-      
-      // If there are more lines, add them
-      if (lines.length > 1) {
-        for (let i = 1; i < lines.length; i++) {
-          yPos += 4;
-          doc.text(lines[i], margin + 8, yPos);
+      // Handle long item names by wrapping if needed
+      if (itemName.length > 15) {
+        // Bold quantity
+        doc.setFont('courier', 'bold');
+        doc.text(quantityText, margin, yPos);
+        doc.setFont('courier', 'normal');
+        
+        const lines = doc.splitTextToSize(itemName, pageWidth - margin - 18);
+        doc.text(lines[0], margin + 8, yPos);
+        
+        // Bold price
+        doc.setFont('courier', 'bold');
+        doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
+        doc.setFont('courier', 'normal');
+        
+        // If there are more lines, add them
+        if (lines.length > 1) {
+          for (let i = 1; i < lines.length; i++) {
+            yPos += 4;
+            doc.text(lines[i], margin + 8, yPos);
+          }
         }
+        
+        // Add unit price underneath
+        yPos += 4;
+        doc.text(`@ ${unitPriceText} each`, margin + 8, yPos);
+      } else {
+        // Bold quantity
+        doc.setFont('courier', 'bold');
+        doc.text(quantityText, margin, yPos);
+        doc.setFont('courier', 'normal');
+        
+        doc.text(itemName, margin + 8, yPos);
+        
+        // Bold total price
+        doc.setFont('courier', 'bold');
+        doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
+        doc.setFont('courier', 'normal');
+        
+        // Add unit price underneath
+        yPos += 4;
+        doc.text(`@ ${unitPriceText} each`, margin + 8, yPos);
       }
-    } else {
-      doc.text(quantityText, margin, yPos);
-      doc.text(itemName, margin + 8, yPos);
-      doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
-    }
-    
-    yPos += 6;
-  });
+      
+      yPos += 6;
+    });
+  } else {
+    // No items - display a message
+    doc.setFont('courier', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('No items in this receipt', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+    doc.setFont('courier', 'normal');
+    doc.setTextColor(80, 80, 80);
+  }
   
   // Draw another horizontal line
   doc.setDrawColor(100, 100, 100);
@@ -767,15 +927,72 @@ export async function downloadReceiptPDF(
   // Try to load the Invo logo
   try {
     // In a browser environment, load the logo
-    const logoUrl = window.location.origin + '/invo-logo.png';
+    let logoUrl = window.location.origin + '/invo-logo.png';
     
-    // Use the cached logo loading function
-    const img = await loadLogoImage(logoUrl);
+    // Use custom logo if provided in company details
+    if (companyDetails?.logoUrl) {
+      logoUrl = companyDetails.logoUrl;
+    }
     
-    // Add a small logo and "Powered by Invo" text at the bottom
-    doc.addImage(img, 'PNG', pageWidth / 2 - 10, yPos - 2, 4, 4);
-    doc.text('Powered by Invo', pageWidth / 2 + 2, yPos, { align: 'left' });
+    // Try to load the logo image with proper error handling
+    let img;
+    try {
+      img = await loadLogoImage(logoUrl);
+      
+      // Position the logo to the left of "Powered by Invo" text
+      const logoWidth = 4; // Smaller for receipt
+      const textWidth = 25; // Approximate text width
+      const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
+      const startX = (pageWidth / 2) - (combinedWidth / 2);
+      
+      // Add logo on the left
+      doc.addImage(img, 'PNG', startX, yPos - 3, logoWidth, 4);
+      
+      // Add text to the right of the logo with a small gap
+      doc.text('Powered by Invo', startX + logoWidth + 2, yPos, { align: 'left' });
+    } catch (logoError) {
+      console.warn('Primary logo loading failed, trying alternate path:', logoError);
+      
+      // Try alternative path (relative URL)
+      try {
+        const altLogoUrl = '/invo-logo.png';
+        img = await loadLogoImage(altLogoUrl);
+        
+        // Position the logo to the left of "Powered by Invo" text
+        const logoWidth = 4; // Smaller for receipt
+        const textWidth = 25; // Approximate text width
+        const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
+        const startX = (pageWidth / 2) - (combinedWidth / 2);
+        
+        // Add logo on the left
+        doc.addImage(img, 'PNG', startX, yPos - 3, logoWidth, 4);
+        
+        // Add text to the right of the logo with a small gap
+        doc.text('Powered by Invo', startX + logoWidth + 2, yPos, { align: 'left' });
+      } catch (altLogoError) {
+        console.warn('Alternative logo loading failed, using data URL fallback:', altLogoError);
+        
+        // Try using the embedded data URL as a last resort
+        try {
+          // Position the logo to the left of "Powered by Invo" text
+          const logoWidth = 4; // Smaller for receipt
+          const textWidth = 25; // Approximate text width
+          const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
+          const startX = (pageWidth / 2) - (combinedWidth / 2);
+          
+          // Add logo on the left
+          doc.addImage(FALLBACK_LOGO_DATA_URL, 'PNG', startX, yPos - 3, logoWidth, 4);
+          
+          // Add text to the right of the logo with a small gap
+          doc.text('Powered by Invo', startX + logoWidth + 2, yPos, { align: 'left' });
+        } catch (dataUrlError) {
+          // All attempts failed, fall back to text only
+          throw dataUrlError;
+        }
+      }
+    }
   } catch (error) {
+    console.error('Error adding logo to receipt PDF, using text only:', error);
     // If image loading fails, just show text
     doc.text('Powered by Invo', pageWidth / 2, yPos, { align: 'center' });
   }

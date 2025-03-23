@@ -26,11 +26,34 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { PhoneInput } from '@/components/ui/phone-input';
+
+// Malaysia-specific phone number validation
+function isValidMalaysiaPhoneNumber(phone: string): boolean {
+  // Must start with Malaysia country code +60
+  if (!phone.startsWith('+60')) {
+    return false;
+  }
+  
+  // Get the number without country code
+  const numberWithoutCode = phone.substring(3);
+  
+  // Malaysia mobile numbers:
+  // - Must start with 1
+  // - Must be 9-10 digits after the country code
+  // - Common prefixes: 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+  return /^1[0-9]{8,9}$/.test(numberWithoutCode);
+}
 
 const customerFormSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
   email: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
-  phoneNumber: z.string().min(6, { message: 'Phone number is required' }),
+  phoneNumber: z.string()
+    .min(4, { message: 'Phone number is required' })
+    .refine(
+      (val) => isValidMalaysiaPhoneNumber(val),
+      { message: 'Please enter a valid Malaysian phone number (e.g. +60123456789)' }
+    ),
   address: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   userId: z.string(),
@@ -75,6 +98,23 @@ export default function CustomerFormDialog({
         },
         body: JSON.stringify(values),
       });
+
+      if (response.status === 409) {
+        // Handle duplicate phone number error
+        const data = await response.json();
+        if (data.duplicatePhone) {
+          form.setError("phoneNumber", {
+            type: "manual",
+            message: "This phone number is already used by another customer"
+          });
+          showToast({
+            message: 'A customer with this phone number already exists',
+            variant: 'error',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       if (!response.ok) {
         throw new Error('Failed to create customer');
@@ -136,7 +176,7 @@ export default function CustomerFormDialog({
               <FormItem>
                 <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
-                  <Input placeholder="Phone number" {...field} />
+                  <PhoneInput placeholder="Phone number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -228,7 +268,7 @@ export default function CustomerFormDialog({
                 <FormItem>
                   <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
-                    <Input placeholder="Phone number" {...field} />
+                    <PhoneInput placeholder="Phone number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

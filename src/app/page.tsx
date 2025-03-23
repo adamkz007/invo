@@ -134,30 +134,36 @@ export default function LandingPage() {
   ];
 
   // Blog posts
-  const blogPosts = [
+  const featuredPosts = [
+    {
+      id: 'invoice-tips-small-business',
+      title: 'Essential Invoicing Tips for Small Business Success',
+      excerpt: 'Discover how proper invoicing can improve your cash flow and enhance your professional image with customers.',
+      date: 'February 28, 2025',
+      author: 'Adam',
+      readTime: '7 min read',
+      category: 'Invoicing',
+      image: '/blog/invoice-tips.jpg',
+      slug: 'invoice-tips-small-business'
+    },
     {
       id: 'malaysia-e-invoicing-changes',
       title: 'Malaysia E-Invoicing: New Changes and How They Impact SMEs',
       excerpt: 'Learn about the latest e-invoicing regulations in Malaysia and what your small business needs to do to stay compliant.',
-      date: 'March 15, 2023',
+      date: 'February 28, 2025',
+      author: 'Adam',
+      readTime: '6 min read',
       category: 'Compliance',
       image: '/blog/malaysia-e-invoicing.jpg',
       slug: 'malaysia-e-invoicing-changes'
     },
     {
-      id: 'invoice-tips-small-business',
-      title: '5 Invoicing Tips Every Small Business Should Know',
-      excerpt: 'Improve your cash flow and get paid faster with these practical invoicing strategies for small businesses.',
-      date: 'February 28, 2023',
-      category: 'Tips & Tricks',
-      image: '/blog/invoice-tips.jpg',
-      slug: 'invoice-tips-small-business'
-    },
-    {
       id: 'digital-transformation-smes',
       title: 'Digital Transformation for SMEs: Where to Start',
-      excerpt: 'A step-by-step guide to beginning your digital transformation journey without overwhelming your small business.',
-      date: 'February 15, 2023',
+      excerpt: 'A practical guide to beginning your digital transformation journey without overwhelming your resources or team.',
+      date: 'February 28, 2025',
+      author: 'Adam',
+      readTime: '9 min read',
       category: 'Digital Transformation',
       image: '/blog/digital-transformation.jpg',
       slug: 'digital-transformation-smes'
@@ -305,12 +311,27 @@ export default function LandingPage() {
             TRUSTED BY BUSINESSES LIKE YOURS
           </p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            {['Local Shop', 'Service Pro', 'Creative Studio', 'Food Truck', 'Online Store'].map((company, index) => (
+            <motion.div
+              key="yspoa"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.7 }}
+              transition={{ delay: 0 * 0.1, duration: 0.5 }}
+              whileHover={{ opacity: 1 }}
+            >
+              <Image 
+                src="/logos/yspoa.jpg" 
+                alt="YSPOA" 
+                width={100} 
+                height={50} 
+                className="object-contain"
+              />
+            </motion.div>
+            {['Service Pro', 'Creative Studio', 'Food Truck', 'Online Store'].map((company, index) => (
               <motion.div
                 key={company}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.7 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
+                transition={{ delay: (index + 1) * 0.1, duration: 0.5 }}
                 whileHover={{ opacity: 1 }}
                 className="text-xl font-bold text-muted-foreground"
               >
@@ -471,7 +492,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start text-sm">
                   <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Communication timeline tracking</span>
+                  <span>Instantly search for customers by name, phone, or email</span>
                 </li>
               </ul>
             </motion.div>
@@ -498,7 +519,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start text-sm">
                   <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Revenue and expense tracking</span>
+                  <span>Inventory and revenue tracking</span>
                 </li>
               </ul>
             </motion.div>
@@ -521,11 +542,11 @@ export default function LandingPage() {
               <ul className="space-y-2 mb-4">
                 <li className="flex items-start text-sm">
                   <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Automated payment reminders</span>
+                  <span>Automated inventory update</span>
                 </li>
                 <li className="flex items-start text-sm">
                   <Check className="h-4 w-4 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                  <span>Recurring invoice scheduling</span>
+                  <span>Invoice statuses and tracking</span>
                 </li>
               </ul>
             </motion.div>
@@ -543,7 +564,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-bold mb-3">Work Anywhere</h3>
               <p className="text-muted-foreground mb-4">
-                Access your business from your phone, tablet, or computer. Keep things running smoothly whether you&apos;re in the office or on the go.
+                Access your invoices & finances entirely from your phone. Keep things running smoothly whether you&apos;re in the office or on the go.
               </p>
               <ul className="space-y-2 mb-4">
                 <li className="flex items-start text-sm">
@@ -916,7 +937,7 @@ export default function LandingPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {blogPosts.map((post, index) => (
+            {featuredPosts.map((post, index) => (
               <Link 
                 key={index}
                 href={`/blog/posts/${post.slug}`}

@@ -1,24 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String     @id @default(cuid())
-  name         String
-  email        String     @unique
-  phoneNumber  String     @unique
-  passwordHash String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  company      Company?
-  customers    Customer[]
-  invoices     Invoice[]
-  inventory    Product[]
+  id           String   @id @default(cuid())
+  name         String?
+  email        String?  @unique
+  phoneNumber  String?  @unique
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Stripe subscription fields
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  subscriptionStatus   String? // "TRIAL", "ACTIVE", "CANCELLED", etc.
+  trialStartDate       DateTime?
+  trialEndDate         DateTime?
+  currentPeriodEnd     DateTime?
+
+  // Relationships
+  company   Company?
+  invoices  Invoice[]
+  customers Customer[]
+  products  Product[]
 }
 
 model Customer {
@@ -88,18 +102,17 @@ model InvoiceItem {
 }
 
 model Company {
-  id                      String   @id @default(cuid())
-  legalName               String
-  ownerName               String
+  id                      String  @id @default(cuid())
+  legalName               String?
+  ownerName               String?
+  address                 String?
+  phoneNumber             String?
+  email                   String?
   registrationNumber      String?
   taxIdentificationNumber String?
-  email                   String?
-  phoneNumber             String?
-  address                 String?
-  logoUrl                 String?
+  termsAndConditions      String?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
-  userId                  String   @unique
-  termsAndConditions      String?
-  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                  String  @unique
+  user                    User    @relation(fields: [userId], references: [id])
 }

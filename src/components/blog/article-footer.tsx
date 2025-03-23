@@ -1,9 +1,10 @@
 'use client';
 
-import { Facebook, Linkedin, Share2, Twitter, User } from 'lucide-react';
+import { Facebook, Linkedin, Share2, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
+import { AuthorBio, DEFAULT_AUTHOR } from './author-bio';
 
 interface RelatedPost {
   id: string;
@@ -16,14 +17,6 @@ interface RelatedPost {
   image: string;
   slug: string;
 }
-
-// Default author information
-const DEFAULT_AUTHOR = {
-  name: 'Adam',
-  role: 'Founder',
-  bio: 'Adam consults for both large organizations and SMEs to identify & optimize finance processes. Growing tired of clunky invoice tools available in the market, he sets out to build Invo.',
-  image: '/blog/authors/adam.jpg'
-};
 
 interface ArticleFooterProps {
   author?: {
@@ -43,12 +36,6 @@ export function ArticleFooter({
   ctaTitle = "Ready to streamline your business operations?",
   ctaDescription = "Invo makes it easy for Malaysian businesses of all sizes to manage invoicing, expenses, and stay compliant with regulations. Get started today.",
 }: ArticleFooterProps) {
-  // Merge with default author properties
-  const authorInfo = {
-    ...DEFAULT_AUTHOR,
-    ...author
-  };
-  
   return (
     <>
       {/* Share Section */}
@@ -73,29 +60,7 @@ export function ArticleFooter({
       </div>
 
       {/* Author Section */}
-      <div className="bg-muted/30 rounded-lg p-6 my-8">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-          <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex-shrink-0">
-            <Image
-              src={authorInfo.image}
-              alt={authorInfo.name}
-              width={64}
-              height={64}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = `https://placehold.co/200x200/02228F/ffffff?text=${authorInfo.name.charAt(0)}`;
-              }}
-            />
-          </div>
-          <div className="text-center sm:text-left">
-            <h3 className="font-bold text-lg">{authorInfo.name}</h3>
-            {authorInfo.role && <p className="text-sm text-muted-foreground mb-2">{authorInfo.role}</p>}
-            <p className="text-sm">
-              {authorInfo.bio}
-            </p>
-          </div>
-        </div>
-      </div>
+      <AuthorBio author={author} />
 
       {/* Related Posts */}
       <div className="my-12">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -15,7 +15,9 @@ import LoginPasswordForm from '@/components/auth/login-password-form';
 
 // Create a client component that uses useSearchParams
 function LoginContent() {
-  const [step, setStep] = useState<'request-tac' | 'verify' | 'password'>('request-tac');
+  console.log('LoginContent render');
+  
+  const [step, setStep] = useState<'request-tac' | 'verify' | 'password'>('password');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
@@ -26,8 +28,14 @@ function LoginContent() {
   const isDarkMode = theme === 'dark';
   
   useEffect(() => {
+    console.log('LoginContent - Current state:', { step, phoneNumber, theme: isDarkMode ? 'dark' : 'light' });
+  }, [step, phoneNumber, isDarkMode]);
+  
+  useEffect(() => {
     // Check if redirected from successful signup or password reset
     const status = searchParams.get('status');
+    console.log('LoginContent - URL status param:', status);
+    
     if (status === 'signup_success') {
       setShowSuccessMessage(true);
       // Set custom success message
@@ -50,19 +58,23 @@ function LoginContent() {
   }, [searchParams]);
 
   const handleRequestTACSuccess = (phoneNumber: string) => {
+    console.log('LoginContent - TAC request success with phone:', phoneNumber);
     setPhoneNumber(phoneNumber);
     setStep('verify');
   };
 
   const handleBackToRequest = () => {
+    console.log('LoginContent - Going back to request TAC');
     setStep('request-tac');
   };
   
   const handleSwitchToPassword = () => {
+    console.log('LoginContent - Switching to password login');
     setStep('password');
   };
   
   const handleSwitchToTAC = () => {
+    console.log('LoginContent - Switching to TAC login');
     setStep('request-tac');
   };
 
@@ -96,7 +108,7 @@ function LoginContent() {
         )}
 
         {step === 'request-tac' && (
-          <>
+          <Fragment>
             <RequestTACForm onSuccess={handleRequestTACSuccess} isLogin={true} initialPhoneNumber={phoneNumber} />
             <div className="text-center mt-4">
               <Button 
@@ -107,7 +119,7 @@ function LoginContent() {
                 Login with password instead
               </Button>
             </div>
-          </>
+          </Fragment>
         )}
         
         {step === 'verify' && (
@@ -118,7 +130,7 @@ function LoginContent() {
         )}
         
         {step === 'password' && (
-          <>
+          <Fragment>
             <LoginPasswordForm initialPhoneNumber={phoneNumber} />
             <div className="text-center mt-4">
               <Button 
@@ -129,7 +141,7 @@ function LoginContent() {
                 Login with verification code instead
               </Button>
             </div>
-          </>
+          </Fragment>
         )}
 
         <div className="mt-6 text-center text-sm">
@@ -169,6 +181,7 @@ function LoginLoading() {
 
 // Main page component with Suspense boundary
 export default function LoginPage() {
+  console.log('LoginPage render');
   return (
     <Suspense fallback={<LoginLoading />}>
       <LoginContent />

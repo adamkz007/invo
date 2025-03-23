@@ -12,9 +12,9 @@ export default function InventoryManagementRetailPost() {
   const relatedPosts = [
     {
       id: 'export-import-opportunities-malaysian-smes',
-      title: 'Export & Import Opportunities for Malaysian SMEs: Your Gateway to Global Markets',
+      title: 'Export & Import Opportunities for Malaysian SMEs',
       excerpt: 'Learn about Malaysia\'s strategic advantages, high-potential export products, and step-by-step guidance to help your business expand into international markets.',
-      date: 'June 12, 2023',
+      date: 'February 28, 2025',
       author: 'Adam',
       readTime: '12 min read',
       category: 'International Trade',
@@ -23,9 +23,9 @@ export default function InventoryManagementRetailPost() {
     },
     {
       id: 'malaysian-government-grants-sme',
-      title: 'Complete Guide to Malaysian Government Grants for SMEs in 2023',
+      title: 'Complete Guide to Malaysian Government Grants for SMEs',
       excerpt: 'Discover the major government grants available for Malaysian SMEs and learn how to improve your chances of securing funding.',
-      date: 'May 5, 2023',
+      date: 'February 28, 2025',
       author: 'Adam',
       readTime: '10 min read',
       category: 'Financing',
@@ -36,7 +36,7 @@ export default function InventoryManagementRetailPost() {
       id: 'malaysia-e-invoicing-changes',
       title: 'Malaysia E-Invoicing: New Changes and How They Impact SMEs',
       excerpt: 'Learn about the latest e-invoicing regulations in Malaysia and what your small business needs to do to stay compliant.',
-      date: 'March 15, 2023',
+      date: 'February 28, 2025',
       author: 'Adam',
       readTime: '6 min read',
       category: 'Compliance',
@@ -47,7 +47,7 @@ export default function InventoryManagementRetailPost() {
 
   // Author information
   const author = {
-    role: 'Product Specialist'
+    role: 'Founder'
   };
 
   return (

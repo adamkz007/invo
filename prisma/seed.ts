@@ -128,7 +128,7 @@ async function main() {
   const invoices = await Promise.all([
     prisma.invoice.create({
       data: {
-        invoiceNumber: 'INV-001',
+        invoiceNumber: 'INV-0001-1234',
         issueDate: new Date('2023-01-15'),
         dueDate: new Date('2023-02-15'),
         status: InvoiceStatus.PAID,
@@ -157,7 +157,7 @@ async function main() {
     }),
     prisma.invoice.create({
       data: {
-        invoiceNumber: 'INV-002',
+        invoiceNumber: 'INV-0002-2345',
         issueDate: new Date('2023-02-01'),
         dueDate: new Date('2023-03-01'),
         status: InvoiceStatus.SENT,
@@ -192,7 +192,7 @@ async function main() {
     }),
     prisma.invoice.create({
       data: {
-        invoiceNumber: 'INV-003',
+        invoiceNumber: 'INV-0003-3456',
         issueDate: new Date('2023-03-10'),
         dueDate: new Date('2023-04-10'),
         status: InvoiceStatus.PARTIAL,

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -27,22 +28,7 @@ import { CalendarIcon, Trash2, Plus, X } from 'lucide-react';
 import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues, InvoiceItemFormValues, InvoiceStatus } from '@/types';
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
-
-// Mock data for customers and products
-const mockCustomers: CustomerWithRelations[] = [
-  { id: '1', name: 'Acme Corporation', email: 'contact@acme.com', phoneNumber: '123-456-7890', address: '123 Main St', notes: '', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '2', name: 'Globex Industries', email: 'info@globex.com', phoneNumber: '234-567-8901', address: '456 Oak Ave', notes: '', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '3', name: 'Wayne Enterprises', email: 'business@wayne.com', phoneNumber: '345-678-9012', address: '789 Gotham Rd', notes: '', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '4', name: 'Stark Industries', email: 'sales@stark.com', phoneNumber: '456-789-0123', address: '10880 Malibu Point', notes: '', createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-];
-
-const mockProducts: ProductWithRelations[] = [
-  { id: '1', name: 'Web Development', description: 'Custom website development', price: 1200, quantity: 10, sku: 'WEB-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '2', name: 'Mobile App Development', description: 'Custom mobile application', price: 2500, quantity: 5, sku: 'APP-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '3', name: 'UI/UX Design', description: 'User interface and experience design', price: 800, quantity: 15, sku: 'DESIGN-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '4', name: 'SEO Service', description: 'Search engine optimization', price: 500, quantity: 20, sku: 'SEO-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-  { id: '5', name: 'Hosting (Monthly)', description: 'Web hosting service', price: 25, quantity: 100, sku: 'HOST-001', disableStockManagement: false, createdAt: new Date(), updatedAt: new Date(), userId: '1' },
-];
+import { useToast } from '@/components/ui/toast';
 
 // Define valid invoice statuses
 const INVOICE_STATUSES = ['DRAFT', 'SENT', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED'] as const;
@@ -58,6 +44,7 @@ const invoiceFormSchema = z.object({
     quantity: z.coerce.number().min(1, { message: 'Quantity must be at least 1' }),
     unitPrice: z.coerce.number().min(0.01, { message: 'Price must be greater than 0' }),
     description: z.string().optional(),
+    disableStockManagement: z.boolean().optional(),
   })).min(1, { message: 'Add at least one item' }),
   taxRate: z.coerce.number().min(0).max(100),
   discountRate: z.coerce.number().min(0).max(100),
@@ -73,8 +60,9 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({ defaultValues, isEditing = false }: InvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [customers, setCustomers] = useState<CustomerWithRelations[]>(mockCustomers);
-  const [products, setProducts] = useState<ProductWithRelations[]>(mockProducts);
+  const [customers, setCustomers] = useState<CustomerWithRelations[]>([]);
+  const [products, setProducts] = useState<ProductWithRelations[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [totals, setTotals] = useState({
     subtotal: 0,
     taxAmount: 0,
@@ -84,6 +72,41 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
   
   const router = useRouter();
   const { settings } = useSettings();
+  const { showToast } = useToast();
+
+  // Fetch customers and products when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch customers
+        const customersResponse = await fetch('/api/customer');
+        if (!customersResponse.ok) {
+          throw new Error('Failed to fetch customers');
+        }
+        const customersData = await customersResponse.json();
+        setCustomers(customersData);
+
+        // Fetch products
+        const productsResponse = await fetch('/api/product');
+        if (!productsResponse.ok) {
+          throw new Error('Failed to fetch products');
+        }
+        const productsData = await productsResponse.json();
+        setProducts(productsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        showToast({
+          variant: "error",
+          message: "Failed to load customers or products. Please try again."
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [showToast]);
 
   // Initialize form with default values or new invoice values
   const form = useForm<InvoiceFormValues>({
@@ -92,7 +115,7 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
       customerId: '',
       issueDate: new Date(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
-      status: 'DRAFT',
+      status: InvoiceStatus.DRAFT,
       taxRate: 0,
       discountRate: 0,
       notes: '',
@@ -102,8 +125,10 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
           quantity: 1,
           unitPrice: 0,
           description: '',
+          disableStockManagement: false,
         },
       ],
+      userId: '',
     },
   });
 

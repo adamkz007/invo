@@ -88,6 +88,27 @@ export async function PUT(
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
     
+    // Check if another customer with the same phone number already exists
+    if (customerData.phoneNumber) {
+      const duplicatePhoneCustomer = await prisma.customer.findFirst({
+        where: {
+          userId: userId,
+          phoneNumber: customerData.phoneNumber,
+          id: { not: customerId } // Exclude the current customer
+        }
+      });
+      
+      if (duplicatePhoneCustomer) {
+        return NextResponse.json(
+          { 
+            error: 'Another customer with this phone number already exists', 
+            duplicatePhone: true,
+          }, 
+          { status: 409 }
+        );
+      }
+    }
+    
     // Update the customer
     const updatedCustomer = await prisma.customer.update({
       where: {

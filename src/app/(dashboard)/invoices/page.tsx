@@ -52,6 +52,7 @@ import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
+import { PLAN_LIMITS } from '@/lib/stripe';
 
 // Define company details interface
 interface CompanyDetails {
@@ -91,19 +92,24 @@ const getStatusBadge = (status: string, isCompact: boolean = false) => {
 
 // Helper function to extract paid amount from notes
 const extractPaidAmount = (invoice: InvoiceWithDetails): number => {
-  if ((invoice as any).paidAmount !== undefined) {
-    return (invoice as any).paidAmount;
+  // First check if paidAmount is directly available
+  if (invoice?.paidAmount !== undefined) {
+    return invoice.paidAmount;
   }
   
-  // If no notes, return 0
-  if (!invoice.notes) return 0;
+  // If no invoice or no notes, return 0
+  if (!invoice || !invoice.notes) return 0;
   
   // Try to extract payment information from notes
-  const paymentRegex = /Payment of ([\d.]+) received/;
-  const matches = invoice.notes.match(paymentRegex);
-  
-  if (matches && matches[1]) {
-    return parseFloat(matches[1]);
+  try {
+    const paymentRegex = /Payment of ([\d.]+) received/;
+    const matches = invoice.notes.match(paymentRegex);
+    
+    if (matches && matches[1]) {
+      return parseFloat(matches[1]);
+    }
+  } catch (error) {
+    console.error('Error extracting payment amount:', error);
   }
   
   return 0;
@@ -119,6 +125,8 @@ export default function InvoicesPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceWithDetails | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [userSubscription, setUserSubscription] = useState<string>('FREE');
+  const [invoicesThisMonth, setInvoicesThisMonth] = useState<number>(0);
 
   // Add theme hook to detect dark mode
   const { theme } = useTheme();
@@ -148,18 +156,97 @@ export default function InvoicesPage() {
     fetchCompanyDetails();
   }, [showToast]);
 
+  // Fetch user subscription status
+  useEffect(() => {
+    async function fetchUserSubscription() {
+      try {
+        const response = await fetch('/api/user/me', {
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+        
+        const data = await response.json();
+        setUserSubscription(data.subscriptionStatus || 'FREE');
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    }
+    
+    fetchUserSubscription();
+  }, []);
+
   const handleViewInvoice = (invoice: InvoiceWithDetails) => {
-    setSelectedInvoice(invoice);
+    // Ensure we fetch the complete invoice with items
+    fetch(`/api/invoices/${invoice.id}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch complete invoice details');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Update the selected invoice with complete data
+        setSelectedInvoice(data);
+      })
+      .catch(error => {
+        console.error('Error fetching complete invoice:', error);
+        showToast({
+          variant: 'error',
+          message: 'Could not load invoice details'
+        });
+      });
   };
 
   const handleDownloadPDF = (invoice: InvoiceWithDetails) => {
-    // Pass company details to the PDF generator
-    downloadInvoicePDF(invoice, companyDetails);
+    // Fetch full invoice details with items before generating PDF
+    fetch(`/api/invoices/${invoice.id}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch complete invoice details for PDF');
+        }
+        return response.json();
+      })
+      .then(completeInvoice => {
+        // Pass complete invoice data with items to the PDF generator
+        downloadInvoicePDF(completeInvoice, companyDetails);
+      })
+      .catch(error => {
+        console.error('Error fetching invoice for PDF:', error);
+        showToast({
+          variant: 'error',
+          message: 'Could not generate PDF with complete data'
+        });
+        // Fall back to using the original invoice data
+        downloadInvoicePDF(invoice, companyDetails);
+      });
   };
 
   const handleGenerateReceipt = (invoice: InvoiceWithDetails) => {
-    // Pass company details to the receipt generator
-    downloadReceiptPDF(invoice, companyDetails, settings);
+    // Fetch full invoice details with items before generating receipt
+    fetch(`/api/invoices/${invoice.id}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch complete invoice details for receipt');
+        }
+        return response.json();
+      })
+      .then(completeInvoice => {
+        // Pass complete invoice data with items to the receipt generator
+        downloadReceiptPDF(completeInvoice, companyDetails, settings);
+      })
+      .catch(error => {
+        console.error('Error fetching invoice for receipt:', error);
+        showToast({
+          variant: 'error',
+          message: 'Could not generate receipt with complete data'
+        });
+        // Fall back to using the original invoice data
+        downloadReceiptPDF(invoice, companyDetails, settings);
+      });
   };
 
   const handleCancelInvoice = async (invoice: InvoiceWithDetails) => {
@@ -274,13 +361,26 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Invoices</h1>
-        <Link href="/invoices/new">
-          <Button className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" /> Create Invoice
-          </Button>
-        </Link>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Invoices</h1>
+          {userSubscription === 'FREE' && (
+            <p className="text-muted-foreground mt-1">
+              Used {invoicesThisMonth} of {PLAN_LIMITS.FREE.invoicesPerMonth} invoices this month
+              {invoicesThisMonth >= PLAN_LIMITS.FREE.invoicesPerMonth && (
+                <span className="ml-2 text-orange-500 font-medium">
+                  (Limit reached - <Link href="/settings" className="underline">upgrade</Link> for unlimited)
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+        <Button asChild>
+          <Link href="/invoices/new">
+            <Plus className="mr-2 h-4 w-4" />
+            New Invoice
+          </Link>
+        </Button>
       </div>
 
       <div className="flex items-center relative">
@@ -310,6 +410,7 @@ export default function InvoicesPage() {
           onMarkAsSent={handleMarkAsSent}
           onGenerateReceipt={handleGenerateReceipt}
           companyDetails={companyDetails}
+          onCountInvoices={(count) => setInvoicesThisMonth(count)}
         />
       </Suspense>
 
@@ -382,7 +483,7 @@ export default function InvoicesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedInvoice?.items.map((item) => (
+                  {selectedInvoice?.items?.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
                         {item.product.name}
@@ -390,9 +491,9 @@ export default function InvoicesPage() {
                           <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.unitPrice, settings)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.quantity * item.unitPrice, settings)}</TableCell>
+                      <TableCell className="text-right font-bold">{item.quantity}</TableCell>
+                      <TableCell className="text-right font-bold">{formatCurrency(item.unitPrice, settings)}</TableCell>
+                      <TableCell className="text-right font-bold">{formatCurrency(item.quantity * item.unitPrice, settings)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -477,32 +578,34 @@ export default function InvoicesPage() {
               Enter the payment amount for invoice {selectedInvoiceForPayment?.invoiceNumber}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Invoice Total:</span>
-                <span className="font-medium">{selectedInvoiceForPayment ? formatCurrency(selectedInvoiceForPayment.total, settings) : ''}</span>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="payment-amount" className="text-sm font-medium">
-                  Payment Amount
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="payment-amount"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max={selectedInvoiceForPayment?.total}
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    className="pl-9"
-                  />
+          {selectedInvoiceForPayment && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Invoice Total:</span>
+                  <span className="font-medium">{formatCurrency(selectedInvoiceForPayment.total, settings)}</span>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="payment-amount" className="text-sm font-medium">
+                    Payment Amount
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="payment-amount"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      max={selectedInvoiceForPayment.total}
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
               Cancel
@@ -526,7 +629,8 @@ function InvoicesList({
   onApplyPayment,
   onMarkAsSent,
   onGenerateReceipt,
-  companyDetails
+  companyDetails,
+  onCountInvoices
 }: { 
   searchTerm: string, 
   onViewInvoice: (invoice: InvoiceWithDetails) => void,
@@ -535,7 +639,8 @@ function InvoicesList({
   onApplyPayment: (invoice: InvoiceWithDetails) => void,
   onMarkAsSent: (invoice: InvoiceWithDetails) => void,
   onGenerateReceipt: (invoice: InvoiceWithDetails) => void,
-  companyDetails: CompanyDetails | null
+  companyDetails: CompanyDetails | null,
+  onCountInvoices: (count: number) => void
 }) {
   const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -568,6 +673,21 @@ function InvoicesList({
 
     fetchInvoices();
   }, []);
+
+  // Track current month invoices and pass up to parent component
+  useEffect(() => {
+    if (invoices.length > 0) {
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      const thisMonthInvoices = invoices.filter(invoice => 
+        new Date(invoice.issueDate) >= firstDayOfMonth
+      ).length;
+      
+      // Use function from parent component to update count
+      onCountInvoices(thisMonthInvoices);
+    }
+  }, [invoices, onCountInvoices]);
 
   // Filter invoices based on search term
   const filteredInvoices = invoices.filter(invoice => 
@@ -636,7 +756,7 @@ function InvoicesList({
 
       {viewMode === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {filteredInvoices.map((invoice) => (
+          {filteredInvoices?.map((invoice) => (
             <Card key={invoice.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="p-3 border-b">
@@ -751,7 +871,7 @@ function InvoicesList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.map((invoice) => (
+              {filteredInvoices?.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell 
                     className="cursor-pointer hover:bg-muted/50 transition-colors"

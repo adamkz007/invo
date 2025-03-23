@@ -33,6 +33,7 @@ import { formatRelativeDate } from '@/lib/utils';
 import { CustomerWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
 import { CustomerDetailDialog } from '@/components/customers/customer-detail-dialog';
+import { PLAN_LIMITS } from '@/lib/stripe';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerWithRelations[]>([]);
@@ -41,8 +42,32 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [userSubscription, setUserSubscription] = useState<string>('FREE');
   const router = useRouter();
   const { showToast } = useToast();
+  
+  // Fetch user subscription status from API
+  useEffect(() => {
+    async function fetchUserSubscription() {
+      try {
+        const response = await fetch('/api/user/me', {
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+        
+        const data = await response.json();
+        setUserSubscription(data.subscriptionStatus || 'FREE');
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    }
+    
+    fetchUserSubscription();
+  }, []);
   
   // Fetch customers from API
   useEffect(() => {
@@ -145,7 +170,19 @@ export default function CustomersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Customers</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Customers</h1>
+          {userSubscription === 'FREE' && (
+            <p className="text-muted-foreground mt-1">
+              Used {customers.length} of {PLAN_LIMITS.FREE.customers} customers
+              {customers.length >= PLAN_LIMITS.FREE.customers && (
+                <span className="ml-2 text-orange-500 font-medium">
+                  (Limit reached - <Link href="/settings" className="underline">upgrade</Link> for unlimited)
+                </span>
+              )}
+            </p>
+          )}
+        </div>
         <Button asChild>
           <Link href="/customers/new">
             <Plus className="mr-2 h-4 w-4" />
@@ -196,7 +233,7 @@ export default function CustomersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCustomers.map((customer) => (
+                  filteredCustomers?.map((customer) => (
                     <TableRow key={customer.id} className="cursor-pointer" onClick={() => handleCustomerSelect(customer.id)}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell>{customer.email}</TableCell>

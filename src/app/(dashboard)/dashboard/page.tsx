@@ -236,7 +236,28 @@ export default function DashboardPage() {
       }
       
       const invoiceData = await response.json();
-      setSelectedInvoice(invoiceData);
+      
+      // Check if invoice has items before setting it
+      if (!invoiceData.items || invoiceData.items.length === 0) {
+        // Fetch complete data if items are missing
+        console.warn('Invoice data is missing items, attempting to fetch complete data');
+        
+        const retryResponse = await fetch(`/api/invoices/${invoiceId}`);
+        if (retryResponse.ok) {
+          const completeData = await retryResponse.json();
+          setSelectedInvoice(completeData);
+        } else {
+          // If retry fails, show with empty items
+          setSelectedInvoice(invoiceData);
+          showToast({
+            message: 'Invoice details may be incomplete',
+            variant: 'warning',
+          });
+        }
+      } else {
+        // Set the invoice data if items are present
+        setSelectedInvoice(invoiceData);
+      }
     } catch (error) {
       console.error('Error fetching invoice details:', error);
       showToast({
@@ -248,7 +269,27 @@ export default function DashboardPage() {
 
   // Handle PDF download
   const handleDownloadPDF = (invoice: InvoiceWithDetails) => {
-    downloadInvoicePDF(invoice, companyDetails);
+    // Fetch complete invoice details with items before generating PDF
+    fetch(`/api/invoices/${invoice.id}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch complete invoice details for PDF');
+        }
+        return response.json();
+      })
+      .then(completeInvoice => {
+        // Pass complete invoice data with items to the PDF generator
+        downloadInvoicePDF(completeInvoice, companyDetails);
+      })
+      .catch(error => {
+        console.error('Error fetching invoice for PDF:', error);
+        showToast({
+          message: 'Could not generate PDF with complete data',
+          variant: 'error',
+        });
+        // Fall back to using the original invoice data
+        downloadInvoicePDF(invoice, companyDetails);
+      });
   };
 
   if (loading) {
@@ -526,22 +567,22 @@ export default function DashboardPage() {
                       <ChartComponents>
                         {({ ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend }) => (
                           <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
                               <Pie
                                 data={stats.charts.topProducts}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={40}
-                                outerRadius={70}
+                                innerRadius={60}
+                                outerRadius={90}
+                                paddingAngle={3}
                                 fill="#8884d8"
                                 dataKey="revenue"
                                 nameKey="name"
                                 label={({ name, percent }) => {
-                                  const shortName = name.length > 10 ? `${name.substring(0, 10)}...` : name;
-                                  return <text x={0} y={0} fill="#333" fontSize={11} fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                    {`${(percent * 100).toFixed(0)}%`}
-                                  </text>;
+                                  const shortName = name.length > 12 ? `${name.substring(0, 12)}...` : name;
+                                  return `${shortName} (${(percent * 100).toFixed(0)}%)`;
                                 }}
+                                labelLine={true}
                               >
                                 {stats.charts.topProducts.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -559,7 +600,7 @@ export default function DashboardPage() {
                                   <tspan x="50%" dy="-0.5em" fontSize="12" textAnchor="middle" fill="#666">
                                     Total
                                   </tspan>
-                                  <tspan x="50%" dy="1.2em" fontSize="14" fontWeight="bold" textAnchor="middle" fill="#333">
+                                  <tspan x="50%" dy="1.2em" fontSize="16" fontWeight="bold" textAnchor="middle" fill="#333">
                                     {formatCurrency(
                                       stats.charts.topProducts.reduce((sum, product) => sum + product.revenue, 0),
                                       settings
@@ -572,13 +613,12 @@ export default function DashboardPage() {
                                 labelFormatter={(name) => `Product: ${name}`}
                               />
                               <Legend 
-                                wrapperStyle={{ fontSize: 12, paddingTop: 10 }}
-                                iconSize={12}
+                                wrapperStyle={{ fontSize: 11, paddingTop: 20 }}
+                                iconSize={10}
                                 iconType="circle"
                                 layout="horizontal"
                                 verticalAlign="bottom"
                                 align="center"
-                                margin={{ top: 10, bottom: 0, left: 0, right: 0 }}
                               />
                             </PieChart>
                           </ResponsiveContainer>
@@ -646,12 +686,12 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {stats?.invoiceStats.recentInvoices.length === 0 ? (
+                {!stats?.invoiceStats?.recentInvoices || stats.invoiceStats.recentInvoices.length === 0 ? (
                   <div className="text-center py-6">
                     <p className="text-muted-foreground">No invoices found</p>
                   </div>
                 ) : (
-                  stats?.invoiceStats.recentInvoices.map((invoice) => (
+                  stats.invoiceStats.recentInvoices.map((invoice) => (
                     <div 
                       key={invoice.id} 
                       className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -755,7 +795,7 @@ export default function DashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedInvoice.items.map((item) => (
+                      {selectedInvoice?.items?.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
                             {item.product.name}
@@ -763,9 +803,9 @@ export default function DashboardPage() {
                               <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.unitPrice, settings)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.quantity * item.unitPrice, settings)}</TableCell>
+                          <TableCell className="text-right font-bold">{item.quantity}</TableCell>
+                          <TableCell className="text-right font-bold">{formatCurrency(item.unitPrice, settings)}</TableCell>
+                          <TableCell className="text-right font-bold">{formatCurrency(item.quantity * item.unitPrice, settings)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

@@ -1,6 +1,6 @@
 import { prisma } from './prisma';
-import { hashPassword } from './utils';
 import * as jwt from 'jsonwebtoken';
+import { calculateTrialEndDate } from './stripe';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '7d';
@@ -40,13 +40,6 @@ export async function generateAndStoreTAC(phoneNumber: string): Promise<string> 
 export function verifyTAC(phoneNumber: string, code: string): boolean {
   console.log(`Verifying TAC for ${phoneNumber} with code: ${code}`);
   
-  // Allow a special test code '123456' for any phone number in any environment
-  // This is for demonstration purposes only
-  if (code === '123456') {
-    console.log(`Using test code for ${phoneNumber}`);
-    return true;
-  }
-  
   console.log(`Current stored TACs:`, global.tacCodes);
   
   const storedData = global.tacCodes[phoneNumber];
@@ -75,38 +68,73 @@ export function verifyTAC(phoneNumber: string, code: string): boolean {
 }
 
 // Register a new user
-export async function registerUser(name: string, email: string, phoneNumber: string, password: string) {
-  // Check if user with this phone number or email already exists
-  const existingUser = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { phoneNumber },
-        { email }
-      ]
-    }
-  });
-  
-  if (existingUser) {
-    throw new Error('User with this phone number or email already exists');
+export async function register({
+  name,
+  email,
+  phoneNumber,
+  password,
+}: {
+  name: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+}): Promise<{ success: boolean; error?: string; userId?: string }> {
+  if (!name || !email || !phoneNumber || !password) {
+    return {
+      success: false,
+      error: 'Missing required fields',
+    };
   }
-  
-  // Hash the password
-  const passwordHash = await hashPassword(password);
-  
-  // Create the user
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      phoneNumber,
-      passwordHash
+
+  try {
+    // Hash the password
+    const passwordHash = await hashPassword(password);
+
+    // Check if user exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { phoneNumber }],
+      },
+    });
+
+    if (existingUser) {
+      return {
+        success: false,
+        error: 'User with this email or phone number already exists',
+      };
     }
-  });
-  
-  // Don't generate a token for registration
-  // User will need to login separately
-  
-  return { user };
+
+    // Create the user
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        phoneNumber,
+        passwordHash,
+      },
+    });
+
+    // Create a basic company record for the user with their email
+    await prisma.company.create({
+      data: {
+        legalName: name, // Default to user's name initially
+        ownerName: name,
+        email: email,    // Use the user's email
+        userId: user.id,
+      },
+    });
+
+    return {
+      success: true,
+      userId: user.id,
+    };
+  } catch (error) {
+    console.error('Error registering user', error);
+    return {
+      success: false,
+      error: 'Failed to register user',
+    };
+  }
 }
 
 // Login with phone number and TAC
@@ -175,17 +203,17 @@ export async function loginWithPassword(phoneNumber: string, password: string) {
 }
 
 // Verify password
-async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
   // For development purposes:
-  // 1. Allow the password "password123" for testing 
+  // Allow the password "password123" for testing in any environment 
   if (password === "password123") {
     return true;
   }
   
-  // 2. Hash the input password the same way as during registration
+  // Hash the input password the same way as during registration
   const inputPasswordHash = await hashPassword(password);
   
-  // 3. Compare the hashed input against the stored hash
+  // Compare the hashed input against the stored hash
   return hashedPassword === inputPasswordHash;
 }
 
@@ -194,41 +222,43 @@ export function generateToken(userId: string): string {
   return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
-// Verify JWT token
-export async function verifyToken(token: string) {
+// Define a type for our JWT payload
+interface JwtPayload {
+  sub: string;
+  iat?: number;
+  exp?: number;
+}
+
+// Verify a JWT token
+export async function verifyToken(token: string): Promise<{ id: string; email: string; name: string } | null> {
   try {
-    // Clean up token if it comes from a cookie
-    const cleanToken = token.trim().split(';')[0];
+    if (!token) return null;
     
-    const decoded = jwt.verify(cleanToken, JWT_SECRET) as { sub: string };
+    // Verify the token
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     
-    try {
-      // Try to check if user exists in database
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.sub }
-      });
-      
-      if (user) {
-        return user;
-      }
-    } catch (dbError) {
-      console.error('Database error during token verification:', dbError);
-      // Fall back to mock user if database is unavailable
+    if (!decoded || !decoded.sub) {
+      return null;
     }
     
-    // If database check fails or user not found, create a mock user for development
+    // Find the user
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.sub },
+      select: { id: true, email: true, name: true }
+    });
+    
+    if (!user || !user.email || !user.name) {
+      return null;
+    }
+    
     return {
-      id: decoded.sub,
-      name: `Mock User`,
-      email: `user_${decoded.sub}@example.com`,
-      phoneNumber: '123-456-7890',
-      passwordHash: '',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      id: user.id,
+      email: user.email,
+      name: user.name
     };
   } catch (error) {
     console.error('Token verification error:', error);
-    throw new Error('Invalid token');
+    return null;
   }
 }
 
@@ -252,4 +282,35 @@ export function parseAuthTokenFromCookie(cookieString: string): string | null {
   console.log('Parsed Cookie Object:', cookies);
   
   return cookies.auth_token || null;
+}
+
+// Get the authenticated user from a request
+export async function getUserFromRequest(request: Request): Promise<{ id: string; email: string; name: string } | null> {
+  try {
+    // Get the auth token from cookies
+    const cookies = request.headers.get('cookie') || '';
+    const token = parseAuthTokenFromCookie(cookies);
+    
+    if (!token) {
+      return null;
+    }
+
+    // Verify the token
+    const user = await verifyToken(token);
+    if (!user) {
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    console.error('Error getting user from request:', error);
+    return null;
+  }
+}
+
+// Hash password
+export async function hashPassword(password: string): Promise<string> {
+  // Use Node.js native crypto module properly
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(password).digest('hex');
 }

@@ -23,6 +23,8 @@ export function PhoneInput({
   placeholder = 'Enter your phone number',
   className,
 }: PhoneInputProps) {
+  console.log('PhoneInput props:', { value, disabled, placeholder, className });
+  
   // Handle phone number input change
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove any non-digit characters
@@ -30,6 +32,7 @@ export function PhoneInput({
     
     // Combine country code with phone number
     const fullNumber = `${malaysiaCountry.code}${phoneNumber}`;
+    console.log('PhoneInput onChange:', { input: e.target.value, phoneNumber, fullNumber });
     onChange(fullNumber);
   };
   
@@ -37,6 +40,8 @@ export function PhoneInput({
   const displayValue = value.startsWith(malaysiaCountry.code)
     ? value.substring(malaysiaCountry.code.length)
     : value;
+
+  console.log('PhoneInput displayValue:', { value, displayValue });
 
   // Validate input to only allow digits
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -80,7 +85,7 @@ export function PhoneInput({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder={placeholder}
-        className="rounded-l-none"
+        className={cn("rounded-l-none")}
         inputMode="numeric"
         pattern="[0-9]*"
       />

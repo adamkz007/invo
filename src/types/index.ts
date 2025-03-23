@@ -75,6 +75,7 @@ export interface InvoiceItemFormValues {
   quantity: number;
   unitPrice: number;
   description?: string;
+  disableStockManagement?: boolean;
 }
 
 export interface InvoiceFormValues {

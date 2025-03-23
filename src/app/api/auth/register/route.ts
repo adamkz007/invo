@@ -1,55 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { registerUser } from '@/lib/auth';
+import * as z from 'zod';
+import { register } from '@/lib/auth';
 
-export async function POST(req: NextRequest) {
+// Registration schema
+const registerSchema = z.object({
+  name: z.string().min(1, { message: 'Name is required' }),
+  email: z.string().email({ message: 'Please enter a valid email' }),
+  phoneNumber: z.string().min(1, { message: 'Phone number is required' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+});
+
+type RegisterData = z.infer<typeof registerSchema>;
+
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
+    // Parse and validate request body
+    const body = await request.json();
     
-    // Validate the request
-    if (!body.name || !body.email || !body.phoneNumber || !body.password) {
-      return NextResponse.json(
-        { success: false, error: 'All fields are required' },
-        { status: 400 }
-      );
+    try {
+      const { name, email, phoneNumber, password } = registerSchema.parse(body);
+      
+      // Call the register function with validated data
+      const result = await register({ name, email, phoneNumber, password });
+      
+      if (result.success) {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'User registered successfully',
+          userId: result.userId
+        });
+      } else {
+        return NextResponse.json({ 
+          success: false, 
+          error: result.error || 'Registration failed' 
+        }, { status: 400 });
+      }
+      
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        return NextResponse.json(
+          { success: false, error: validationError.errors[0].message },
+          { status: 400 }
+        );
+      }
+      throw validationError;
     }
     
-    const { name, email, phoneNumber, password } = body;
-    
-    // Validate password requirements
-    if (password.length < 8) {
-      return NextResponse.json(
-        { success: false, error: 'Password must be at least 8 characters long' },
-        { status: 400 }
-      );
-    }
-    
-    // Check for alphanumeric (contains both letters and numbers)
-    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
-      return NextResponse.json(
-        { success: false, error: 'Password must contain both letters and numbers' },
-        { status: 400 }
-      );
-    }
-    
-    // Register the user
-    const { user } = await registerUser(name, email, phoneNumber, password);
-    
-    // Create a response without setting the auth token cookie
-    const response = NextResponse.json({
-      success: true,
-      data: { user: { id: user.id, name: user.name, email: user.email, phoneNumber: user.phoneNumber } }
-    });
-    
-    return response;
-  } catch (error: any) {
-    console.error('Error during registration:', error);
-    
+  } catch (error) {
+    console.error('Error registering user:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Registration failed'
-      },
-      { status: 400 }
+      { success: false, error: 'Failed to register user' },
+      { status: 500 }
     );
   }
 }

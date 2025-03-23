@@ -23,6 +23,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon, Trash2, Plus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 // Define InvoiceStatus enum locally
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
@@ -50,6 +51,7 @@ const invoiceFormSchema = z.object({
     quantity: z.coerce.number().min(1, { message: 'Quantity must be at least 1' }),
     unitPrice: z.coerce.number().min(0.01, { message: 'Price must be greater than 0' }),
     description: z.string().optional(),
+    disableStockManagement: z.boolean().optional().default(false),
   })).min(1, { message: 'Add at least one item' }),
   taxRate: z.coerce.number().min(0).max(100),
   discountRate: z.coerce.number().min(0).max(100),
@@ -119,7 +121,7 @@ export default function InvoiceFormEnhanced({
       issueDate: new Date(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Default to 30 days from now
       status: InvoiceStatus.DRAFT,
-      items: [{ productId: '', quantity: 1, unitPrice: 0, description: '' }],
+      items: [{ productId: '', quantity: 1, unitPrice: 0, description: '', disableStockManagement: false }],
       taxRate: 0,
       discountRate: 0,
       notes: '',
@@ -185,6 +187,9 @@ export default function InvoiceFormEnhanced({
         total: totals.total
       };
       
+      // Debug log
+      console.log('Submitting invoice data:', JSON.stringify(invoiceData, null, 2));
+      
       // Submit to the API
       const response = await fetch('/api/invoices', {
         method: 'POST',
@@ -195,7 +200,14 @@ export default function InvoiceFormEnhanced({
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create invoice');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Server error response:', errorData);
+        const errorMessage = errorData.error || 'Failed to create invoice. Please try again.';
+        showToast({
+          variant: 'error',
+          message: errorMessage
+        });
+        throw new Error(`Failed to create invoice: ${errorMessage}`);
       }
       
       // Show success message and redirect
@@ -211,9 +223,19 @@ export default function InvoiceFormEnhanced({
       }, 1500);
     } catch (error) {
       console.error('Error submitting form:', error);
+      
+      // Extract error message if available
+      let message = 'Failed to create invoice. Please try again.';
+      if (error instanceof Error) {
+        // If the error contains our specific prefix, just display the message as is
+        if (error.message.includes('Failed to create invoice:')) {
+          message = error.message;
+        }
+      }
+      
       showToast({
         variant: 'error',
-        message: 'Failed to create invoice. Please try again.'
+        message
       });
     } finally {
       setIsSubmitting(false);
@@ -226,6 +248,12 @@ export default function InvoiceFormEnhanced({
     if (product) {
       form.setValue(`items.${index}.unitPrice`, product.price);
       form.setValue(`items.${index}.description`, product.description || '');
+      form.setValue(`items.${index}.disableStockManagement`, product.disableStockManagement || false);
+      
+      // If disabling stock management, set quantity to 1
+      if (product.disableStockManagement) {
+        form.setValue(`items.${index}.quantity`, 1);
+      }
     }
   };
   
@@ -525,7 +553,7 @@ export default function InvoiceFormEnhanced({
                                 type="number"
                                 min="1"
                                 {...field}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || form.watch(`items.${index}.disableStockManagement`)}
                               />
                             </FormControl>
                             <FormMessage />
@@ -554,6 +582,34 @@ export default function InvoiceFormEnhanced({
                         )}
                       />
                     </div>
+                    
+                    {/* Disable Stock Management */}
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.disableStockManagement`}
+                      render={({ field }) => (
+                        <FormItem className="mt-2 flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                if (checked) {
+                                  // If disabling stock management, set quantity to 1
+                                  form.setValue(`items.${index}.quantity`, 1);
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Disable Stock Management</FormLabel>
+                            <FormDescription>
+                              Enable this for service-based products or items that don&apos;t require inventory tracking
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   
                   {/* Description */}
@@ -586,6 +642,7 @@ export default function InvoiceFormEnhanced({
                   quantity: 1,
                   unitPrice: 0,
                   description: '',
+                  disableStockManagement: false,
                 })}
                 disabled={isSubmitting}
                 className="w-full"

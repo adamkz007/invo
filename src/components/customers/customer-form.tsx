@@ -19,12 +19,35 @@ import {
 } from '@/components/ui/form';
 import { CustomerWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
+import { PhoneInput } from '@/components/ui/phone-input';
+
+// Malaysia-specific phone number validation
+function isValidMalaysiaPhoneNumber(phone: string): boolean {
+  // Must start with Malaysia country code +60
+  if (!phone.startsWith('+60')) {
+    return false;
+  }
+  
+  // Get the number without country code
+  const numberWithoutCode = phone.substring(3);
+  
+  // Malaysia mobile numbers:
+  // - Must start with 1
+  // - Must be 9-10 digits after the country code
+  // - Common prefixes: 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+  return /^1[0-9]{8,9}$/.test(numberWithoutCode);
+}
 
 // Form validation schema
 const customerFormSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
   email: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
-  phoneNumber: z.string().min(6, { message: 'Phone number is required' }),
+  phoneNumber: z.string()
+    .min(4, { message: 'Phone number is required' })
+    .refine(
+      (val) => isValidMalaysiaPhoneNumber(val),
+      { message: 'Please enter a valid Malaysian phone number (e.g. +60123456789)' }
+    ),
   address: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   userId: z.string().optional(),
@@ -74,6 +97,22 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
         },
         body: JSON.stringify(values),
       });
+      
+      if (response.status === 409) {
+        // Handle duplicate phone number error
+        const data = await response.json();
+        if (data.duplicatePhone) {
+          form.setError("phoneNumber", {
+            type: "manual",
+            message: "This phone number is already used by another customer"
+          });
+          showToast({
+            message: 'A customer with this phone number already exists',
+            variant: 'error',
+          });
+          return;
+        }
+      }
       
       if (!response.ok) {
         throw new Error(`Failed to ${isEditing ? 'update' : 'create'} customer`);
@@ -159,14 +198,14 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
               <FormItem>
                 <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
-                  <Input
+                  <PhoneInput
                     placeholder="Enter phone number"
                     {...field}
                     disabled={isSubmitting}
                   />
                 </FormControl>
                 <FormDescription>
-                  Business or mobile phone number
+                  Malaysian mobile phone number
                 </FormDescription>
                 <FormMessage />
               </FormItem>

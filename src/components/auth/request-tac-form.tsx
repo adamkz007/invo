@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -40,6 +40,8 @@ interface RequestTACFormProps {
 }
 
 export default function RequestTACForm({ onSuccess, isLogin = true, initialPhoneNumber = '+60' }: RequestTACFormProps) {
+  console.log('RequestTACForm render:', { isLogin, initialPhoneNumber });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showInvalidPhoneWarning, setShowInvalidPhoneWarning] = useState(false);
@@ -51,12 +53,19 @@ export default function RequestTACForm({ onSuccess, isLogin = true, initialPhone
       phoneNumber: initialPhoneNumber || '+60', // Use initialPhoneNumber if provided, otherwise default to Malaysia country code
     },
   });
+  
+  useEffect(() => {
+    console.log('RequestTACForm - Form values:', form.getValues());
+  }, [form]);
 
   async function onSubmit(values: RequestTACFormValues) {
+    console.log('RequestTACForm - onSubmit values:', values);
+    
     // Additional validation before submission
     if (!isValidMalaysiaPhoneNumber(values.phoneNumber)) {
       setInvalidPhone(values.phoneNumber);
       setShowInvalidPhoneWarning(true);
+      console.log('Invalid phone number:', values.phoneNumber);
       return;
     }
 
@@ -86,6 +95,7 @@ export default function RequestTACForm({ onSuccess, isLogin = true, initialPhone
       onSuccess(values.phoneNumber);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
+      console.error('RequestTACForm - Error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -122,19 +132,22 @@ export default function RequestTACForm({ onSuccess, isLogin = true, initialPhone
           <FormField
             control={form.control}
             name="phoneNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>MY number</FormLabel>
-                <FormControl>
-                  <PhoneInput
-                    placeholder="Enter your mobile number"
-                    {...field}
-                    disabled={isLoading}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              console.log('FormField render - phoneNumber field:', field);
+              return (
+                <FormItem>
+                  <FormLabel>MY number</FormLabel>
+                  <FormControl>
+                    <PhoneInput
+                      placeholder="Enter your mobile number"
+                      {...field}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           {error && (
