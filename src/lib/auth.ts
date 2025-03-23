@@ -226,7 +226,12 @@ export async function loginWithPassword(phoneNumber: string, password: string) {
 }
 
 // Verify password
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+export async function verifyPassword(password: string, hashedPassword: string | null): Promise<boolean> {
+  // Handle case where hashedPassword is null
+  if (hashedPassword === null) {
+    return false;
+  }
+  
   // For development purposes:
   // Allow the password "password123" for testing in any environment 
   if (password === "password123") {

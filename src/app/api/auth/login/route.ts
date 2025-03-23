@@ -117,17 +117,47 @@ async function handleEmailPasswordLogin(email: string, password: string, request
     return NextResponse.json({ success: false, error: 'Password is required' }, { status: 400 });
   }
   
-  // Look up the user in the database
-  const user = await prisma.user.findUnique({
-    where: { email }
-  });
+  console.log(`Attempting login with email: ${email}`);
   
-  // If user doesn't exist or password doesn't match
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return NextResponse.json({ success: false, error: 'Invalid email or password' }, { status: 401 });
+  try {
+    // Look up the user in the database by email first
+    let user = await prisma.user.findUnique({
+      where: { email }
+    });
+    
+    // If not found by email, try looking up by phone number
+    if (!user && email.match(/^\+?\d+$/)) {
+      console.log(`Email looks like a phone number, trying to find user by phone number`);
+      user = await prisma.user.findUnique({
+        where: { phoneNumber: email }
+      });
+    }
+    
+    // If user doesn't exist or password doesn't match
+    if (!user) {
+      console.log(`No user found with email/phone: ${email}`);
+      return NextResponse.json({ success: false, error: 'Invalid email or password' }, { status: 401 });
+    }
+    
+    console.log(`User found, verifying password`);
+    const isValidPassword = await verifyPassword(password, user.passwordHash);
+    
+    if (!isValidPassword) {
+      console.log(`Invalid password for user with email/phone: ${email}`);
+      return NextResponse.json({ success: false, error: 'Invalid email or password' }, { status: 401 });
+    }
+    
+    console.log(`Login successful for user: ${user.id}`);
+    return createAuthResponse(user);
+  } catch (error) {
+    console.error('Login error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Authentication failed. Please try again later.'
+    }, { 
+      status: 500 
+    });
   }
-  
-  return createAuthResponse(user);
 }
 
 // Create authenticated response with token

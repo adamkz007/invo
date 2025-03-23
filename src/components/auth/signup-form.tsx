@@ -123,7 +123,9 @@ export default function SignUpForm() {
       // Automatically log the user in
       try {
         console.log('Attempting auto-login after successful registration');
-        const loginResponse = await fetch('/api/auth/login', {
+        
+        // First try email
+        let loginResponse = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -134,8 +136,26 @@ export default function SignUpForm() {
           }),
         });
 
-        const loginData = await loginResponse.json();
+        let loginData = await loginResponse.json();
         console.log('Login response status:', loginResponse.status);
+
+        // If email login failed, try phone number
+        if (!loginData.success) {
+          console.log('Email login failed, trying phone number login');
+          loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: values.phoneNumber, // Use phone number in the email field
+              password: values.password,
+            }),
+          });
+          
+          loginData = await loginResponse.json();
+          console.log('Phone login response status:', loginResponse.status);
+        }
 
         if (loginData.success) {
           console.log('Auto-login successful, redirecting to settings');
