@@ -71,9 +71,8 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [formIsDirty, setFormIsDirty] = useState(false);
   const [userData, setUserData] = useState<any>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [loadingUser, setLoadingUser] = useState(false);
-  const [loadingCompany, setLoadingCompany] = useState(false);
+  const [fieldNames, setFieldNames] = useState<string[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
   
   // Initialize form
   const form = useForm<CompanyFormValues>({
@@ -186,50 +185,31 @@ export default function SettingsPage() {
     
     // Fetch user data including subscription info
     async function fetchUserData() {
-      if (!mountedRef.current) return;
-    
       try {
-        setLoadingUser(true);
-        console.log('Fetching user data, refreshTrigger:', refreshTrigger);
+        console.log('Fetching user data');
         // Use the test API endpoint temporarily to bypass authentication
         const response = await fetch('/api/user/test');
-        
-        if (!mountedRef.current) return;
         
         console.log('User data response status:', response.status);
         if (response.ok) {
           const data = await response.json();
           console.log('User data received:', data);
           if (data && data.user) {
-            setUserData(data.user); // Extract the user object from the response
+            setUserData(data.user); 
             
             // If we have user data but no company data yet, pre-populate the email field
-            if (data.user && data.user.email && !company) {
+            if (data.user.email && !company) {
               form.setValue('email', data.user.email);
             }
-          } else {
-            // If we don't get valid user data, still set loading to false
-            console.error('User data is invalid:', data);
           }
         } else {
           console.error('Failed to fetch user data:', response.statusText);
-          // Even if we can't load user data, don't keep showing loading spinner
-          if (company) {
-            // If company data is loaded, we can still show the form
-            setIsLoading(false);
-          }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
       } finally {
-        if (mountedRef.current) {
-          setLoadingUser(false);
-          // Only set overall loading to false if both fetches are complete
-          // If company data is loaded or if we couldn't load user data, show the form
-          if (!loadingCompany || !userData) {
-            setIsLoading(false);
-          }
-        }
+        // Always ensure loading state is completed
+        setIsLoading(false);
       }
     }
 
@@ -239,16 +219,16 @@ export default function SettingsPage() {
     
     // Set a safety timeout to prevent infinite loading
     const safetyTimer = setTimeout(() => {
-      if (mountedRef.current && isLoading) {
+      if (isLoading) {
         console.log('Safety timeout: forcing isLoading to false');
         setIsLoading(false);
       }
-    }, 5000); // 5 second safety timeout
+    }, 3000); // 3 second safety timeout
     
     return () => {
       clearTimeout(safetyTimer);
     };
-  }, [form, showToast, refreshTrigger]);
+  }, []);
 
   const handleSubmit = async (data: CompanyFormValues) => {
     try {
