@@ -72,6 +72,8 @@ export default function SettingsPage() {
   const [formIsDirty, setFormIsDirty] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [loadingUser, setLoadingUser] = useState(false);
+  const [loadingCompany, setLoadingCompany] = useState(false);
   
   // Initialize form
   const form = useForm<CompanyFormValues>({
@@ -107,6 +109,13 @@ export default function SettingsPage() {
 
   // Use a ref to track the previous refresh trigger value
   const prevRefreshTriggerRef = React.useRef(refreshTrigger);
+  const mountedRef = React.useRef(true);
+  
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   
   useEffect(() => {
     // Skip initial render
@@ -120,13 +129,13 @@ export default function SettingsPage() {
     let isMounted = true;
     
     async function fetchCompanyDetails() {
-      if (!isMounted) return;
+      if (!mountedRef.current) return;
     
       try {
-        setIsLoading(true);
+        setLoadingCompany(true);
         const response = await fetch('/api/company');
         
-        if (!isMounted) return;
+        if (!mountedRef.current) return;
         
         if (response.ok) {
           const data = await response.json();
@@ -158,29 +167,34 @@ export default function SettingsPage() {
         }
       } catch (error) {
         console.error('Error fetching company details:', error);
-        if (isMounted) {
+        if (mountedRef.current) {
           showToast({
             message: 'Failed to fetch company details',
             variant: 'error'
           });
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
+        if (mountedRef.current) {
+          setLoadingCompany(false);
+          // Only set overall loading to false if both fetches are complete
+          if (!loadingUser) {
+            setIsLoading(false);
+          }
         }
       }
     }
     
     // Fetch user data including subscription info
     async function fetchUserData() {
-      if (!isMounted) return;
+      if (!mountedRef.current) return;
     
       try {
+        setLoadingUser(true);
         console.log('Fetching user data, refreshTrigger:', refreshTrigger);
         // Use the test API endpoint temporarily to bypass authentication
         const response = await fetch('/api/user/test');
         
-        if (!isMounted) return;
+        if (!mountedRef.current) return;
         
         console.log('User data response status:', response.status);
         if (response.ok) {
@@ -197,6 +211,14 @@ export default function SettingsPage() {
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
+      } finally {
+        if (mountedRef.current) {
+          setLoadingUser(false);
+          // Only set overall loading to false if both fetches are complete
+          if (!loadingCompany) {
+            setIsLoading(false);
+          }
+        }
       }
     }
 
@@ -204,11 +226,7 @@ export default function SettingsPage() {
     fetchCompanyDetails();
     fetchUserData();
     
-    return () => {
-      isMounted = false;
-    };
-    
-  }, [form, showToast, refreshTrigger]); // Removed company dependency to prevent infinite loop
+  }, [form, showToast, refreshTrigger, company]); // Added company dependency back but with additional guards
 
   const handleSubmit = async (data: CompanyFormValues) => {
     try {
