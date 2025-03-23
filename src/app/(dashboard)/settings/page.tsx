@@ -200,14 +200,24 @@ export default function SettingsPage() {
         if (response.ok) {
           const data = await response.json();
           console.log('User data received:', data);
-          setUserData(data.user); // Extract the user object from the response
-          
-          // If we have user data but no company data yet, pre-populate the email field
-          if (data.user && data.user.email && !company) {
-            form.setValue('email', data.user.email);
+          if (data && data.user) {
+            setUserData(data.user); // Extract the user object from the response
+            
+            // If we have user data but no company data yet, pre-populate the email field
+            if (data.user && data.user.email && !company) {
+              form.setValue('email', data.user.email);
+            }
+          } else {
+            // If we don't get valid user data, still set loading to false
+            console.error('User data is invalid:', data);
           }
         } else {
           console.error('Failed to fetch user data:', response.statusText);
+          // Even if we can't load user data, don't keep showing loading spinner
+          if (company) {
+            // If company data is loaded, we can still show the form
+            setIsLoading(false);
+          }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -215,7 +225,8 @@ export default function SettingsPage() {
         if (mountedRef.current) {
           setLoadingUser(false);
           // Only set overall loading to false if both fetches are complete
-          if (!loadingCompany) {
+          // If company data is loaded or if we couldn't load user data, show the form
+          if (!loadingCompany || !userData) {
             setIsLoading(false);
           }
         }
@@ -226,7 +237,18 @@ export default function SettingsPage() {
     fetchCompanyDetails();
     fetchUserData();
     
-  }, [form, showToast, refreshTrigger, company]); // Added company dependency back but with additional guards
+    // Set a safety timeout to prevent infinite loading
+    const safetyTimer = setTimeout(() => {
+      if (mountedRef.current && isLoading) {
+        console.log('Safety timeout: forcing isLoading to false');
+        setIsLoading(false);
+      }
+    }, 5000); // 5 second safety timeout
+    
+    return () => {
+      clearTimeout(safetyTimer);
+    };
+  }, [form, showToast, refreshTrigger]);
 
   const handleSubmit = async (data: CompanyFormValues) => {
     try {
