@@ -61,11 +61,7 @@ const currencies = [
   { code: 'INR', name: 'Indian Rupee', locale: 'en-IN' },
 ];
 
-type SettingsPageProps = {
-  onSubscriptionChange?: () => void;
-};
-
-export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps = {}) {
+export default function SettingsPage() {
   const { showToast } = useToast();
   const { settings, updateSettings } = useSettings();
   const [isSaving, setIsSaving] = useState(false);
@@ -75,7 +71,9 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
   const [isLoading, setIsLoading] = useState(true);
   const [formIsDirty, setFormIsDirty] = useState(false);
   const [userData, setUserData] = useState<any>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [loadingUser, setLoadingUser] = useState(false);
+  const [loadingCompany, setLoadingCompany] = useState(false);
   
   // Initialize form
   const form = useForm<CompanyFormValues>({
@@ -92,12 +90,13 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
     },
   });
 
-  // Function to refresh user data - simplified
+  // Function to refresh user data
   const refreshUserData = () => {
     console.log('refreshUserData called');
-    if (onSubscriptionChange) {
-      onSubscriptionChange();
-    }
+    // Add a small delay to prevent multiple rapid refreshes
+    setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 300);
   };
 
   // Watch for form changes to enable/disable save button
@@ -107,108 +106,132 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
     });
     return () => subscription.unsubscribe();
   }, [form]);
+
+  // Use a ref to track the previous refresh trigger value
+  const prevRefreshTriggerRef = React.useRef(refreshTrigger);
+  const mountedRef = React.useRef(true);
   
-  // Fetch company details
-  async function fetchCompanyDetails() {
-    try {
-      const response = await fetch('/api/company');
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCompany(data);
-        
-        // If company data exists, populate the form
-        if (data) {
-          form.reset({
-            legalName: data.legalName || '',
-            ownerName: data.ownerName || '',
-            registrationNumber: data.registrationNumber || '',
-            taxIdentificationNumber: data.taxIdentificationNumber || '',
-            email: data.email || '',
-            phoneNumber: data.phoneNumber || '',
-            address: data.address || '',
-            termsAndConditions: data.termsAndConditions || '',
-          });
-          
-          // Lock certain fields if company exists (this is just an example)
-          setFieldsLocked(!!data.registrationNumber);
-        }
-        
-        setFormIsDirty(false);
-      } else {
-        showToast({
-          message: 'Failed to fetch company details',
-          variant: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching company details:', error);
-      showToast({
-        message: 'Failed to fetch company details',
-        variant: 'error'
-      });
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  
+  useEffect(() => {
+    // Skip initial render
+    if (prevRefreshTriggerRef.current === refreshTrigger) {
+      return;
     }
-  }
-  
-  // Fetch user data including subscription info
-  async function fetchUserData() {
-    try {
-      console.log('Fetching user data');
-      // Use the test API endpoint temporarily to bypass authentication
-      const response = await fetch('/api/user/test');
-      
-      console.log('User data response status:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User data received:', data);
-        if (data && data.user) {
-          setUserData(data.user); 
+    
+    // Update ref with current value
+    prevRefreshTriggerRef.current = refreshTrigger;
+    
+    let isMounted = true;
+    
+    async function fetchCompanyDetails() {
+      if (!mountedRef.current) return;
+    
+      try {
+        setLoadingCompany(true);
+        const response = await fetch('/api/company');
+        
+        if (!mountedRef.current) return;
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCompany(data);
           
-          // If we have user data but no company data yet, pre-populate the email field
-          if (data.user.email && !company) {
-            form.setValue('email', data.user.email);
+          // If company data exists, populate the form
+          if (data) {
+            form.reset({
+              legalName: data.legalName || '',
+              ownerName: data.ownerName || '',
+              registrationNumber: data.registrationNumber || '',
+              taxIdentificationNumber: data.taxIdentificationNumber || '',
+              email: data.email || '',
+              phoneNumber: data.phoneNumber || '',
+              address: data.address || '',
+              termsAndConditions: data.termsAndConditions || '',
+            });
+            
+            // Lock certain fields if company exists (this is just an example)
+            setFieldsLocked(!!data.registrationNumber);
+          }
+          
+          setFormIsDirty(false);
+        } else {
+          showToast({
+            message: 'Failed to fetch company details',
+            variant: 'error'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching company details:', error);
+        if (mountedRef.current) {
+          showToast({
+            message: 'Failed to fetch company details',
+            variant: 'error'
+          });
+        }
+      } finally {
+        if (mountedRef.current) {
+          setLoadingCompany(false);
+          // Only set overall loading to false if both fetches are complete
+          if (!loadingUser) {
+            setIsLoading(false);
           }
         }
-      } else {
-        console.error('Failed to fetch user data:', response.statusText);
       }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
     }
-  }
-
-  // Load data on initial mount
-  useEffect(() => {
-    const loadData = async () => {
+    
+    // Fetch user data including subscription info
+    async function fetchUserData() {
       try {
-        setIsLoading(true);
+        console.log('Fetching user data');
+        // Use the test API endpoint temporarily to bypass authentication
+        const response = await fetch('/api/user/test');
         
-        // Execute both fetches in parallel
-        await Promise.all([
-          fetchCompanyDetails(),
-          fetchUserData()
-        ]);
+        console.log('User data response status:', response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('User data received:', data);
+          if (data && data.user) {
+            setUserData(data.user); 
+            
+            // If we have user data, pre-populate form fields as needed
+            if (data.user.email && !form.getValues('email')) {
+              form.setValue('email', data.user.email);
+            }
+            
+            // Populate the phone number from the user's account if not already set
+            if (data.user.phoneNumber && !form.getValues('phoneNumber')) {
+              form.setValue('phoneNumber', data.user.phoneNumber);
+            }
+          }
+        } else {
+          console.error('Failed to fetch user data:', response.statusText);
+        }
       } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching user data:', error);
       }
-    };
+    }
 
-    loadData();
+    // Fetch data when component mounts or refreshTrigger changes
+    fetchCompanyDetails();
+    fetchUserData();
     
     // Set a safety timeout to prevent infinite loading
     const safetyTimer = setTimeout(() => {
-      if (isLoading) {
+      if (mountedRef.current && isLoading) {
         console.log('Safety timeout: forcing isLoading to false');
         setIsLoading(false);
       }
-    }, 3000); // 3 second safety timeout
+    }, 5000); // 5 second safety timeout
     
     return () => {
       clearTimeout(safetyTimer);
     };
-  }, []);
+  }, [form, showToast, refreshTrigger]);
 
   const handleSubmit = async (data: CompanyFormValues) => {
     try {
@@ -396,12 +419,16 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                           <FormItem>
                             <FormLabel>Business Phone</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                disabled={isSaving || true} 
-                                className="bg-muted text-muted-foreground"
+                              <PhoneInput 
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                disabled={isSaving}
+                                placeholder="Enter business phone number"
                               />
                             </FormControl>
+                            <FormDescription>
+                              This will be shown on your invoices
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
