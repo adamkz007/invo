@@ -313,6 +313,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
     setIsBetaLoading(true);
     
     try {
+      console.log('Initiating beta upgrade...');
       const response = await fetch('/api/subscription/beta-upgrade', {
         method: 'POST',
         headers: {
@@ -325,25 +326,37 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
       }
       
       const data = await response.json();
+      console.log('Beta upgrade response:', data);
       
-      // Update local state immediately
-      if (user) {
-        setSubscriptionStatus('TRIAL');
-        const now = new Date();
-        const trialEndDate = new Date(now);
-        trialEndDate.setDate(trialEndDate.getDate() + TRIAL_DURATION_DAYS);
-        user.trialStartDate = now;
-        user.trialEndDate = trialEndDate;
-        user.subscriptionStatus = 'TRIAL';
+      // Show success toast
+      showToast({
+        message: `Beta access activated! You now have ${TRIAL_DURATION_DAYS} days of unlimited features.`,
+        variant: 'success'
+      });
+      
+      // Update local state if user data is returned
+      if (data.user) {
+        // Update subscription status directly without a full page reload
+        setSubscriptionStatus(data.user.subscriptionStatus);
         
-        // Trigger refresh in parent component
-        if (onSubscriptionChange) {
-          onSubscriptionChange();
+        // Update the user object with new subscription details
+        if (user) {
+          user.subscriptionStatus = data.user.subscriptionStatus;
+          user.trialStartDate = data.user.trialStartDate;
+          user.trialEndDate = data.user.trialEndDate;
+          
+          // If onSubscriptionChange is provided, call it to update parent state
+          if (onSubscriptionChange) {
+            // Use setTimeout to prevent rapid state updates
+            setTimeout(() => {
+              onSubscriptionChange();
+            }, 500);
+          }
         }
+      } else {
+        // Fall back to redirect if no user data is returned
+        window.location.href = data.redirectUrl;
       }
-      
-      // Redirect to the success page
-      window.location.href = data.redirectUrl;
     } catch (err) {
       console.error('Beta upgrade error:', err);
       showToast({

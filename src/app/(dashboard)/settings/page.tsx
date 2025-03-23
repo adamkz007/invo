@@ -90,7 +90,11 @@ export default function SettingsPage() {
 
   // Function to refresh user data
   const refreshUserData = () => {
-    setRefreshTrigger(prev => prev + 1);
+    console.log('refreshUserData called');
+    // Add a small delay to prevent multiple rapid refreshes
+    setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 300);
   };
 
   // Watch for form changes to enable/disable save button
@@ -101,11 +105,28 @@ export default function SettingsPage() {
     return () => subscription.unsubscribe();
   }, [form]);
 
+  // Use a ref to track the previous refresh trigger value
+  const prevRefreshTriggerRef = React.useRef(refreshTrigger);
+  
   useEffect(() => {
+    // Skip initial render
+    if (prevRefreshTriggerRef.current === refreshTrigger) {
+      return;
+    }
+    
+    // Update ref with current value
+    prevRefreshTriggerRef.current = refreshTrigger;
+    
+    let isMounted = true;
+    
     async function fetchCompanyDetails() {
+      if (!isMounted) return;
+    
       try {
         setIsLoading(true);
         const response = await fetch('/api/company');
+        
+        if (!isMounted) return;
         
         if (response.ok) {
           const data = await response.json();
@@ -137,21 +158,30 @@ export default function SettingsPage() {
         }
       } catch (error) {
         console.error('Error fetching company details:', error);
-        showToast({
-          message: 'Failed to fetch company details',
-          variant: 'error'
-        });
+        if (isMounted) {
+          showToast({
+            message: 'Failed to fetch company details',
+            variant: 'error'
+          });
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
     
     // Fetch user data including subscription info
     async function fetchUserData() {
+      if (!isMounted) return;
+    
       try {
-        console.log('Fetching user data...');
+        console.log('Fetching user data, refreshTrigger:', refreshTrigger);
         // Use the test API endpoint temporarily to bypass authentication
         const response = await fetch('/api/user/test');
+        
+        if (!isMounted) return;
+        
         console.log('User data response status:', response.status);
         if (response.ok) {
           const data = await response.json();
@@ -173,6 +203,10 @@ export default function SettingsPage() {
     // Fetch data when component mounts or refreshTrigger changes
     fetchCompanyDetails();
     fetchUserData();
+    
+    return () => {
+      isMounted = false;
+    };
     
   }, [form, showToast, refreshTrigger]); // Removed company dependency to prevent infinite loop
 
