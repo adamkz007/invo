@@ -142,7 +142,11 @@ export default function CustomerFormDialog({
   if (renderWithoutDialog) {
     return (
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation(); // Stop the event from bubbling up to parent forms
+          form.handleSubmit(onSubmit)(e);
+        }} className="space-y-4">
           <FormField
             control={form.control}
             name="name"
@@ -234,7 +238,11 @@ export default function CustomerFormDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Stop the event from bubbling up to parent forms
+            form.handleSubmit(onSubmit)(e);
+          }} className="space-y-4">
             <FormField
               control={form.control}
               name="name"

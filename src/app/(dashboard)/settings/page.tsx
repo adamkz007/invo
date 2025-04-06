@@ -43,8 +43,16 @@ const companyFormSchema = z.object({
   taxIdentificationNumber: z.string().optional(),
   email: z.string().email({ message: 'Please enter a valid email' }).optional().or(z.literal('')),
   phoneNumber: z.string().optional(),
-  address: z.string().optional(),
+  addressLine1: z.string().min(1, { message: 'Address line 1 is required' }),
+  postcode: z.string().min(1, { message: 'Postcode is required' }),
+  city: z.string().min(1, { message: 'City is required' }),
+  country: z.string().default('Malaysia'),
   termsAndConditions: z.string().optional(),
+  paymentMethod: z.enum(['bank', 'qr']).optional(),
+  bankAccountName: z.string().optional(),
+  bankName: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  qrImageUrl: z.string().optional(),
 });
 
 type CompanyFormValues = z.infer<typeof companyFormSchema>;
@@ -93,8 +101,16 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
       taxIdentificationNumber: '',
       email: '',
       phoneNumber: '',
-      address: '',
+      addressLine1: '',
+      postcode: '',
+      city: '',
+      country: 'Malaysia',
       termsAndConditions: '',
+      paymentMethod: undefined,
+      bankAccountName: '',
+      bankName: '',
+      bankAccountNumber: '',
+      qrImageUrl: '',
     },
   });
 
@@ -140,8 +156,16 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
             taxIdentificationNumber: data.taxIdentificationNumber || '',
             email: data.email || '',
             phoneNumber: data.phoneNumber || '',
-            address: data.address || '',
+            addressLine1: data.addressLine1 || '',
+            postcode: data.postcode || '',
+            city: data.city || '',
+            country: data.country || 'Malaysia',
             termsAndConditions: data.termsAndConditions || '',
+            paymentMethod: data.paymentMethod || undefined,
+            bankAccountName: data.bankAccountName || '',
+            bankName: data.bankName || '',
+            bankAccountNumber: data.bankAccountNumber || '',
+            qrImageUrl: data.qrImageUrl || '',
           });
           
           // Lock certain fields if company exists (this is just an example)
@@ -285,7 +309,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
     }
   };
   
-  const updateAppSettings = async (newSettings: Partial<{currency: {code: string, locale: string}}>) => {
+  const updateAppSettings = async (newSettings: Partial<{currency: {code: string, locale: string}, enableReceiptsModule: boolean}>) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
       updateSettings(updatedSettings);
@@ -448,23 +472,97 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                       />
                     </div>
                     
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Address</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              {...field} 
-                              disabled={isSaving}
-                              className="min-h-[100px]"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium mb-2">Business Address</h3>
+                      <div className="grid gap-4">
+                        <FormField
+                          control={form.control}
+                          name="addressLine1"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Address</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  disabled={isSaving}
+                                  placeholder="Street address"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="postcode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Postcode</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    disabled={isSaving}
+                                    placeholder="Postcode"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    disabled={isSaving}
+                                    placeholder="City"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Country</FormLabel>
+                              <FormControl>
+                                <Select
+                                  defaultValue={field.value || 'Malaysia'}
+                                  onValueChange={field.onChange}
+                                  disabled={isSaving}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select country" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Malaysia">Malaysia</SelectItem>
+                                    <SelectItem value="Singapore">Singapore</SelectItem>
+                                    <SelectItem value="Indonesia">Indonesia</SelectItem>
+                                    <SelectItem value="Thailand">Thailand</SelectItem>
+                                    <SelectItem value="Vietnam">Vietnam</SelectItem>
+                                    <SelectItem value="Philippines">Philippines</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
                     
                     <FormField
                       control={form.control}
@@ -486,6 +584,131 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         </FormItem>
                       )}
                     />
+                    
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium mb-2">Payment Information</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        This information will be displayed on your invoices to let your customers know how to pay you
+                      </p>
+                      
+                      <FormField
+                        control={form.control}
+                        name="paymentMethod"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Payment Method</FormLabel>
+                            <FormControl>
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                disabled={isSaving}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select payment method" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="bank">Bank Transfer</SelectItem>
+                                  <SelectItem value="qr">QR Code</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {form.watch('paymentMethod') === 'bank' && (
+                        <div className="mt-4 space-y-4">
+                          <FormField
+                            control={form.control}
+                            name="bankAccountName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Full Account Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} disabled={isSaving} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="bankName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Bank Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} disabled={isSaving} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="bankAccountNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Bank Account Number</FormLabel>
+                                <FormControl>
+                                  <Input {...field} disabled={isSaving} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+                      
+                      {form.watch('paymentMethod') === 'qr' && (
+                        <div className="mt-4">
+                          <FormField
+                            control={form.control}
+                            name="qrImageUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>QR Code Image</FormLabel>
+                                <FormControl>
+                                  <div className="space-y-4">
+                                    {field.value && (
+                                      <div className="border p-4 rounded-md w-48 h-48 flex items-center justify-center">
+                                        <img 
+                                          src={field.value} 
+                                          alt="Payment QR Code" 
+                                          className="max-w-full max-h-full object-contain"
+                                        />
+                                      </div>
+                                    )}
+                                    <Input 
+                                      type="file" 
+                                      accept="image/*"
+                                      disabled={isSaving}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          const reader = new FileReader();
+                                          reader.onload = (event) => {
+                                            field.onChange(event.target?.result as string);
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormDescription>
+                                  Upload an image of your payment QR code
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+                    </div>
                     
                     <Button 
                       type="submit" 
@@ -541,6 +764,47 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Module Settings</CardTitle>
+              <CardDescription>
+                Enable or disable optional modules
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-sm font-medium">Receipts Module</label>
+                    <p className="text-sm text-muted-foreground">
+                      Enable quick receipt generation for walk-in customers
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant={settings.enableReceiptsModule ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        updateAppSettings({ enableReceiptsModule: true });
+                      }}
+                    >
+                      Enable
+                    </Button>
+                    <Button 
+                      variant={!settings.enableReceiptsModule ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        updateAppSettings({ enableReceiptsModule: false });
+                      }}
+                    >
+                      Disable
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>

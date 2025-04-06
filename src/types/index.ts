@@ -164,3 +164,34 @@ export interface InvoiceWithDetails {
   notes?: string;
   items: InvoiceItemWithDetails[];
 }
+
+// Receipt specific types
+export interface ReceiptFormValues {
+  customerPhone?: string;
+  customerName?: string;
+  receiptDate: Date;
+  items: ReceiptItemFormValues[];
+  paymentMethod: 'CASH' | 'CARD' | 'OTHER';
+  notes?: string;
+  userId?: string;
+}
+
+export interface ReceiptItemFormValues {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  description?: string;
+}
+
+export interface ReceiptWithDetails {
+  id: string;
+  receiptNumber: string;
+  customerPhone?: string;
+  customerName: string;
+  receiptDate: Date;
+  total: number;
+  paymentMethod: string;
+  notes?: string;
+  items: InvoiceItemWithDetails[];
+  createdAt: Date;
+}

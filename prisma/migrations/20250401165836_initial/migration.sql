@@ -97,7 +97,37 @@ CREATE TABLE "Company" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     "userId" TEXT NOT NULL,
-    CONSTRAINT "Company_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "Company_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Receipt" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "receiptNumber" TEXT NOT NULL,
+    "customerName" TEXT NOT NULL,
+    "customerPhone" TEXT,
+    "receiptDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "paymentMethod" TEXT NOT NULL DEFAULT 'CASH',
+    "total" REAL NOT NULL,
+    "notes" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    "userId" TEXT NOT NULL,
+    CONSTRAINT "Receipt_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "ReceiptItem" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "quantity" INTEGER NOT NULL,
+    "unitPrice" REAL NOT NULL,
+    "description" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    "receiptId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    CONSTRAINT "ReceiptItem_receiptId_fkey" FOREIGN KEY ("receiptId") REFERENCES "Receipt" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ReceiptItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateIndex
@@ -111,3 +141,6 @@ CREATE UNIQUE INDEX "Invoice_invoiceNumber_key" ON "Invoice"("invoiceNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Company_userId_key" ON "Company"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Receipt_receiptNumber_key" ON "Receipt"("receiptNumber");

@@ -13,6 +13,15 @@ interface CompanyDetails {
   address?: string;
   logoUrl?: string;
   termsAndConditions?: string;
+  addressLine1?: string;
+  postcode?: string;
+  city?: string;
+  country?: string;
+  paymentMethod?: string;
+  bankAccountName?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  qrImageUrl?: string;
 }
 
 // Use WeakMap for caching logo images to allow garbage collection
@@ -136,6 +145,25 @@ function extractPaidAmount(invoice: InvoiceWithDetails): number {
   return 0;
 }
 
+// Format the address from separate fields or use the single address field
+function formatCompanyAddress(companyDetails: any): string {
+  if (companyDetails.addressLine1) {
+    // Format from separate address fields - without addressLine2
+    const addressParts = [
+      companyDetails.addressLine1,
+      `${companyDetails.postcode || ''} ${companyDetails.city || ''}${companyDetails.country ? ', ' + companyDetails.country : ''}`
+    ];
+    
+    // Filter only completely empty lines for final output
+    return addressParts
+      .filter(part => part.trim() !== '')
+      .join('\n');
+  }
+  
+  // Fall back to single address field
+  return companyDetails.address || '';
+}
+
 export async function downloadInvoicePDF(
   invoice: InvoiceWithDetails, 
   companyDetails: CompanyDetails | null = null,
@@ -185,10 +213,16 @@ export async function downloadInvoicePDF(
   // Use company details if available, otherwise use default values
   if (companyDetails) {
     let yPos = 20;
-    if (companyDetails.address) {
-      doc.text(companyDetails.address, pageWidth - margin, yPos, { align: 'right' });
-      yPos += 5;
+    const companyAddress = formatCompanyAddress(companyDetails);
+    
+    if (companyAddress) {
+      const addressLines = companyAddress.split('\n');
+      addressLines.forEach(line => {
+        doc.text(line, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 5;
+      });
     }
+    
     if (companyDetails.email) {
       doc.text(companyDetails.email, pageWidth - margin, yPos, { align: 'right' });
       yPos += 5;
@@ -275,7 +309,7 @@ export async function downloadInvoicePDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
   
-  doc.text('Invoice#', invoiceDetailsX, customerY);
+  doc.text('Invoice #', invoiceDetailsX, customerY);
   doc.setFont('helvetica', 'bold');
   doc.text(invoice.invoiceNumber, invoiceDetailsValueX, customerY, { align: 'right' });
   
@@ -420,7 +454,7 @@ export async function downloadInvoicePDF(
       
       // Item name and description
       doc.setFont('helvetica', 'bold');
-      doc.text(item.product?.name || 'Item', xPos, yPos);
+      doc.text(item.product?.name || item.description || 'Item', xPos, yPos);
       doc.setFont('helvetica', 'normal');
       
       if (item.description) {
@@ -468,6 +502,52 @@ export async function downloadInvoicePDF(
   const totalsWidth = 80;
   const totalsX = pageWidth - margin - totalsWidth;
   const totalsY = yPos + 10;
+  
+  // Show payment QR code beside subtotal if enabled
+  if (companyDetails?.paymentMethod === 'qr' && companyDetails.qrImageUrl) {
+    try {
+      // Position QR code in the left area beside the totals section
+      const qrSize = 50; // QR code size in mm
+      const qrX = margin;
+      const qrY = totalsY - 10;
+      
+      // Add Payment Information title
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(50, 50, 50);
+      doc.text('Payment Information', qrX, qrY - 5);
+      
+      // Add white background for QR code
+      doc.setFillColor(255, 255, 255);
+      doc.rect(qrX, qrY, qrSize + 10, qrSize + 15, 'F');
+      
+      // Add border around QR code
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(qrX, qrY, qrSize + 10, qrSize + 15, 'S');
+      
+      // Add the QR code image
+      doc.addImage(
+        companyDetails.qrImageUrl,
+        'PNG',
+        qrX + 5,
+        qrY + 5,
+        qrSize,
+        qrSize
+      );
+      
+      // Add a caption
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Scan to pay', qrX + (qrSize + 10)/2, qrY + qrSize + 10, { align: 'center' });
+      doc.setFontSize(10);
+      
+      // Reset text color
+      doc.setTextColor(80, 80, 80);
+    } catch (qrError) {
+      console.error('Error adding QR code to PDF:', qrError);
+    }
+  }
   
   // Subtotal
   doc.setFont('helvetica', 'normal');
@@ -526,6 +606,10 @@ export async function downloadInvoicePDF(
     doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, currentY, { align: 'right' });
   }
   
+  // Payment Information - Bank details - Add if payment method is bank
+  // This section is now handled after Terms & Conditions
+  // if (companyDetails?.paymentMethod === 'bank') { ... }
+  
   // Terms & Conditions
   const termsY = currentY + 25;
   doc.setFont('helvetica', 'bold');
@@ -544,107 +628,142 @@ export async function downloadInvoicePDF(
   const termsLines = doc.splitTextToSize(termsText, maxWidth);
   
   // Add each line of terms
+  let termsBottomY = termsY + 8;
   termsLines.forEach((line: string, index: number) => {
-    doc.text(line, margin, termsY + 8 + (index * 6));
+    doc.text(line, margin, termsBottomY + (index * 6));
   });
-  
+  termsBottomY += (termsLines.length * 6);
+
+  // Unified Payment Information Section - Bottom Left
+  if (companyDetails?.paymentMethod) {
+    const paymentInfoY = termsBottomY + 15; // Position below terms
+    const paymentInfoX = margin;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    doc.text('Payment Information', paymentInfoX, paymentInfoY - 5);
+
+    if (companyDetails.paymentMethod === 'bank') {
+      // Display bank transfer details in a table format
+      const tableWidth = 100;
+      const rowHeight = 10;
+      const tableX = paymentInfoX;
+      const tableY = paymentInfoY;
+
+      // Draw white background for the entire table
+      doc.setFillColor(255, 255, 255);
+      doc.rect(tableX, tableY, tableWidth, rowHeight * 3, 'F');
+
+      // Draw table borders
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(tableX, tableY, tableWidth, rowHeight * 3, 'S'); // Outer border
+      doc.line(tableX, tableY + rowHeight, tableX + tableWidth, tableY + rowHeight); // Row 1 divider
+      doc.line(tableX, tableY + rowHeight * 2, tableX + tableWidth, tableY + rowHeight * 2); // Row 2 divider
+      const colDivider = tableX + tableWidth * 0.4;
+      doc.line(colDivider, tableY, colDivider, tableY + rowHeight * 3); // Column divider
+
+      // Add table content
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text('Bank Name', tableX + 2, tableY + rowHeight * 0.65);
+      doc.text('Account Name', tableX + 2, tableY + rowHeight * 1.65);
+      doc.text('Account Number', tableX + 2, tableY + rowHeight * 2.65);
+      doc.setFont('helvetica', 'normal');
+      doc.text(companyDetails.bankName || '', colDivider + 2, tableY + rowHeight * 0.65);
+      doc.text(companyDetails.bankAccountName || '', colDivider + 2, tableY + rowHeight * 1.65);
+      doc.text(companyDetails.bankAccountNumber || '', colDivider + 2, tableY + rowHeight * 2.65);
+
+    } else if (companyDetails.paymentMethod === 'qr' && companyDetails.qrImageUrl) {
+      // Display QR code image with white background
+      try {
+        const qrSize = 40; // QR code size in mm
+        const qrX = paymentInfoX;
+        const qrY = paymentInfoY;
+
+        // Add white background for QR code box
+        doc.setFillColor(255, 255, 255);
+        doc.rect(qrX, qrY, qrSize + 10, qrSize + 15, 'F');
+
+        // Add border around QR code box
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.rect(qrX, qrY, qrSize + 10, qrSize + 15, 'S');
+
+        // Add the QR code image
+        doc.addImage(
+          companyDetails.qrImageUrl,
+          'PNG',
+          qrX + 5,
+          qrY + 5,
+          qrSize,
+          qrSize
+        );
+
+        // Add caption
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Scan to pay', qrX + (qrSize + 10) / 2, qrY + qrSize + 10, { align: 'center' });
+        doc.setFontSize(10); // Reset font size
+
+      } catch (qrError) {
+        console.error('Error adding QR code to PDF:', qrError);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.text('QR code payment available (scan not displayed)', paymentInfoX, paymentInfoY + 8);
+      }
+    }
+  }
+
   // Footer
-  const footerY = pageHeight - 25;
+  const footerHeight = 15; // Keep footer height definition
+  const footerTopY = pageHeight - footerHeight; // Calculate top Y of the footer area
   
-  // Add a light gray footer bar that extends to the bottom of the page
+  // Add a light gray footer bar that extends to the bottom
   doc.setFillColor(245, 245, 245);
-  doc.rect(0, footerY - 15, pageWidth, 25 + 15, 'F'); // Increased height to reach bottom of page
+  doc.rect(0, footerTopY, pageWidth, footerHeight, 'F'); // Position rectangle at the very bottom
   
-  // Thanks for your business and company details
+  // Company name and registration number - centered
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
-  // Center the "Thank you" text
-  doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
-  
-  // Company name and registration number - centered
+  const companyTextY = footerTopY + 6; // Position text relative to footer top (approx center)
   if (companyDetails?.registrationNumber) {
-    doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, footerY + 7, { align: 'center' });
+    doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, companyTextY, { align: 'center' });
   } else {
-    doc.text('Your Company Name | SSM: 123456-A', pageWidth / 2, footerY + 7, { align: 'center' });
+    doc.text('Your Company Name | SSM: 123456-A', pageWidth / 2, companyTextY, { align: 'center' });
   }
   
+  // "Powered by Invo" logo and text (adjust Y position if needed, maybe remove?)
+  // Let's keep it simple and just have company name for now to ensure no overlap
+  // TODO: Re-add Powered by Invo if space allows and adjust positioning carefully
+  
+  // Remove Powered by Invo for now to simplify footer adjustments
+  /*
   try {
-    // In a browser environment, load the logo
-    let logoUrl = window.location.origin + '/invo-logo.png';
+    // ... existing logo loading and drawing code ...
+    // Ensure all Y coordinates (e.g., logoY, text Y) are relative to footerTopY
+    const logoWidth = 6;
+    const logoHeight = 6;
+    const textWidth = 25; 
+    const combinedWidth = logoWidth + 2 + textWidth;
+    const startX = (pageWidth / 2) - (combinedWidth / 2);
+    const logoY = footerTopY + footerHeight - logoHeight - 2; // Position near bottom
     
-    // Use custom logo if provided in company details
-    if (companyDetails?.logoUrl) {
-      logoUrl = companyDetails.logoUrl;
-    }
+    // Add logo on the left
+    // doc.addImage(img, 'PNG', startX, logoY, logoWidth, logoHeight);
     
-    // Try to load the logo image with proper error handling
-    let img;
-    try {
-      img = await loadLogoImage(logoUrl);
-      
-      // Add "Powered by Invo" text
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(50, 50, 50);
-      
-      // Position the logo to the left of "Powered by Invo" text
-      const logoWidth = 8;
-      const textWidth = 30; // Approximate text width
-      const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
-      const startX = (pageWidth / 2) - (combinedWidth / 2);
-      
-      // Add logo on the left
-      doc.addImage(img, 'PNG', startX, footerY + 10, logoWidth, 8);
-      
-      // Add text to the right of the logo with a small gap
-      doc.text('Powered by Invo', startX + logoWidth + 2, footerY + 14, { align: 'left' });
-    } catch (logoError) {
-      console.warn('Primary logo loading failed, trying alternate path:', logoError);
-      
-      // Try alternative path (relative URL)
-      try {
-        const altLogoUrl = '/invo-logo.png';
-        img = await loadLogoImage(altLogoUrl);
-        
-        // Position the logo to the left of "Powered by Invo" text
-        const logoWidth = 8;
-        const textWidth = 30; // Approximate text width
-        const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
-        const startX = (pageWidth / 2) - (combinedWidth / 2);
-        
-        // Add logo on the left
-        doc.addImage(img, 'PNG', startX, footerY + 10, logoWidth, 8);
-        
-        // Add text to the right of the logo with a small gap
-        doc.text('Powered by Invo', startX + logoWidth + 2, footerY + 14, { align: 'left' });
-      } catch (altLogoError) {
-        console.warn('Alternative logo loading failed, using data URL fallback:', altLogoError);
-        
-        // Try using the embedded data URL as a last resort
-        try {
-          // Position the logo to the left of "Powered by Invo" text
-          const logoWidth = 8;
-          const textWidth = 30; // Approximate text width
-          const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
-          const startX = (pageWidth / 2) - (combinedWidth / 2);
-          
-          // Add logo on the left
-          doc.addImage(FALLBACK_LOGO_DATA_URL, 'PNG', startX, footerY + 10, logoWidth, 8);
-          
-          // Add text to the right of the logo with a small gap
-          doc.text('Powered by Invo', startX + logoWidth + 2, footerY + 14, { align: 'left' });
-        } catch (dataUrlError) {
-          // All attempts failed, fall back to text-based logo
-          throw dataUrlError;
-        }
-      }
-    }
+    // Add text to the right of the logo
+    // doc.text('Powered by Invo', startX + logoWidth + 2, logoY + (logoHeight/2) + 1, { align: 'left' });
+    
   } catch (error) {
     console.error('Error adding logo to PDF, using text fallback:', error);
-    // Fallback to text-based logo
-    createTextLogo(doc, pageWidth, footerY + 14);
+    // Fallback to text-based logo, adjusted Y position
+    // createTextLogo(doc, pageWidth, footerTopY + X); // Adjust X as needed
   }
+  */
   
   // Save the PDF
   doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
@@ -709,16 +828,18 @@ export async function downloadReceiptPDF(
   
   let yPos = margin + 10;
   
-  if (companyDetails?.address) {
-    const addressLines = companyDetails.address.split('\n');
+  const companyAddress = formatCompanyAddress(companyDetails);
+  
+  if (companyAddress) {
+    const addressLines = companyAddress.split('\n');
     addressLines.forEach(line => {
       doc.text(line, pageWidth / 2, yPos, { align: 'center' });
       yPos += 4;
     });
   } else {
-    doc.text('2334, Fish and Chips Street', pageWidth / 2, yPos, { align: 'center' });
+    doc.text('address', pageWidth / 2, yPos, { align: 'center' });
     yPos += 4;
-    doc.text('New Hill, SC, 34566-454646', pageWidth / 2, yPos, { align: 'center' });
+    doc.text('Malaysia', pageWidth / 2, yPos, { align: 'center' });
     yPos += 4;
   }
   
@@ -778,7 +899,7 @@ export async function downloadReceiptPDF(
     invoice.items.forEach(item => {
       const quantityText = item.quantity.toString();
       const priceText = formatCurrency(item.unitPrice * item.quantity, settings);
-      const itemName = item.description || item.product?.name || 'Item';
+      const itemName = item.product?.name || item.description || 'Item';
       const unitPriceText = formatCurrency(item.unitPrice, settings);
       
       // Handle long item names by wrapping if needed

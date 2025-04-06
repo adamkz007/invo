@@ -1,38 +1,32 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String?
-  email        String?  @unique
-  phoneNumber  String?  @unique
-  passwordHash String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Stripe subscription fields
+  id                   String     @id @default(cuid())
+  name                 String?
+  email                String?    @unique
+  phoneNumber          String?    @unique
+  passwordHash         String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
   stripeCustomerId     String?
   stripeSubscriptionId String?
   stripePriceId        String?
-  subscriptionStatus   String? // "TRIAL", "ACTIVE", "CANCELLED", etc.
+  subscriptionStatus   String?
   trialStartDate       DateTime?
   trialEndDate         DateTime?
   currentPeriodEnd     DateTime?
-
-  // Relationships
-  company   Company?
-  invoices  Invoice[]
-  customers Customer[]
-  products  Product[]
+  company              Company?
+  customers            Customer[]
+  invoices             Invoice[]
+  products             Product[]
+  receipts             Receipt[]
 }
 
 model Customer {
@@ -62,6 +56,7 @@ model Product {
   userId                 String
   invoiceItems           InvoiceItem[]
   user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receiptItems           ReceiptItem[]
 }
 
 model Invoice {
@@ -82,8 +77,8 @@ model Invoice {
   updatedAt      DateTime      @updatedAt
   customerId     String
   userId         String
-  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   items          InvoiceItem[]
 }
 
@@ -97,12 +92,12 @@ model InvoiceItem {
   updatedAt   DateTime @updatedAt
   invoiceId   String
   productId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model Company {
-  id                      String  @id @default(cuid())
+  id                      String   @id @default(cuid())
   legalName               String?
   ownerName               String?
   address                 String?
@@ -111,8 +106,42 @@ model Company {
   registrationNumber      String?
   taxIdentificationNumber String?
   termsAndConditions      String?
+  paymentMethod           String?
+  bankAccountName         String?
+  bankName                String?
+  bankAccountNumber       String?
+  qrImageUrl              String?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
-  userId                  String  @unique
-  user                    User    @relation(fields: [userId], references: [id])
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Receipt {
+  id            String        @id @default(cuid())
+  receiptNumber String        @unique
+  customerName  String
+  customerPhone String?
+  receiptDate   DateTime      @default(now())
+  paymentMethod String        @default("CASH")
+  total         Float
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         ReceiptItem[]
+}
+
+model ReceiptItem {
+  id          String   @id @default(cuid())
+  quantity    Int
+  unitPrice   Float
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  receiptId   String
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  receipt     Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
 }

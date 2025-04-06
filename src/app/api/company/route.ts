@@ -13,8 +13,17 @@ let mockCompanyStorage: Record<string, any> = {
     taxIdentificationNumber: 'TAX123456',
     email: 'contact@democompany.com',
     phoneNumber: '123-456-7890',
-    address: '123 Business Ave, Commerce City, USA',
+    address: '123 Business Ave, Commerce City, Malaysia',
+    addressLine1: '123 Business Ave',
+    postcode: '50000',
+    city: 'Commerce City',
+    country: 'Malaysia',
     termsAndConditions: 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
+    paymentMethod: 'bank',
+    bankAccountName: 'Demo Company LLC',
+    bankName: 'Demo Bank',
+    bankAccountNumber: '1234567890',
+    qrImageUrl: null,
     logoUrl: null,
     userId: '1',
     createdAt: new Date(),
@@ -84,7 +93,10 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(null);
         }
         
-        return NextResponse.json(company);
+        // Parse address into separate fields if they don't exist
+        const parsedCompany = parseAddress(company);
+        
+        return NextResponse.json(parsedCompany);
       } catch (dbError) {
         console.error('Database error, falling back to mock storage:', dbError);
       }
@@ -133,6 +145,9 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Format address from separate fields if they exist
+    const combinedAddress = formatAddress(data);
+    
     // If database is connected, try to use it first
     if (isConnected) {
       try {
@@ -161,8 +176,13 @@ export async function POST(request: NextRequest) {
                 taxIdentificationNumber: data.taxIdentificationNumber,
                 email: data.email,
                 phoneNumber: data.phoneNumber,
-                address: data.address,
+                address: combinedAddress,
                 termsAndConditions: data.termsAndConditions,
+                paymentMethod: data.paymentMethod,
+                bankAccountName: data.bankAccountName,
+                bankName: data.bankName,
+                bankAccountNumber: data.bankAccountNumber,
+                qrImageUrl: data.qrImageUrl,
               }
             })
           );
@@ -177,8 +197,13 @@ export async function POST(request: NextRequest) {
                 taxIdentificationNumber: data.taxIdentificationNumber,
                 email: data.email,
                 phoneNumber: data.phoneNumber,
-                address: data.address,
+                address: combinedAddress,
                 termsAndConditions: data.termsAndConditions,
+                paymentMethod: data.paymentMethod,
+                bankAccountName: data.bankAccountName,
+                bankName: data.bankName,
+                bankAccountNumber: data.bankAccountNumber,
+                qrImageUrl: data.qrImageUrl,
                 user: {
                   connect: { id: userId }
                 }
@@ -187,7 +212,30 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        return NextResponse.json(company);
+        // Return the company data with both formats (single address and separate fields)
+        const responseCompany = {
+          ...company,
+          addressLine1: data.addressLine1 || '',
+          postcode: data.postcode || '',
+          city: data.city || '',
+          country: data.country || 'Malaysia',
+        };
+        
+        // Log data for debugging
+        console.log('Responding with company details:', {
+          addressFields: {
+            addressLine1: data.addressLine1,
+            postcode: data.postcode,
+            city: data.city
+          },
+          response: {
+            addressLine1: responseCompany.addressLine1,
+            postcode: responseCompany.postcode,
+            city: responseCompany.city
+          }
+        });
+        
+        return NextResponse.json(responseCompany);
       } catch (dbError) {
         console.error('Database error, using mock storage instead:', dbError);
       }
@@ -204,8 +252,17 @@ export async function POST(request: NextRequest) {
       taxIdentificationNumber: data.taxIdentificationNumber || 'TAX123456',
       email: data.email || 'contact@democompany.com',
       phoneNumber: data.phoneNumber || '123-456-7890',
-      address: data.address || '123 Business Ave, Commerce City, USA',
+      address: combinedAddress || '123 Business Ave, Commerce City, Malaysia',
+      addressLine1: data.addressLine1 || '123 Business Ave',
+      postcode: data.postcode || '50000',
+      city: data.city || 'Commerce City',
+      country: data.country || 'Malaysia',
       termsAndConditions: data.termsAndConditions || 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
+      paymentMethod: data.paymentMethod || 'bank',
+      bankAccountName: data.bankAccountName || 'Demo Company LLC',
+      bankName: data.bankName || 'Demo Bank',
+      bankAccountNumber: data.bankAccountNumber || '1234567890',
+      qrImageUrl: data.qrImageUrl || null,
       logoUrl: null,
       userId: userId,
       createdAt: new Date(),
@@ -226,4 +283,101 @@ export async function POST(request: NextRequest) {
       status: 500 
     });
   }
+}
+
+// Format address from separate fields into a single combined address
+function formatAddress(data: any): string {
+  if (!data.addressLine1) {
+    return data.address || '';
+  }
+  
+  // Format address with addressLine1 and a combined line for postcode, city, country
+  const addressParts = [
+    data.addressLine1,
+    `${data.postcode || ''} ${data.city || ''}${data.country ? ', ' + data.country : ''}`
+  ];
+  
+  // Join with comma, then clean up any consecutive commas or trailing commas
+  let formattedAddress = addressParts.join(', ');
+  
+  // Replace consecutive commas and spaces (from empty fields)
+  formattedAddress = formattedAddress.replace(/,\s*,+/g, ',');
+  
+  // Remove any leading/trailing commas and trim spaces
+  formattedAddress = formattedAddress.replace(/^,+|,+$/g, '').trim();
+  
+  return formattedAddress;
+}
+
+// Parse a single address string into separate fields
+function parseAddress(company: any): any {
+  if (company.addressLine1) {
+    return company; // Already has separate fields
+  }
+  
+  const address = company.address || '';
+  
+  // Split by comma to get address parts
+  const addressParts = address.split(',').map((part: string) => part.trim());
+  
+  // Need at least 2 parts: addressLine1 and location (postcode city, country)
+  if (addressParts.length < 2) {
+    return {
+      ...company,
+      addressLine1: addressParts[0] || '',
+      postcode: '',
+      city: '',
+      country: 'Malaysia'
+    };
+  }
+  
+  // Get addressLine1 from first part
+  const addressLine1 = addressParts[0];
+  
+  // Try to parse the postcode, city and country from the second part
+  const locationPart = addressParts[1];
+  
+  // Split location by commas to separate country
+  const locationParts = locationPart.split(',').map((part: string) => part.trim());
+  
+  let postcode = '';
+  let city = '';
+  let country = 'Malaysia';
+  
+  if (locationParts.length > 1) {
+    // If location has comma, the last part is country
+    country = locationParts[locationParts.length - 1] || 'Malaysia';
+    
+    // The first part contains postcode and city
+    const cityPostcodePart = locationParts[0];
+    
+    // Try to extract postcode (assuming it starts with numbers)
+    const postcodeMatch = cityPostcodePart.match(/^(\d+)/);
+    if (postcodeMatch) {
+      postcode = postcodeMatch[0];
+      city = cityPostcodePart.replace(postcode, '').trim();
+    } else {
+      city = cityPostcodePart;
+    }
+  } else {
+    // No comma in location, assume it's just postcode + city
+    const cityPostcodePart = locationPart;
+    
+    // Try to extract postcode (assuming it starts with numbers)
+    const postcodeMatch = cityPostcodePart.match(/^(\d+)/);
+    if (postcodeMatch) {
+      postcode = postcodeMatch[0];
+      city = cityPostcodePart.replace(postcode, '').trim();
+    } else {
+      city = cityPostcodePart;
+    }
+  }
+  
+  return {
+    ...company,
+    addressLine1: addressLine1 || '',
+    postcode: postcode || '',
+    city: city || '',
+    country: country || 'Malaysia'
+  };
 } 

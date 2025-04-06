@@ -14,7 +14,8 @@ import {
   Settings, 
   Users,
   PlusCircle,
-  LucideIcon
+  LucideIcon,
+  Receipt
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ProfileNotification } from '@/components/ui/profile-notification';
 import { useTheme } from 'next-themes';
+import { useSettings } from '@/contexts/settings-context';
 
 interface User {
   id: string;
@@ -44,6 +46,11 @@ interface CompanyDetails {
   phoneNumber?: string;
   address?: string;
   logoUrl?: string;
+  paymentMethod?: string;
+  bankAccountName?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  qrImageUrl?: string;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -54,6 +61,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
+  const { settings } = useSettings();
 
   // TEMPORARILY BYPASSING AUTHENTICATION
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -100,13 +108,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
-  const navigationItems = [
+  const baseNavigationItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Invoices', href: '/invoices', icon: FileText },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
+  
+  // Add Receipts menu item if enabled in settings
+  const navigationItems = settings.enableReceiptsModule 
+    ? [
+        ...baseNavigationItems.slice(0, 2), 
+        { name: 'Receipts', href: '/receipts', icon: Receipt },
+        ...baseNavigationItems.slice(2)
+      ]
+    : baseNavigationItems;
 
   // Show loading state or login redirect
   if (loading) {

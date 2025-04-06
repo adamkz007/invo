@@ -70,6 +70,26 @@ export default function InvoiceFormEnhanced({
   isEditing = false,
   preSelectedCustomerId = null 
 }: InvoiceFormProps) {
+  const router = useRouter();
+  const { showToast } = useToast();
+
+  // Initialize form first, before any effects that depend on it
+  const form = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceFormSchema),
+    defaultValues: defaultValues || {
+      customerId: preSelectedCustomerId || '',
+      issueDate: new Date(),
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Default to 30 days from now
+      status: InvoiceStatus.DRAFT,
+      items: [{ productId: '', quantity: 1, unitPrice: 0, description: '', disableStockManagement: false }],
+      taxRate: 0,
+      discountRate: 0,
+      notes: '',
+      userId: '',
+    },
+  });
+
+  // State declarations
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customers, setCustomers] = useState<CustomerWithRelations[]>([]);
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
@@ -80,9 +100,55 @@ export default function InvoiceFormEnhanced({
     total: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-  
-  const router = useRouter();
-  const { showToast } = useToast();
+  const [minDueDate, setMinDueDate] = useState<Date>(form.getValues('issueDate'));
+
+  // Create field array for invoice items
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'items',
+  });
+
+  // Update minDueDate when issue date changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'issueDate') {
+        const issueDate = value.issueDate as Date;
+        setMinDueDate(issueDate);
+        
+        // Also update due date if it's now before issue date
+        const currentDueDate = form.getValues('dueDate') as Date;
+        if (currentDueDate < issueDate) {
+          form.setValue('dueDate', issueDate);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  // Calculate totals whenever form values change
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      const totals = calculateInvoiceTotals(
+        values.items?.map(item => ({
+          quantity: item?.quantity || 0,
+          unitPrice: item?.unitPrice || 0,
+        })) || [],
+        values.taxRate || 0,
+        values.discountRate || 0
+      );
+      setTotals(totals);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  // Set the selected customer if preSelectedCustomerId changes
+  useEffect(() => {
+    if (preSelectedCustomerId && !isEditing) {
+      form.setValue('customerId', preSelectedCustomerId);
+    }
+  }, [preSelectedCustomerId, form, isEditing]);
 
   // Fetch customers and products
   useEffect(() => {
@@ -112,52 +178,6 @@ export default function InvoiceFormEnhanced({
     
     fetchData();
   }, []);
-
-  // Initialize form with default values or empty invoice
-  const form = useForm<InvoiceFormValues>({
-    resolver: zodResolver(invoiceFormSchema),
-    defaultValues: defaultValues || {
-      customerId: preSelectedCustomerId || '',
-      issueDate: new Date(),
-      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Default to 30 days from now
-      status: InvoiceStatus.DRAFT,
-      items: [{ productId: '', quantity: 1, unitPrice: 0, description: '', disableStockManagement: false }],
-      taxRate: 0,
-      discountRate: 0,
-      notes: '',
-      userId: '',
-    },
-  });
-
-  // Create field array for invoice items
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'items',
-  });
-
-  // Set the selected customer if preSelectedCustomerId changes
-  useEffect(() => {
-    if (preSelectedCustomerId && !isEditing) {
-      form.setValue('customerId', preSelectedCustomerId);
-    }
-  }, [preSelectedCustomerId, form, isEditing]);
-
-  // Calculate totals whenever form values change
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      const totals = calculateInvoiceTotals(
-        values.items?.map(item => ({
-          quantity: item?.quantity || 0,
-          unitPrice: item?.unitPrice || 0,
-        })) || [],
-        values.taxRate || 0,
-        values.discountRate || 0
-      );
-      setTotals(totals);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [form]);
 
   // Handle form submission
   async function onSubmit(values: InvoiceFormValues) {
@@ -423,7 +443,7 @@ export default function InvoiceFormEnhanced({
                             selected={field.value}
                             onSelect={field.onChange}
                             disabled={(date) =>
-                              date < new Date('1900-01-01')
+                              date < new Date('2000-01-01')
                             }
                             initialFocus
                           />
@@ -463,9 +483,8 @@ export default function InvoiceFormEnhanced({
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date('1900-01-01')
-                            }
+                            fromDate={minDueDate}
+                            disabled={(date) => date < new Date('1900-01-01')}
                             initialFocus
                           />
                         </PopoverContent>

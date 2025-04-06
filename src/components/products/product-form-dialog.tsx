@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { useSettings } from '@/contexts/settings-context';
 
 const productFormSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
@@ -46,7 +47,9 @@ interface ProductFormDialogProps {
 export default function ProductFormDialog({ userId, onProductCreated }: ProductFormDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [quantityValue, setQuantityValue] = React.useState('0');
   const { showToast } = useToast();
+  const { settings } = useSettings();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -121,7 +124,11 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Stop the event from bubbling up to parent forms
+            form.handleSubmit(onSubmit)(e);
+          }} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -165,7 +172,24 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
                   <FormItem>
                     <FormLabel>Price</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                      <div className="flex">
+                        <Button
+                          variant="outline"
+                          className="rounded-r-none border-r-0"
+                          disabled={true}
+                        >
+                          {settings.currency.code}
+                        </Button>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          className="rounded-l-none"
+                          {...field} 
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -178,7 +202,28 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
                   <FormItem>
                     <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                      <Input type="number" min="0" placeholder="0" {...field} />
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        placeholder="0" 
+                        value={quantityValue}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setQuantityValue(value);
+                          field.onChange(value === '' ? 0 : parseInt(value, 10));
+                        }}
+                        onFocus={(e) => {
+                          if (e.target.value === '0') {
+                            setQuantityValue('');
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            setQuantityValue('0');
+                          }
+                        }}
+                        className={quantityValue === '0' ? 'text-gray-400' : ''}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

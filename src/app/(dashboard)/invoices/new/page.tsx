@@ -1,10 +1,20 @@
 'use client';
 
+import React, { Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import InvoiceFormEnhanced from '@/components/invoices/invoice-form-enhanced';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+// Use dynamic import with ssr: false to prevent server rendering issues
+const InvoiceFormEnhanced = dynamic(
+  () => import('@/components/invoices/invoice-form-enhanced').then(mod => mod.default),
+  {
+    loading: () => <div className="py-8 text-center">Loading form...</div>,
+    ssr: false // Disable server-side rendering to avoid hydration issues
+  }
+);
 
 export default function NewInvoicePage() {
   // Get customerId from URL query parameters
@@ -32,7 +42,9 @@ export default function NewInvoicePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <InvoiceFormEnhanced preSelectedCustomerId={customerId} />
+          <Suspense fallback={<div className="py-8 text-center">Loading form...</div>}>
+            <InvoiceFormEnhanced preSelectedCustomerId={customerId} />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

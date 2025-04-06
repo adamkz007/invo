@@ -64,6 +64,11 @@ interface CompanyDetails {
   phoneNumber?: string;
   address?: string;
   logoUrl?: string;
+  paymentMethod?: string;
+  bankAccountName?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  qrImageUrl?: string;
 }
 
 // Helper function to get status badge styling - accessible to all components

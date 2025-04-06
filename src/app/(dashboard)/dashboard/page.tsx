@@ -104,6 +104,11 @@ interface CompanyDetails {
   phoneNumber?: string;
   address?: string;
   logoUrl?: string;
+  paymentMethod?: string;
+  bankAccountName?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  qrImageUrl?: string;
 }
 
 interface DashboardStats {
