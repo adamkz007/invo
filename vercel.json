@@ -12,7 +12,7 @@
     "env": {
       "DATABASE_URL": "postgresql://postgres:${env.DB_PASSWORD}@db.${env.SUPABASE_PROJECT_ID}.supabase.co:5432/postgres",
       "JWT_SECRET": "${env.JWT_SECRET}",
-      "NEXT_PUBLIC_APP_URL": "${env.VERCEL_PROJECT_PRODUCTION_URL}"
+      "NEXT_PUBLIC_APP_URL": "https://invo.my"
     }
   }
 } 
