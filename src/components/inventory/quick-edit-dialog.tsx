@@ -153,9 +153,6 @@ export function QuickEditDialog({
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>Disable Stock Management</FormLabel>
-                    <FormDescription>
-                      Enable for service-based products
-                    </FormDescription>
                   </div>
                 </FormItem>
               )}

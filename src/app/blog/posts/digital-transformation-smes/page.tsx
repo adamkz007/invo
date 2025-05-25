@@ -44,7 +44,7 @@ export default function DigitalTransformationPost() {
     <BlogPostLayout
       title="Digital Transformation for SMEs: Where to Start"
       category="Digital Transformation"
-      date="February 15, 2023"
+      date="February 28, 2025"
       readTime="5 min read"
       featuredImage="/blog/digital-transformation.jpg"
       imageAlt="Digital Transformation for SMEs"

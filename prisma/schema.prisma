@@ -4,14 +4,14 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
 }
 
 model User {
   id                   String     @id @default(cuid())
   name                 String?
-  email                String?    @unique
-  phoneNumber          String?    @unique
+  email                String?     @unique
+  phoneNumber          String?     @unique
   passwordHash         String?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
@@ -55,8 +55,8 @@ model Product {
   updatedAt              DateTime      @updatedAt
   userId                 String
   invoiceItems           InvoiceItem[]
-  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   receiptItems           ReceiptItem[]
+  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Invoice {
@@ -77,8 +77,8 @@ model Invoice {
   updatedAt      DateTime      @updatedAt
   customerId     String
   userId         String
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   items          InvoiceItem[]
 }
 
@@ -92,29 +92,30 @@ model InvoiceItem {
   updatedAt   DateTime @updatedAt
   invoiceId   String
   productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Company {
-  id                      String   @id @default(cuid())
-  legalName               String?
-  ownerName               String?
-  address                 String?
-  phoneNumber             String?
-  email                   String?
-  registrationNumber      String?
+  id                     String   @id @default(cuid())
+  legalName             String?
+  ownerName             String?
+  address               String?
+  phoneNumber           String?
+  email                 String?
+  registrationNumber    String?
   taxIdentificationNumber String?
-  termsAndConditions      String?
-  paymentMethod           String?
-  bankAccountName         String?
-  bankName                String?
-  bankAccountNumber       String?
-  qrImageUrl              String?
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  userId                  String   @unique
-  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  termsAndConditions    String?
+  paymentMethod         String?
+  bankAccountName       String?
+  bankName              String?
+  bankAccountNumber     String?
+  qrImageUrl            String?
+  msicCode              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Receipt {

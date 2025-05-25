@@ -129,10 +129,21 @@ interface DashboardStats {
       status: string;
       date: string;
     }[];
+    outstandingAmount: number;
   };
   charts: {
     monthlyRevenue: MonthlyDataPoint[];
     topProducts: TopProduct[];
+  };
+  growth?: {
+    lastMonthInvoices: number;
+    lastMonthCustomers: number;
+    lastMonthProducts: number;
+    lastMonthRevenue: number;
+    currentMonthInvoices: number;
+    currentMonthCustomers: number;
+    currentMonthProducts: number;
+    currentMonthRevenue: number;
   };
 }
 
@@ -224,12 +235,71 @@ export default function DashboardPage() {
   }, [fetchDashboardData]);
 
   // Memoize growth percentages to prevent recalculation on each render
-  const growthData = useMemo(() => ({
-    invoiceGrowth: "+5%",
-    customerGrowth: "+12%",
-    productGrowth: "+8%",
-    revenueGrowth: "+15%"
-  }), []);
+  const growthData = useMemo(() => {
+    // Helper function to calculate percentage increase
+    const calculatePercentageIncrease = (current: number, previous: number): string => {
+      try {
+        if (previous === 0) {
+          return current > 0 ? "+100%" : "N/A";
+        }
+        
+        const percentageChange = ((current - previous) / previous) * 100;
+        
+        if (isNaN(percentageChange) || !isFinite(percentageChange)) {
+          return "N/A";
+        }
+        
+        const sign = percentageChange >= 0 ? "+" : "";
+        return `${sign}${percentageChange.toFixed(1)}%`;
+      } catch (error) {
+        return "N/A";
+      }
+    };
+    
+    // If we have growth data from the API, use it to calculate percentages
+    if (stats?.growth) {
+      const { 
+        lastMonthInvoices, lastMonthCustomers, lastMonthProducts, lastMonthRevenue,
+        currentMonthInvoices, currentMonthCustomers, currentMonthProducts, currentMonthRevenue
+      } = stats.growth;
+      
+      // Use total invoices/customers/products for calculating percentage if data is available
+      const totalInvoicesIncrease = calculatePercentageIncrease(
+        (stats?.totalInvoices || 0) - lastMonthInvoices,
+        lastMonthInvoices
+      );
+      
+      const totalCustomersIncrease = calculatePercentageIncrease(
+        (stats?.totalCustomers || 0) - lastMonthCustomers,
+        lastMonthCustomers
+      );
+      
+      const totalProductsIncrease = calculatePercentageIncrease(
+        (stats?.totalProducts || 0) - lastMonthProducts,
+        lastMonthProducts
+      );
+      
+      const revenueIncrease = calculatePercentageIncrease(
+        currentMonthRevenue,
+        lastMonthRevenue
+      );
+      
+      return {
+        invoiceGrowth: totalInvoicesIncrease,
+        customerGrowth: totalCustomersIncrease,
+        productGrowth: totalProductsIncrease,
+        revenueGrowth: revenueIncrease
+      };
+    }
+    
+    // Fallback to default values if growth data is not available
+    return {
+      invoiceGrowth: "N/A",
+      customerGrowth: "N/A",
+      productGrowth: "N/A",
+      revenueGrowth: "N/A"
+    };
+  }, [stats]);
 
   // Handle invoice selection
   const handleViewInvoice = async (invoiceId: string) => {
@@ -494,7 +564,7 @@ export default function DashboardPage() {
                   <span className="text-sm font-medium">Total Outstanding</span>
                   <span className="text-sm">
                     {formatCurrency(
-                      (stats?.invoiceStats.totalAmount || 0) - (stats?.invoiceStats.paidAmount || 0),
+                      stats?.invoiceStats.outstandingAmount || 0,
                       settings
                     )}
                   </span>

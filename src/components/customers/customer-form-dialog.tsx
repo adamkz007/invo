@@ -225,9 +225,9 @@ export default function CustomerFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1">
+        <Button variant="outline" size="sm" className="h-8 gap-1 rounded-full w-8 p-0">
           <Plus className="h-3.5 w-3.5" />
-          <span>Add Customer</span>
+          <span className="sr-only">Add Customer</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

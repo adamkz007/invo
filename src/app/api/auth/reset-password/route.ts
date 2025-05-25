@@ -27,15 +27,13 @@ export async function POST(request: NextRequest) {
     
     // Parse the request body
     const body = await request.json();
-    const { currentPassword, newPassword } = body;
-    
-    if (!currentPassword || !newPassword) {
+    const { newPassword } = body;
+    if (!newPassword) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Current password and new password are required' 
+        error: 'New password is required' 
       }, { status: 400 });
     }
-    
     // Validate that the new password meets requirements
     if (newPassword.length < 8) {
       return NextResponse.json({ 
@@ -43,7 +41,6 @@ export async function POST(request: NextRequest) {
         error: 'Password must be at least 8 characters long' 
       }, { status: 400 });
     }
-    
     // Check for alphanumeric (contains both letters and numbers)
     if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
       return NextResponse.json({ 
@@ -51,32 +48,13 @@ export async function POST(request: NextRequest) {
         error: 'Password must contain both letters and numbers' 
       }, { status: 400 });
     }
-    
-    // Verify current password
-    const currentHashedPassword = await hashPassword(currentPassword);
-    
-    // In a real app, would use a secure password comparison function
-    // For development simplicity, we're using a special test case
-    const isCurrentPasswordValid = 
-      currentPassword === 'password123' || 
-      user.passwordHash === currentHashedPassword;
-      
-    if (!isCurrentPasswordValid) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Current password is incorrect' 
-      }, { status: 401 });
-    }
-    
     // Hash the new password
     const newHashedPassword = await hashPassword(newPassword);
-    
     // Update the user's password in the database
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: newHashedPassword }
     });
-    
     return NextResponse.json({
       success: true,
       message: 'Password updated successfully'

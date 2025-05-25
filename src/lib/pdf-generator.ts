@@ -404,15 +404,6 @@ export async function downloadInvoicePDF(
   const tableTop = 110;
   const tableRowHeight = 10;
   
-  // Table header
-  doc.setFillColor(240, 240, 240); // Light gray background
-  doc.rect(margin, tableTop - 6, contentWidth, tableRowHeight, 'F');
-  
-  // Table header text
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(50, 50, 50);
-  
   // Define column widths - adjusted for better visibility of quantity and price
   const colWidths = {
     item: contentWidth * 0.05,
@@ -422,30 +413,100 @@ export async function downloadInvoicePDF(
     amount: contentWidth * 0.20
   };
   
+  // Draw table header with border
+  doc.setFillColor(240, 240, 240); // Light gray background
+  doc.rect(margin, tableTop - 6, contentWidth, tableRowHeight, 'F');
+  doc.setDrawColor(200, 200, 200); // Light gray border
+  doc.setLineWidth(0.3);
+  
+  // Draw table header horizontal lines
+  doc.line(margin, tableTop - 6, margin + contentWidth, tableTop - 6); // Top border
+  doc.line(margin, tableTop + 4, margin + contentWidth, tableTop + 4); // Bottom border
+  
+  // Draw table header vertical lines
   let xPos = margin;
+  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // Left border
+  
+  xPos += colWidths.item;
+  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After item number
+  
+  xPos += colWidths.description;
+  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After description
+  
+  xPos += colWidths.quantity;
+  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After quantity
+  
+  xPos += colWidths.unitPrice;
+  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After unit price
+  
+  doc.line(margin + contentWidth, tableTop - 6, margin + contentWidth, tableTop + 4); // Right border
+  
+  // Table header text
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  
+  xPos = margin;
   doc.text('#', xPos + 5, tableTop);
   xPos += colWidths.item;
   
-  doc.text('ITEM & DESCRIPTION', xPos, tableTop);
+  doc.text('ITEM & DESCRIPTION', xPos + 2, tableTop);
   xPos += colWidths.description;
   
-  doc.text('QUANTITY', xPos, tableTop, { align: 'right' });
+  doc.text('QTY', xPos - 2, tableTop, { align: 'right' });
   xPos += colWidths.quantity;
   
-  doc.text('UNIT PRICE', xPos, tableTop, { align: 'right' });
+  doc.text('UNIT PRICE', xPos - 2, tableTop, { align: 'right' });
   xPos += colWidths.unitPrice;
   
-  doc.text('AMOUNT', pageWidth - margin, tableTop, { align: 'right' });
+  doc.text('AMOUNT', pageWidth - margin - 2, tableTop, { align: 'right' });
   
   // Table rows
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
   
-  let yPos = tableTop + tableRowHeight + 5;
+  let yPos = tableTop + tableRowHeight;
+  let startYPos = yPos; // Keep track of starting position for final bottom border
   
   // Draw table rows
   if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
     invoice.items.forEach((item, index) => {
+      const rowYStart = yPos - 4; // Start position for this row
+      let rowHeight = tableRowHeight; // Default row height
+      
+      // Adjust if we have description
+      if (item.description) {
+        rowHeight += 5;
+      }
+      
+      // Draw row background (alternating)
+      if (index % 2 === 1) {
+        doc.setFillColor(248, 248, 248); // Very light gray for alternating rows
+        doc.rect(margin, rowYStart, contentWidth, rowHeight, 'F');
+      }
+      
+      // Draw vertical borders for this row
+      xPos = margin;
+      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight); // Left border
+      
+      xPos += colWidths.item;
+      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
+      
+      xPos += colWidths.description;
+      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
+      
+      xPos += colWidths.quantity;
+      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
+      
+      xPos += colWidths.unitPrice;
+      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
+      
+      doc.line(margin + contentWidth, rowYStart, margin + contentWidth, rowYStart + rowHeight); // Right border
+      
+      // Draw bottom border for this row
+      doc.line(margin, rowYStart + rowHeight, margin + contentWidth, rowYStart + rowHeight);
+      
+      // Add row content
       xPos = margin;
       
       // Item number
@@ -454,12 +515,12 @@ export async function downloadInvoicePDF(
       
       // Item name and description
       doc.setFont('helvetica', 'bold');
-      doc.text(item.product?.name || item.description || 'Item', xPos, yPos);
+      doc.text(item.product?.name || item.description || 'Item', xPos + 2, yPos);
       doc.setFont('helvetica', 'normal');
       
       if (item.description) {
         yPos += 5;
-        doc.text(item.description || '', xPos, yPos);
+        doc.text(item.description || '', xPos + 2, yPos);
       }
       
       xPos += colWidths.description;
@@ -471,29 +532,38 @@ export async function downloadInvoicePDF(
       
       // Quantity - make it more prominent
       doc.setFont('helvetica', 'bold');
-      doc.text(`${item.quantity}`, xPos, yPos, { align: 'right' });
+      doc.text(`${item.quantity}`, xPos - 2, yPos, { align: 'right' });
       doc.setFont('helvetica', 'normal');
       xPos += colWidths.quantity;
       
       // Unit price - make it more prominent
       doc.setFont('helvetica', 'bold');
-      doc.text(formatCurrency(item.unitPrice, settings), xPos, yPos, { align: 'right' });
+      doc.text(formatCurrency(item.unitPrice, settings), xPos - 2, yPos, { align: 'right' });
       doc.setFont('helvetica', 'normal');
       xPos += colWidths.unitPrice;
       
       // Amount - make it more prominent
       doc.setFont('helvetica', 'bold');
-      doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin, yPos, { align: 'right' });
+      doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin - 2, yPos, { align: 'right' });
       doc.setFont('helvetica', 'normal');
       
-      yPos += tableRowHeight + 5;
+      yPos += rowHeight;
     });
   } else {
-    // No items - display a message
+    // No items - display a message with borders
+    const rowHeight = tableRowHeight + 5;
+    
+    // Draw vertical borders
+    doc.line(margin, yPos - 4, margin, yPos - 4 + rowHeight); // Left border
+    doc.line(margin + contentWidth, yPos - 4, margin + contentWidth, yPos - 4 + rowHeight); // Right border
+    
+    // Draw bottom border
+    doc.line(margin, yPos - 4 + rowHeight, margin + contentWidth, yPos - 4 + rowHeight);
+    
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(100, 100, 100);
     doc.text('No items in this invoice', margin + contentWidth / 2, yPos, { align: 'center' });
-    yPos += tableRowHeight + 5;
+    yPos += rowHeight;
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
   }
@@ -549,32 +619,46 @@ export async function downloadInvoicePDF(
     }
   }
   
-  // Subtotal
+  // Create a nice table for the totals section
+  doc.setDrawColor(200, 200, 200); // Light gray border
+  doc.setLineWidth(0.3);
+  
+  // Subtotal row
+  doc.setFillColor(255, 255, 255); // White background
+  doc.rect(totalsX - 5, totalsY - 5, totalsWidth + 5, 10, 'F');
+  doc.rect(totalsX - 5, totalsY - 5, totalsWidth + 5, 10, 'S'); // Border
+  
   doc.setFont('helvetica', 'normal');
   doc.text('Sub Total', totalsX, totalsY);
-  doc.text(formatCurrency(invoice.subtotal, settings).replace(settings.currency.code, ''), pageWidth - margin, totalsY, { align: 'right' });
+  doc.text(formatCurrency(invoice.subtotal, settings).replace(settings.currency.code, ''), pageWidth - margin - 2, totalsY, { align: 'right' });
   
   // Tax (if applicable)
   let currentY = totalsY + 8;
   if (invoice.taxRate > 0) {
+    doc.setFillColor(255, 255, 255); // White background
+    doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
+    doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'S'); // Border
+    
     doc.text(`Tax Rate`, totalsX, currentY);
-    doc.text(`${invoice.taxRate.toFixed(2)}%`, pageWidth - margin, currentY, { align: 'right' });
+    doc.text(`${invoice.taxRate.toFixed(2)}%`, pageWidth - margin - 2, currentY, { align: 'right' });
     currentY += 8;
   }
   
   // Total
   doc.setFillColor(240, 240, 240); // Light gray background
   doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
+  doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'S'); // Border
   
   doc.setFont('helvetica', 'bold');
   doc.text('Total', totalsX, currentY);
-  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, currentY, { align: 'right' });
+  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin - 2, currentY, { align: 'right' });
   
-  currentY += 15;
+  currentY += 8;
   
   // Balance Due
   doc.setFillColor(240, 240, 240); // Light gray background
   doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
+  doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'S'); // Border
   
   doc.text('Balance Due', totalsX, currentY);
   
@@ -585,25 +669,26 @@ export async function downloadInvoicePDF(
     
     // If fully paid, show 0 balance
     if (invoice.status === 'PAID') {
-      doc.text(formatCurrency(0, settings), pageWidth - margin, currentY, { align: 'right' });
+      doc.text(formatCurrency(0, settings), pageWidth - margin - 2, currentY, { align: 'right' });
     } else {
-      doc.text(formatCurrency(balanceDue, settings), pageWidth - margin, currentY, { align: 'right' });
+      doc.text(formatCurrency(balanceDue, settings), pageWidth - margin - 2, currentY, { align: 'right' });
     }
     
-    // Add paid amount information
-    currentY += 15;
+    // Add paid amount information with border
+    currentY += 8;
     doc.setFillColor(220, 252, 231); // Light green for paid amount
     doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
+    doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'S'); // Border
     
     doc.setTextColor(22, 101, 52); // Dark green text
     doc.text('Amount Paid', totalsX, currentY);
-    doc.text(formatCurrency(paidAmount, settings), pageWidth - margin, currentY, { align: 'right' });
+    doc.text(formatCurrency(paidAmount, settings), pageWidth - margin - 2, currentY, { align: 'right' });
     
     // Reset text color
     doc.setTextColor(50, 50, 50);
   } else {
     // For unpaid invoices, show the full amount as balance due
-    doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, currentY, { align: 'right' });
+    doc.text(formatCurrency(invoice.total, settings), pageWidth - margin - 2, currentY, { align: 'right' });
   }
   
   // Payment Information - Bank details - Add if payment method is bank
@@ -644,11 +729,12 @@ export async function downloadInvoicePDF(
     doc.text('Payment Information', paymentInfoX, paymentInfoY - 5);
 
     if (companyDetails.paymentMethod === 'bank') {
-      // Display bank transfer details in a table format
-      const tableWidth = 100;
-      const rowHeight = 10;
+      // Display bank transfer details in a smaller, tighter table format
+      const tableWidth = 70; // Reduced width
+      const rowHeight = 7;   // Reduced row height
       const tableX = paymentInfoX;
       const tableY = paymentInfoY;
+      const fontSize = 8;    // Smaller font size
 
       // Draw white background for the entire table
       doc.setFillColor(255, 255, 255);
@@ -656,25 +742,24 @@ export async function downloadInvoicePDF(
 
       // Draw table borders
       doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
+      doc.setLineWidth(0.3); // Thinner border
       doc.rect(tableX, tableY, tableWidth, rowHeight * 3, 'S'); // Outer border
       doc.line(tableX, tableY + rowHeight, tableX + tableWidth, tableY + rowHeight); // Row 1 divider
       doc.line(tableX, tableY + rowHeight * 2, tableX + tableWidth, tableY + rowHeight * 2); // Row 2 divider
       const colDivider = tableX + tableWidth * 0.4;
       doc.line(colDivider, tableY, colDivider, tableY + rowHeight * 3); // Column divider
 
-      // Add table content
+      // Add table content with smaller font and tighter padding
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-      doc.text('Bank Name', tableX + 2, tableY + rowHeight * 0.65);
-      doc.text('Account Name', tableX + 2, tableY + rowHeight * 1.65);
-      doc.text('Account Number', tableX + 2, tableY + rowHeight * 2.65);
+      doc.setFontSize(fontSize);
+      doc.text('Bank Name', tableX + 1.5, tableY + rowHeight * 0.6);
+      doc.text('Account Name', tableX + 1.5, tableY + rowHeight * 1.6);
+      doc.text('Account Number', tableX + 1.5, tableY + rowHeight * 2.6);
       doc.setFont('helvetica', 'normal');
-      doc.text(companyDetails.bankName || '', colDivider + 2, tableY + rowHeight * 0.65);
-      doc.text(companyDetails.bankAccountName || '', colDivider + 2, tableY + rowHeight * 1.65);
-      doc.text(companyDetails.bankAccountNumber || '', colDivider + 2, tableY + rowHeight * 2.65);
-
+      doc.text(companyDetails.bankName || '', colDivider + 1.5, tableY + rowHeight * 0.6);
+      doc.text(companyDetails.bankAccountName || '', colDivider + 1.5, tableY + rowHeight * 1.6);
+      doc.text(companyDetails.bankAccountNumber || '', colDivider + 1.5, tableY + rowHeight * 2.6);
     } else if (companyDetails.paymentMethod === 'qr' && companyDetails.qrImageUrl) {
       // Display QR code image with white background
       try {
@@ -723,7 +808,7 @@ export async function downloadInvoicePDF(
   
   // Add a light gray footer bar that extends to the bottom
   doc.setFillColor(245, 245, 245);
-  doc.rect(0, footerTopY, pageWidth, footerHeight, 'F'); // Position rectangle at the very bottom
+  doc.rect(0, footerTopY, pageWidth, footerHeight, 'F');
   
   // Company name and registration number - centered
   doc.setFontSize(9);
@@ -735,36 +820,37 @@ export async function downloadInvoicePDF(
   } else {
     doc.text('Your Company Name | SSM: 123456-A', pageWidth / 2, companyTextY, { align: 'center' });
   }
-  
-  // "Powered by Invo" logo and text (adjust Y position if needed, maybe remove?)
-  // Let's keep it simple and just have company name for now to ensure no overlap
-  // TODO: Re-add Powered by Invo if space allows and adjust positioning carefully
-  
-  // Remove Powered by Invo for now to simplify footer adjustments
-  /*
+
+  // Add Invo logo at the bottom right of the PDF
   try {
-    // ... existing logo loading and drawing code ...
-    // Ensure all Y coordinates (e.g., logoY, text Y) are relative to footerTopY
-    const logoWidth = 6;
-    const logoHeight = 6;
-    const textWidth = 25; 
-    const combinedWidth = logoWidth + 2 + textWidth;
-    const startX = (pageWidth / 2) - (combinedWidth / 2);
-    const logoY = footerTopY + footerHeight - logoHeight - 2; // Position near bottom
-    
-    // Add logo on the left
-    // doc.addImage(img, 'PNG', startX, logoY, logoWidth, logoHeight);
-    
-    // Add text to the right of the logo
-    // doc.text('Powered by Invo', startX + logoWidth + 2, logoY + (logoHeight/2) + 1, { align: 'left' });
-    
+    let logoUrl = (typeof window !== 'undefined' ? window.location.origin : '') + '/invo-logo.png';
+    if (companyDetails?.logoUrl) {
+      logoUrl = companyDetails.logoUrl;
+    }
+    let img;
+    try {
+      img = await loadLogoImage(logoUrl);
+      const logoWidth = 10; // Adjust size as needed
+      const logoHeight = 10;
+      const logoX = pageWidth - logoWidth - 8; // 8mm from right edge
+      const logoY = pageHeight - logoHeight - 4; // 4mm from bottom edge
+      doc.addImage(img, 'PNG', logoX, logoY, logoWidth, logoHeight);
+    } catch (logoError) {
+      // Try fallback data URL
+      try {
+        const logoWidth = 10;
+        const logoHeight = 10;
+        const logoX = pageWidth - logoWidth - 8;
+        const logoY = pageHeight - logoHeight - 4;
+        doc.addImage(FALLBACK_LOGO_DATA_URL, 'PNG', logoX, logoY, logoWidth, logoHeight);
+      } catch (dataUrlError) {
+        // If all fail, do nothing
+      }
+    }
   } catch (error) {
-    console.error('Error adding logo to PDF, using text fallback:', error);
-    // Fallback to text-based logo, adjusted Y position
-    // createTextLogo(doc, pageWidth, footerTopY + X); // Adjust X as needed
+    // If all fail, do nothing
   }
-  */
-  
+
   // Save the PDF
   doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
 }
@@ -817,11 +903,11 @@ export async function downloadReceiptPDF(
     });
   };
   
-  // Company header (centered)
+  // Company header & BRN (centered)
   doc.setFontSize(10);
   doc.setFont('courier', 'bold');
-  doc.text(companyDetails?.legalName || 'Fish & Chips Fast Foods', pageWidth / 2, margin + 5, { align: 'center' });
-  
+  doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, margin + 5, { align: 'center' });
+
   // Company address (centered)
   doc.setFontSize(8);
   doc.setFont('courier', 'normal');
@@ -838,8 +924,6 @@ export async function downloadReceiptPDF(
     });
   } else {
     doc.text('address', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    doc.text('Malaysia', pageWidth / 2, yPos, { align: 'center' });
     yPos += 4;
   }
   
@@ -1038,7 +1122,7 @@ export async function downloadReceiptPDF(
   yPos += 6;
   doc.text('Thanks for visiting', pageWidth / 2, yPos, { align: 'center' });
   yPos += 6;
-  doc.text(companyDetails?.legalName || 'Fish & Chips Fast Foods', pageWidth / 2, yPos, { align: 'center' });
+  doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 10;
   
   // Add "Powered by Invo" at the bottom

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import {
   Form,
   FormControl,
@@ -19,10 +20,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { CalendarIcon, Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 // Define InvoiceStatus enum locally
 export enum InvoiceStatus {
@@ -211,36 +211,66 @@ export default function InvoiceFormEnhanced({
       console.log('Submitting invoice data:', JSON.stringify(invoiceData, null, 2));
       
       // Submit to the API
-      const response = await fetch('/api/invoices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(invoiceData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Server error response:', errorData);
-        const errorMessage = errorData.error || 'Failed to create invoice. Please try again.';
-        showToast({
-          variant: 'error',
-          message: errorMessage
+      try {
+        console.log('Attempting to fetch:', '/api/invoices');
+        const response = await fetch('/api/invoices', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(invoiceData),
+          // Add these options to help with potential fetch issues
+          credentials: 'same-origin',
+          mode: 'same-origin',
         });
-        throw new Error(`Failed to create invoice: ${errorMessage}`);
+        
+        console.log('Fetch response received:', response.status, response.statusText);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch((err) => {
+            console.error('Error parsing error response:', err);
+            return {};
+          });
+          console.error('Server error response:', errorData);
+          const errorMessage = errorData.error || 'Failed to create invoice. Please try again.';
+          showToast({
+            variant: 'error',
+            message: errorMessage
+          });
+          throw new Error(`Failed to create invoice: ${errorMessage}`);
+        }
+        
+        // Show success message and redirect
+        showToast({
+          variant: 'success',
+          message: 'Invoice created successfully!'
+        });
+        
+        // Redirect after a short delay to allow the toast to be seen
+        setTimeout(() => {
+          router.push('/invoices');
+          router.refresh();
+        }, 1500);
+      } catch (fetchError) {
+        console.error('Fetch error details:', fetchError);
+        
+        // Check for network error
+        if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+          console.error('Network error detected. API endpoint might be unavailable.');
+          showToast({
+            variant: 'error',
+            message: 'Network error: Unable to connect to the server. Please check your connection and try again.'
+          });
+        } else {
+          // Other error handling
+          showToast({
+            variant: 'error',
+            message: 'Error submitting invoice. Please try again.'
+          });
+        }
+        
+        throw fetchError; // Rethrow to be caught by the outer catch
       }
-      
-      // Show success message and redirect
-      showToast({
-        variant: 'success',
-        message: 'Invoice created successfully!'
-      });
-      
-      // Redirect after a short delay to allow the toast to be seen
-      setTimeout(() => {
-        router.push('/invoices');
-        router.refresh();
-      }, 1500);
     } catch (error) {
       console.error('Error submitting form:', error);
       
@@ -307,36 +337,35 @@ export default function InvoiceFormEnhanced({
           {/* Customer Selection */}
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <FormLabel>Customer</FormLabel>
-                <CustomerFormDialog 
-                  userId="1" 
-                  onCustomerCreated={handleCustomerCreated} 
-                />
-              </div>
+              <FormLabel>Customer</FormLabel>
               <FormField
                 control={form.control}
                 name="customerId"
                 render={({ field }) => (
                   <FormItem>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      disabled={isSubmitting}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a customer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {customers.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <Combobox
+                            options={customers.map((customer) => ({
+                              value: customer.id,
+                              label: customer.name,
+                              details: customer.phoneNumber || ''
+                            }))}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select a customer"
+                            searchPlaceholder="Search by name or phone number..."
+                            emptyText="No customers found"
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                        <CustomerFormDialog 
+                          userId="1" 
+                          onCustomerCreated={handleCustomerCreated} 
+                        />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -414,84 +443,20 @@ export default function InvoiceFormEnhanced({
             <CardContent className="pt-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Issue Date */}
-                <FormField
-                  control={form.control}
+                <DatePicker
                   name="issueDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Issue Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full pl-3 text-left font-normal"
-                              disabled={isSubmitting}
-                            >
-                              {field.value ? (
-                                format(field.value, 'PPP')
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date('2000-01-01')
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  label="Issue Date"
+                  disabled={isSubmitting}
+                  minDate={new Date('2000-01-01')}
                 />
 
                 {/* Due Date */}
-                <FormField
-                  control={form.control}
+                <DatePicker
                   name="dueDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Due Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full pl-3 text-left font-normal"
-                              disabled={isSubmitting}
-                            >
-                              {field.value ? (
-                                format(field.value, 'PPP')
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            fromDate={minDueDate}
-                            disabled={(date) => date < new Date('1900-01-01')}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  label="Due Date"
+                  disabled={isSubmitting}
+                  fromDate={minDueDate}
+                  minDate={new Date('1900-01-01')}
                 />
               </div>
             </CardContent>
@@ -533,27 +498,24 @@ export default function InvoiceFormEnhanced({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Product</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              handleProductChange(value, index);
-                            }}
-                            defaultValue={field.value}
-                            disabled={isSubmitting}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a product" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Combobox
+                              options={products.map((product) => ({
+                                value: product.id,
+                                label: product.name,
+                                details: product.sku || product.description || ''
+                              }))}
+                              value={field.value}
+                              onChange={(value) => {
+                                field.onChange(value);
+                                handleProductChange(value, index);
+                              }}
+                              placeholder="Select a product"
+                              searchPlaceholder="Search products..."
+                              emptyText="No products found"
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -622,9 +584,6 @@ export default function InvoiceFormEnhanced({
                           </FormControl>
                           <div className="space-y-1 leading-none">
                             <FormLabel>Disable Stock Management</FormLabel>
-                            <FormDescription>
-                              Enable this for service-based products or items that don&apos;t require inventory tracking
-                            </FormDescription>
                           </div>
                         </FormItem>
                       )}

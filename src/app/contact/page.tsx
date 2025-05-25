@@ -68,7 +68,7 @@ export default function ContactPage() {
                     <Mail className="h-5 w-5 text-primary mt-1 mr-3" />
                     <div>
                       <h3 className="font-medium">Email Us</h3>
-                      <p className="text-muted-foreground">support@invoinvoice.com</p>
+                      <p className="text-muted-foreground">hello@invo.my</p>
                       <p className="text-sm text-muted-foreground">We'll respond within 24 hours</p>
                     </div>
                   </div>

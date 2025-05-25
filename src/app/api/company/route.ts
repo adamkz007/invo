@@ -25,6 +25,7 @@ let mockCompanyStorage: Record<string, any> = {
     bankAccountNumber: '1234567890',
     qrImageUrl: null,
     logoUrl: null,
+    msicCode: '00000',
     userId: '1',
     createdAt: new Date(),
     updatedAt: new Date()
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest) {
                 bankName: data.bankName,
                 bankAccountNumber: data.bankAccountNumber,
                 qrImageUrl: data.qrImageUrl,
+                msicCode: data.msicCode,
               }
             })
           );
@@ -204,6 +206,7 @@ export async function POST(request: NextRequest) {
                 bankName: data.bankName,
                 bankAccountNumber: data.bankAccountNumber,
                 qrImageUrl: data.qrImageUrl,
+                msicCode: data.msicCode,
                 user: {
                   connect: { id: userId }
                 }
@@ -264,6 +267,7 @@ export async function POST(request: NextRequest) {
       bankAccountNumber: data.bankAccountNumber || '1234567890',
       qrImageUrl: data.qrImageUrl || null,
       logoUrl: null,
+      msicCode: data.msicCode || '00000',
       userId: userId,
       createdAt: new Date(),
       updatedAt: new Date()

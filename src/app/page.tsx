@@ -434,6 +434,9 @@ export default function LandingPage() {
                 {/* Invoice example - now visible on both mobile and desktop */}
                 <div className="relative">
                   <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-xl hidden md:block"></div>
+                  {/* Stacked background card */}
+                  <div className="absolute top-6 left-6 w-full h-full rounded-lg bg-white/60 shadow-lg border border-primary/10 z-0 scale-95"></div>
+                  {/* Main invoice card */}
                   <div className="rounded-lg bg-white/80 backdrop-blur-sm p-6 shadow-xl border border-primary/20 relative z-10 mt-8 md:mt-0">
                     <div className="flex justify-between items-center mb-4 pb-4 border-b">
                       <div>
@@ -446,15 +449,15 @@ export default function LandingPage() {
                     </div>
                     <div className="space-y-3 mb-4">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Website Design</span>
+                        <span className="text-muted-foreground">Catering - Hi-Tea Package 250pax</span>
                         <span className="font-medium">RM2,500.00</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Logo Design</span>
-                        <span className="font-medium">RM450.00</span>
+                        <span className="text-muted-foreground">Delivery - Lorry</span>
+                        <span className="font-medium">RM350.00</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">SEO Setup</span>
+                        <span className="text-muted-foreground">Tents & Equipments</span>
                         <span className="font-medium">RM550.00</span>
                       </div>
                     </div>
@@ -803,7 +806,7 @@ export default function LandingPage() {
             </motion.p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {plans.map((plan, index) => (
               <motion.div
                 key={plan.name}
@@ -1055,6 +1058,7 @@ export default function LandingPage() {
               <h3 className="font-bold mb-4">Resources</h3>
               <ul className="space-y-2">
                 <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
+                <li><Link href="/changelog" className="text-sm text-muted-foreground hover:text-primary">Changelog</Link></li>
               </ul>
             </div>
             <div>

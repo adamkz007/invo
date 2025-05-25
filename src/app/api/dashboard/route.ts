@@ -149,6 +149,7 @@ export async function GET(request: NextRequest) {
     let paidAmount = 0;
     let overdueAmount = 0;
     let pendingAmount = 0;
+    let outstandingAmount = 0;
     
     // Track revenue by product
     const productRevenue: ProductRevenue = {};
@@ -163,16 +164,21 @@ export async function GET(request: NextRequest) {
             return sum + (item.quantity * item.unitPrice);
           }, 0)
         : 0;
+      // Use invoice.total if available (should be more accurate)
+      const total = typeof invoice.total === 'number' ? invoice.total : invoiceTotal;
+      const paid = typeof invoice.paidAmount === 'number' ? invoice.paidAmount : 0;
       
-      totalAmount += invoiceTotal;
+      totalAmount += total;
+      paidAmount += paid;
+      outstandingAmount += Math.max(0, total - paid);
       
       // Update status-based totals
       if (invoice.status === InvoiceStatus.PAID) {
-        paidAmount += invoiceTotal;
+        // Already counted in paidAmount
       } else if (invoice.status === InvoiceStatus.OVERDUE) {
-        overdueAmount += invoiceTotal;
+        overdueAmount += Math.max(0, total - paid);
       } else if (invoice.status === InvoiceStatus.SENT || invoice.status === InvoiceStatus.PARTIAL) {
-        pendingAmount += invoiceTotal;
+        pendingAmount += Math.max(0, total - paid);
       }
       
       // Update product revenue data
@@ -203,12 +209,12 @@ export async function GET(request: NextRequest) {
         }
         
         const monthData = monthlyData.get(monthKey)!;
-        monthData.revenue += invoiceTotal;
+        monthData.revenue += total;
         
         if (invoice.status === InvoiceStatus.PAID) {
-          monthData.paid += invoiceTotal;
+          monthData.paid += total;
         } else if (invoice.status === InvoiceStatus.SENT || invoice.status === InvoiceStatus.PARTIAL) {
-          monthData.pending += invoiceTotal;
+          monthData.pending += Math.max(0, total - paid);
         }
       }
     });
@@ -239,6 +245,115 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    // Calculate last month's data for growth calculations
+    const currentMonth = today.getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? today.getFullYear() - 1 : today.getFullYear();
+    
+    // Count last month's invoices, customers, products and revenue
+    const lastMonthStart = new Date(lastMonthYear, lastMonth, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), currentMonth, 0);
+    const currentMonthStart = new Date(today.getFullYear(), currentMonth, 1);
+    
+    const [lastMonthInvoicesCount, lastMonthCustomersCount, lastMonthProductsCount] = await Promise.all([
+      retryDatabaseOperation(() => prisma.invoice.count({
+        where: { 
+          userId,
+          createdAt: {
+            gte: lastMonthStart,
+            lt: currentMonthStart
+          }
+        }
+      })),
+      retryDatabaseOperation(() => prisma.customer.count({
+        where: { 
+          userId,
+          createdAt: {
+            gte: lastMonthStart,
+            lt: currentMonthStart
+          }
+        }
+      })),
+      retryDatabaseOperation(() => prisma.product.count({
+        where: { 
+          userId,
+          createdAt: {
+            gte: lastMonthStart,
+            lt: currentMonthStart
+          }
+        }
+      }))
+    ]);
+    
+    // Calculate last month's revenue
+    const lastMonthInvoices = await retryDatabaseOperation(() => prisma.invoice.findMany({
+      where: { 
+        userId,
+        createdAt: {
+          gte: lastMonthStart,
+          lt: currentMonthStart
+        }
+      },
+      include: {
+        items: true
+      }
+    }));
+    
+    const lastMonthRevenue = lastMonthInvoices.reduce((total, invoice) => {
+      const invoiceTotal = invoice.items && Array.isArray(invoice.items) 
+        ? invoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+        : 0;
+      return total + invoiceTotal;
+    }, 0);
+    
+    // Calculate current month's data for comparison
+    const currentMonthInvoices = await retryDatabaseOperation(() => prisma.invoice.count({
+      where: { 
+        userId,
+        createdAt: {
+          gte: currentMonthStart
+        }
+      }
+    }));
+    
+    const currentMonthCustomers = await retryDatabaseOperation(() => prisma.customer.count({
+      where: { 
+        userId,
+        createdAt: {
+          gte: currentMonthStart
+        }
+      }
+    }));
+    
+    const currentMonthProducts = await retryDatabaseOperation(() => prisma.product.count({
+      where: { 
+        userId,
+        createdAt: {
+          gte: currentMonthStart
+        }
+      }
+    }));
+    
+    // Get current month revenue
+    const currentMonthInvoicesList = await retryDatabaseOperation(() => prisma.invoice.findMany({
+      where: { 
+        userId,
+        createdAt: {
+          gte: currentMonthStart
+        }
+      },
+      include: {
+        items: true
+      }
+    }));
+    
+    const currentMonthRevenue = currentMonthInvoicesList.reduce((total, invoice) => {
+      const invoiceTotal = invoice.items && Array.isArray(invoice.items) 
+        ? invoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+        : 0;
+      return total + invoiceTotal;
+    }, 0);
+    
     // Recent invoices (last 3)
     const recentInvoices = invoices
       .sort((a, b) => {
@@ -267,11 +382,22 @@ export async function GET(request: NextRequest) {
         paidAmount,
         overdueAmount,
         pendingAmount,
+        outstandingAmount,
         recentInvoices
       },
       charts: {
         monthlyRevenue: sixMonthsData,
         topProducts
+      },
+      growth: {
+        lastMonthInvoices: lastMonthInvoicesCount,
+        lastMonthCustomers: lastMonthCustomersCount,
+        lastMonthProducts: lastMonthProductsCount,
+        lastMonthRevenue: lastMonthRevenue,
+        currentMonthInvoices: currentMonthInvoices,
+        currentMonthCustomers: currentMonthCustomers,
+        currentMonthProducts: currentMonthProducts,
+        currentMonthRevenue: currentMonthRevenue
       }
     };
     

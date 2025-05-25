@@ -21,10 +21,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { CalendarIcon, Trash2, Plus, X } from 'lucide-react';
+import { Trash2, Plus, X } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
 import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues, InvoiceItemFormValues, InvoiceStatus } from '@/types';
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
@@ -263,82 +262,22 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
           <Card>
             <CardContent className="pt-6">
               {/* Issue Date */}
-              <FormField
-                control={form.control}
+              <DatePicker
                 name="issueDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Issue Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className="w-full pl-3 text-left font-normal"
-                            disabled={isSubmitting}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date: Date) => date < new Date('1900-01-01')}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                label="Issue Date"
+                disabled={isSubmitting}
+                minDate={new Date('1900-01-01')}
               />
 
               {/* Due Date */}
-              <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                  <FormItem className="mt-4 flex flex-col">
-                    <FormLabel>Due Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className="w-full pl-3 text-left font-normal"
-                            disabled={isSubmitting}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date: Date) => date < new Date('1900-01-01')}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="mt-4">
+                <DatePicker
+                  name="dueDate"
+                  label="Due Date"
+                  disabled={isSubmitting}
+                  minDate={new Date('1900-01-01')}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

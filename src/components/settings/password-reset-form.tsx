@@ -34,7 +34,6 @@ import {
 import { useToast } from '@/components/ui/toast';
 
 const passwordFormSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z.string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
@@ -56,7 +55,6 @@ export default function PasswordResetForm() {
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
     defaultValues: {
-      currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     },
@@ -72,7 +70,6 @@ export default function PasswordResetForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          currentPassword: values.currentPassword,
           newPassword: values.newPassword,
         }),
       });
@@ -125,25 +122,6 @@ export default function PasswordResetForm() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="currentPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Password</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Enter your current password" 
-                        {...field} 
-                        disabled={isLoading}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
               <FormField
                 control={form.control}
                 name="newPassword"

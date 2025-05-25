@@ -34,6 +34,7 @@ import PasswordResetForm from '@/components/settings/password-reset-form';
 import { SubscriptionSettings } from '@/components/subscription/SubscriptionSettings';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { MSICCodeSearch } from '@/components/ui/msic-code-search';
 
 // Form validation schema
 const companyFormSchema = z.object({
@@ -53,6 +54,7 @@ const companyFormSchema = z.object({
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
   qrImageUrl: z.string().optional(),
+  msicCode: z.string().optional(),
 });
 
 type CompanyFormValues = z.infer<typeof companyFormSchema>;
@@ -111,6 +113,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
       bankName: '',
       bankAccountNumber: '',
       qrImageUrl: '',
+      msicCode: '',
     },
   });
 
@@ -166,6 +169,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
             bankName: data.bankName || '',
             bankAccountNumber: data.bankAccountNumber || '',
             qrImageUrl: data.qrImageUrl || '',
+            msicCode: data.msicCode || '',
           });
           
           // Lock certain fields if company exists (this is just an example)
@@ -339,7 +343,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
         <SubscriptionSettings user={userData} onSubscriptionChange={refreshUserData} />
       )}
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -709,6 +713,37 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         </div>
                       )}
                     </div>
+                    
+                    <Card className="bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900">
+                      <CardHeader>
+                        <CardTitle>e-Invoicing</CardTitle>
+                        <CardDescription>
+                          Information required for Malaysia's e-invoicing compliance
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <FormField
+                          control={form.control}
+                          name="msicCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>MSIC Code</FormLabel>
+                              <FormControl>
+                                <MSICCodeSearch
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  disabled={isSaving}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Malaysian Standard Industrial Classification code for your business
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
                     
                     <Button 
                       type="submit" 
