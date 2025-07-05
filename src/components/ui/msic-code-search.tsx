@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { msicCodes } from '@/lib/msic-codes';
+import { getMsicCodes, MSICCode } from '@/lib/msic-codes';
 
 interface MSICCodeSearchProps {
   value?: string;
@@ -27,7 +27,17 @@ interface MSICCodeSearchProps {
 export function MSICCodeSearch({ value, onChange, disabled }: MSICCodeSearchProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [msicCodes, setMsicCodes] = React.useState<MSICCode[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    setLoading(true);
+    getMsicCodes().then((codes) => {
+      setMsicCodes(codes);
+      setLoading(false);
+    });
+  }, []);
 
   // Debug logging
   React.useEffect(() => {
@@ -44,12 +54,11 @@ export function MSICCodeSearch({ value, onChange, disabled }: MSICCodeSearchProp
       code.description.toLowerCase().includes(query) ||
       (code.category && code.category.toLowerCase().includes(query))
     );
-  }, [searchQuery]);
+  }, [searchQuery, msicCodes]);
 
   // Group codes by category
   const groupedCodes = React.useMemo(() => {
-    const groups: { [key: string]: typeof msicCodes } = {};
-    
+    const groups: { [key: string]: MSICCode[] } = {};
     filteredCodes.forEach(code => {
       const category = code.category || 'Other';
       if (!groups[category]) {
@@ -57,7 +66,6 @@ export function MSICCodeSearch({ value, onChange, disabled }: MSICCodeSearchProp
       }
       groups[category].push(code);
     });
-    
     return groups;
   }, [filteredCodes]);
 
@@ -88,7 +96,7 @@ export function MSICCodeSearch({ value, onChange, disabled }: MSICCodeSearchProp
               <span className="truncate">{selectedCode.description}</span>
             </span>
           ) : (
-            "Select MSIC code..."
+            loading ? 'Loading MSIC codes...' : 'Select MSIC code...'
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -100,12 +108,13 @@ export function MSICCodeSearch({ value, onChange, disabled }: MSICCodeSearchProp
             placeholder="Search by code, description, or category..." 
             value={searchQuery}
             onValueChange={setSearchQuery}
+            disabled={loading}
           />
-          <CommandEmpty>No MSIC code found.</CommandEmpty>
+          <CommandEmpty>{loading ? 'Loading MSIC codes...' : 'No MSIC code found.'}</CommandEmpty>
           <div className="max-h-[300px] overflow-y-auto">
             {Object.entries(groupedCodes).map(([category, codes]) => (
               <CommandGroup key={category} heading={category}>
-                {codes.map((code) => {
+                {codes.map((code, idx) => {
                   // Create custom selection handler for each item
                   const handleItemSelect = () => {
                     console.log('Item selected:', code.code);
@@ -113,10 +122,9 @@ export function MSICCodeSearch({ value, onChange, disabled }: MSICCodeSearchProp
                     setOpen(false);
                     setSearchQuery('');
                   };
-                  
                   return (
                     <div 
-                      key={code.code}
+                      key={code.code + '-' + idx}
                       onClick={handleItemSelect}
                       className={cn(
                         "flex items-center px-2 py-1.5 text-sm rounded-sm relative",

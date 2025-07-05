@@ -428,7 +428,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         name="taxIdentificationNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tax Identification Number</FormLabel>
+                            <FormLabel>Tax Identification Number (TIN)</FormLabel>
                             <FormControl>
                               <Input {...field} disabled={isSaving} />
                             </FormControl>

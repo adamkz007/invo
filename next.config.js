@@ -15,6 +15,16 @@ const nextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /msic\.json$/,
+      type: 'json',
+      parser: {
+        parse: JSON.parse,
+      },
+    });
+    return config;
+  },
 };
 
 module.exports = nextConfig; 

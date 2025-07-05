@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/form';
 import { format } from 'date-fns';
 import { Trash2, Plus, X } from 'lucide-react';
-import { DatePicker } from '@/components/ui/date-picker';
 import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues, InvoiceItemFormValues, InvoiceStatus } from '@/types';
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
