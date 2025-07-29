@@ -383,10 +383,12 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold">Dashboard</h1>
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-            <FileText className="h-5 w-5 text-muted-foreground" />
+            <div className="rounded-full p-2 bg-primary/10 dark:bg-primary/20">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalInvoices}</div>
@@ -396,10 +398,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <Users className="h-5 w-5 text-muted-foreground" />
+            <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20">
+              <Users className="h-5 w-5 text-accent dark:text-accent-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalCustomers}</div>
@@ -409,10 +413,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <Package className="h-5 w-5 text-muted-foreground" />
+            <div className="rounded-full p-2 bg-secondary/10 dark:bg-secondary/20">
+              <Package className="h-5 w-5 text-secondary-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalProducts}</div>
@@ -422,10 +428,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <div className="rounded-full p-2 bg-green-500/10 dark:bg-green-500/20">
+              <DollarSign className="h-5 w-5 text-green-500 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats?.invoiceStats.totalAmount || 0, settings)}</div>
@@ -445,34 +453,36 @@ export default function DashboardPage() {
         
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card>
+            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">
                   Invoice Status
                 </CardTitle>
-                <ClipboardList className="h-5 w-5 text-muted-foreground" />
+                <div className="rounded-full p-2 bg-muted/50 dark:bg-muted/30">
+                  <ClipboardList className="h-5 w-5 text-muted-foreground dark:text-muted-foreground/80" />
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm dark:text-foreground/90">
                     <div className="flex items-center">
-                      <div className="mr-2 h-3 w-3 rounded-full bg-green-500"></div>
+                      <div className="mr-2 h-3 w-3 rounded-full bg-green-500 dark:bg-green-400 dark:ring-1 dark:ring-green-400/30"></div>
                       <span>Paid</span>
                     </div>
                     <span className="font-medium">{formatCurrency(stats?.invoiceStats.paidAmount || 0, settings)}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm dark:text-foreground/90">
                     <div className="flex items-center">
-                      <div className="mr-2 h-3 w-3 rounded-full bg-amber-500"></div>
+                      <div className="mr-2 h-3 w-3 rounded-full bg-amber-500 dark:bg-amber-400 dark:ring-1 dark:ring-amber-400/30"></div>
                       <span>Pending</span>
                     </div>
                     <span className="font-medium">
                       {formatCurrency(stats?.invoiceStats.pendingAmount || 0, settings)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm dark:text-foreground/90">
                     <div className="flex items-center">
-                      <div className="mr-2 h-3 w-3 rounded-full bg-red-500"></div>
+                      <div className="mr-2 h-3 w-3 rounded-full bg-red-500 dark:bg-red-400 dark:ring-1 dark:ring-red-400/30"></div>
                       <span>Overdue</span>
                     </div>
                     <span className="font-medium">{formatCurrency(stats?.invoiceStats.overdueAmount || 0, settings)}</span>
@@ -516,51 +526,51 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-muted-foreground/80">
                   Common tasks to get you started
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-2">
                 <a 
                   href="/invoices/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent"
+                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30"
                 >
-                  <FileText className="mr-2 h-5 w-5" />
+                  <FileText className="mr-2 h-5 w-5 text-primary dark:text-primary/80" />
                   Create New Invoice
                 </a>
                 <a 
                   href="/customers/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent"
+                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30"
                 >
-                  <Users className="mr-2 h-5 w-5" />
+                  <Users className="mr-2 h-5 w-5 text-accent dark:text-accent/80" />
                   Add New Customer
                 </a>
                 <a 
                   href="/inventory/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent"
+                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30"
                 >
-                  <Package className="mr-2 h-5 w-5" />
+                  <Package className="mr-2 h-5 w-5 text-secondary dark:text-secondary/80" />
                   Add New Product
                 </a>
               </CardContent>
             </Card>
             
-            <Card className="sm:col-span-2 lg:col-span-1">
+            <Card className="sm:col-span-2 lg:col-span-1 dark:bg-gradient-to-br dark:from-card dark:to-card/95">
               <CardHeader>
                 <CardTitle>Business Summary</CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-muted-foreground/80">
                   Your financial overview
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between dark:text-foreground/90">
                   <span className="text-sm font-medium">Total Revenue</span>
                   <span className="text-sm">{formatCurrency(stats?.invoiceStats.totalAmount || 0, settings)}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between dark:text-foreground/90">
                   <span className="text-sm font-medium">Total Outstanding</span>
                   <span className="text-sm">
                     {formatCurrency(
@@ -569,17 +579,17 @@ export default function DashboardPage() {
                     )}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between dark:text-foreground/90">
                   <span className="text-sm font-medium">Payment Rate</span>
                   <span className="text-sm">
                     {Math.round(((stats?.invoiceStats.paidAmount || 0) / (stats?.invoiceStats.totalAmount || 1)) * 100)}%
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between dark:text-foreground/90">
                   <span className="text-sm font-medium">Inventory Value</span>
                   <span className="text-sm">{formatCurrency(stats?.inventoryValue || 0, settings)}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between dark:text-foreground/90">
                   <span className="text-sm font-medium">Active Invoices</span>
                   <span className="text-sm">{stats?.totalInvoices || 0}</span>
                 </div>
@@ -590,10 +600,10 @@ export default function DashboardPage() {
         
         <TabsContent value="charts" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Card>
+            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
               <CardHeader>
                 <CardTitle>Monthly Revenue</CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-muted-foreground/80">
                   Revenue trends over the last 6 months
                 </CardDescription>
               </CardHeader>
@@ -608,16 +618,17 @@ export default function DashboardPage() {
                               data={stats.charts.monthlyRevenue}
                               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                             >
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                              <YAxis tickFormatter={(value) => formatCurrency(value, settings)} tick={{ fontSize: 10 }} />
+                              <CartesianGrid strokeDasharray="3 3" className="dark:opacity-30" />
+                              <XAxis dataKey="month" tick={{ fontSize: 10 }} className="dark:text-foreground/70" />
+                              <YAxis tickFormatter={(value) => formatCurrency(value, settings)} tick={{ fontSize: 10 }} className="dark:text-foreground/70" />
                               <Tooltip 
                                 formatter={(value) => formatCurrency(value as number, settings)}
                                 labelFormatter={(label) => `Month: ${label}`}
+                                contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px' }}
                               />
                               <Legend wrapperStyle={{ fontSize: 10 }} />
-                              <Bar dataKey="paid" name="Paid" fill="#10b981" />
-                              <Bar dataKey="pending" name="Pending" stackId="a" fill="#f59e0b" />
+                              <Bar dataKey="paid" name="Paid" fill="#10b981" className="dark:fill-green-400" />
+                              <Bar dataKey="pending" name="Pending" stackId="a" fill="#f59e0b" className="dark:fill-amber-400" />
                             </BarChart>
                           </ResponsiveContainer>
                         )}
@@ -628,10 +639,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
               <CardHeader>
                 <CardTitle>Top Products by Revenue</CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-muted-foreground/80">
                   Your best-selling products
                 </CardDescription>
               </CardHeader>
@@ -658,9 +669,10 @@ export default function DashboardPage() {
                                   return `${shortName} (${(percent * 100).toFixed(0)}%)`;
                                 }}
                                 labelLine={true}
+                                className="dark:text-foreground/90"
                               >
                                 {stats.charts.topProducts.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="dark:opacity-90" />
                                 ))}
                               </Pie>
                               {/* Add center label for total revenue */}
@@ -672,10 +684,10 @@ export default function DashboardPage() {
                                   dominantBaseline="middle"
                                   className="fill-current"
                                 >
-                                  <tspan x="50%" dy="-0.5em" fontSize="12" textAnchor="middle" fill="#666">
+                                  <tspan x="50%" dy="-0.5em" fontSize="12" textAnchor="middle" className="dark:fill-muted-foreground">
                                     Total
                                   </tspan>
-                                  <tspan x="50%" dy="1.2em" fontSize="16" fontWeight="bold" textAnchor="middle" fill="#333">
+                                  <tspan x="50%" dy="1.2em" fontSize="16" fontWeight="bold" textAnchor="middle" className="dark:fill-foreground">
                                     {formatCurrency(
                                       stats.charts.topProducts.reduce((sum, product) => sum + product.revenue, 0),
                                       settings
@@ -686,6 +698,7 @@ export default function DashboardPage() {
                               <Tooltip 
                                 formatter={(value) => formatCurrency(value as number, settings)}
                                 labelFormatter={(name) => `Product: ${name}`}
+                                contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px' }}
                               />
                               <Legend 
                                 wrapperStyle={{ fontSize: 11, paddingTop: 20 }}
@@ -705,10 +718,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
             
-            <Card className="col-span-1 sm:col-span-2">
+            <Card className="col-span-1 sm:col-span-2 dark:bg-gradient-to-br dark:from-card dark:to-card/95">
               <CardHeader>
                 <CardTitle>Revenue Trend</CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-muted-foreground/80">
                   Monthly revenue over time
                 </CardDescription>
               </CardHeader>
@@ -723,12 +736,13 @@ export default function DashboardPage() {
                               data={stats.charts.monthlyRevenue}
                               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                             >
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                              <YAxis tickFormatter={(value) => formatCurrency(value, settings)} tick={{ fontSize: 10 }} />
+                              <CartesianGrid strokeDasharray="3 3" className="dark:opacity-30" />
+                              <XAxis dataKey="month" tick={{ fontSize: 10 }} className="dark:text-foreground/70" />
+                              <YAxis tickFormatter={(value) => formatCurrency(value, settings)} tick={{ fontSize: 10 }} className="dark:text-foreground/70" />
                               <Tooltip 
                                 formatter={(value) => formatCurrency(value as number, settings)}
                                 labelFormatter={(label) => `Month: ${label}`}
+                                contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px' }}
                               />
                               <Legend wrapperStyle={{ fontSize: 10 }} />
                               <Line 
@@ -736,7 +750,8 @@ export default function DashboardPage() {
                                 dataKey="revenue" 
                                 name="Total Revenue" 
                                 stroke="#8884d8" 
-                                activeDot={{ r: 8 }} 
+                                className="dark:stroke-primary"
+                                activeDot={{ r: 8, className: "dark:fill-primary dark:stroke-primary-foreground" }} 
                                 strokeWidth={2}
                               />
                             </LineChart>
@@ -752,10 +767,10 @@ export default function DashboardPage() {
         </TabsContent>
         
         <TabsContent value="recent">
-          <Card>
+          <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
             <CardHeader>
               <CardTitle>Recent Invoices</CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-muted-foreground/80">
                 Your latest invoices
               </CardDescription>
             </CardHeader>
@@ -763,22 +778,22 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {!stats?.invoiceStats?.recentInvoices || stats.invoiceStats.recentInvoices.length === 0 ? (
                   <div className="text-center py-6">
-                    <p className="text-muted-foreground">No invoices found</p>
+                    <p className="text-muted-foreground dark:text-muted-foreground/80">No invoices found</p>
                   </div>
                 ) : (
                   stats.invoiceStats.recentInvoices.map((invoice) => (
                     <div 
                       key={invoice.id} 
-                      className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                      className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 dark:border-border/60 dark:hover:bg-accent/10 transition-colors"
                       onClick={() => handleViewInvoice(invoice.id)}
                     >
                       <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">{invoice.invoiceNumber}</p>
-                        <p className="text-base font-bold">{invoice.customerName}</p>
-                        <p className="text-xs text-muted-foreground">Date: {invoice.date}</p>
+                        <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground/80">{invoice.invoiceNumber}</p>
+                        <p className="text-base font-bold dark:text-foreground/90">{invoice.customerName}</p>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">Date: {invoice.date}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium">{formatCurrency(invoice.amount, settings)}</p>
+                        <p className="text-sm font-medium dark:text-foreground/90">{formatCurrency(invoice.amount, settings)}</p>
                         <div className="mt-1">
                           {getStatusBadge(invoice.status, true)}
                         </div>
@@ -788,7 +803,7 @@ export default function DashboardPage() {
                 )}
                 <a 
                   href="/invoices" 
-                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline dark:text-primary/90 dark:hover:text-primary"
                 >
                   View all invoices
                   <ArrowUpRight className="ml-1 h-5 w-5" />
@@ -801,35 +816,35 @@ export default function DashboardPage() {
 
       {/* Invoice Details Dialog */}
       <Dialog open={selectedInvoice !== null} onOpenChange={() => setSelectedInvoice(null)}>
-        <DialogContent className="max-w-xl w-full mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[90vh] sm:max-h-[85vh]">
+        <DialogContent className="max-w-xl w-full mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[90vh] sm:max-h-[85vh] dark:bg-gradient-to-br dark:from-card dark:to-card/95">
           <DialogTitle className="sr-only">Invoice Details</DialogTitle>
           {selectedInvoice && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Customer Information */}
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-muted-foreground">Bill To:</h3>
-                  <p className="font-medium">{selectedInvoice.customer.name}</p>
+                  <h3 className="text-sm font-semibold text-muted-foreground dark:text-muted-foreground/80">Bill To:</h3>
+                  <p className="font-medium dark:text-foreground/90">{selectedInvoice.customer.name}</p>
                   {selectedInvoice.customer.email && (
-                    <p className="text-sm text-muted-foreground">{selectedInvoice.customer.email}</p>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground/80">{selectedInvoice.customer.email}</p>
                   )}
                   {selectedInvoice.customer.phoneNumber && (
-                    <p className="text-sm text-muted-foreground">{selectedInvoice.customer.phoneNumber}</p>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground/80">{selectedInvoice.customer.phoneNumber}</p>
                   )}
                   {selectedInvoice.customer.address && (
-                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedInvoice.customer.address}</p>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground/80 whitespace-pre-line">{selectedInvoice.customer.address}</p>
                   )}
                 </div>
                 
                 {/* Invoice Information */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold">Invoice #{selectedInvoice.invoiceNumber}</h2>
+                    <h2 className="text-xl font-bold dark:text-foreground">Invoice #{selectedInvoice.invoiceNumber}</h2>
                     {getStatusBadge(selectedInvoice.status)}
                   </div>
-                  <div className="flex flex-col gap-1 text-sm">
+                  <div className="flex flex-col gap-1 text-sm dark:text-foreground/90">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 text-muted-foreground dark:text-muted-foreground/80" />
                       <span>Issued: {format(new Date(selectedInvoice.issueDate), 'MMMM d, yyyy')}</span>
                     </div>
                     <div className="flex items-center gap-2">

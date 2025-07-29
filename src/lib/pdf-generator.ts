@@ -404,12 +404,12 @@ export async function downloadInvoicePDF(
   const tableTop = 110;
   const tableRowHeight = 10;
   
-  // Define column widths - adjusted for better visibility of quantity and price
+  // Define column widths - adjusted to prevent text overflow and ensure headers have their own column
   const colWidths = {
     item: contentWidth * 0.05,
-    description: contentWidth * 0.35, // Reduced to give more space to other columns
-    quantity: contentWidth * 0.20,
-    unitPrice: contentWidth * 0.20,
+    description: contentWidth * 0.45, // Increased for better text accommodation
+    quantity: contentWidth * 0.15,
+    unitPrice: contentWidth * 0.15,
     amount: contentWidth * 0.20
   };
   
@@ -447,19 +447,19 @@ export async function downloadInvoicePDF(
   doc.setTextColor(50, 50, 50);
   
   xPos = margin;
-  doc.text('#', xPos + 5, tableTop);
+  doc.text('#', xPos + (colWidths.item / 2), tableTop, { align: 'center' });
   xPos += colWidths.item;
   
   doc.text('ITEM & DESCRIPTION', xPos + 2, tableTop);
   xPos += colWidths.description;
   
-  doc.text('QTY', xPos - 2, tableTop, { align: 'right' });
+  doc.text('QTY', xPos - (colWidths.quantity / 2), tableTop, { align: 'center' });
   xPos += colWidths.quantity;
   
-  doc.text('UNIT PRICE', xPos - 2, tableTop, { align: 'right' });
+  doc.text('UNIT PRICE', xPos - (colWidths.unitPrice / 2), tableTop, { align: 'center' });
   xPos += colWidths.unitPrice;
   
-  doc.text('AMOUNT', pageWidth - margin - 2, tableTop, { align: 'right' });
+  doc.text('AMOUNT', pageWidth - margin - (colWidths.amount / 2), tableTop, { align: 'center' });
   
   // Table rows
   doc.setFont('helvetica', 'normal');
@@ -474,10 +474,27 @@ export async function downloadInvoicePDF(
       const rowYStart = yPos - 4; // Start position for this row
       let rowHeight = tableRowHeight; // Default row height
       
-      // Adjust if we have description
-      if (item.description) {
-        rowHeight += 5;
+      // Get item details for calculations
+      const itemNameForCalc = item.product?.name || item.description || 'Item';
+      const maxWidthForCalc = colWidths.description - 4; // Leave some margin
+      
+      // Calculate row height based on text wrapping
+      let additionalHeight = 0;
+      
+      // Check if item name needs wrapping
+      if (doc.getTextWidth(itemNameForCalc) > maxWidthForCalc) {
+        const textLines = doc.splitTextToSize(itemNameForCalc, maxWidthForCalc);
+        additionalHeight += (textLines.length - 1) * 5;
       }
+      
+      // Check if description needs wrapping and is different from name
+      if (item.description && item.description !== itemNameForCalc) {
+        const descLines = doc.splitTextToSize(item.description, maxWidthForCalc);
+        additionalHeight += 5; // Basic line for description
+        additionalHeight += (descLines.length - 1) * 5; // Additional lines
+      }
+      
+      rowHeight += additionalHeight;
       
       // Draw row background (alternating)
       if (index % 2 === 1) {
@@ -510,41 +527,64 @@ export async function downloadInvoicePDF(
       xPos = margin;
       
       // Item number
-      doc.text(`${index + 1}`, xPos + 5, yPos);
+      doc.text(`${index + 1}`, xPos + (colWidths.item / 2), yPos, { align: 'center' });
       xPos += colWidths.item;
       
       // Item name and description
       doc.setFont('helvetica', 'bold');
-      doc.text(item.product?.name || item.description || 'Item', xPos + 2, yPos);
-      doc.setFont('helvetica', 'normal');
-      
-      if (item.description) {
-        yPos += 5;
-        doc.text(item.description || '', xPos + 2, yPos);
-      }
-      
-      xPos += colWidths.description;
-      
-      // Reset yPos if we added a description line
-      if (item.description) {
-        yPos -= 5;
-      }
+      // Handle long item names with text wrapping - reuse variables from row height calculation
+       // Split text if it's too long
+       if (doc.getTextWidth(itemNameForCalc) > maxWidthForCalc) {
+         const textLines = doc.splitTextToSize(itemNameForCalc, maxWidthForCalc);
+         doc.text(textLines[0], xPos + 2, yPos);
+         
+         // If we have more lines from splitting the name, adjust position
+         if (textLines.length > 1) {
+           yPos += 5;
+           doc.text(textLines.slice(1).join(' '), xPos + 2, yPos);
+         }
+       } else {
+         doc.text(itemNameForCalc, xPos + 2, yPos);
+       }
+       
+       doc.setFont('helvetica', 'normal');
+       
+       // Add description on a new line if it exists and is different from the name
+       if (item.description && item.description !== itemNameForCalc) {
+         yPos += 5;
+         // Split description text if it's too long
+         const descLines = doc.splitTextToSize(item.description, maxWidthForCalc);
+         doc.text(descLines, xPos + 2, yPos);
+         
+         // Adjust yPos based on number of description lines
+         if (descLines.length > 1) {
+           yPos += (descLines.length - 1) * 5;
+         }
+       }
+       
+       xPos += colWidths.description;
+       
+       // Reset yPos if we added description lines
+       const originalYPos = yPos - (item.description && item.description !== itemNameForCalc ? 5 : 0);
+       if (yPos !== originalYPos) {
+         yPos = originalYPos;
+       }
       
       // Quantity - make it more prominent
       doc.setFont('helvetica', 'bold');
-      doc.text(`${item.quantity}`, xPos - 2, yPos, { align: 'right' });
+      doc.text(`${item.quantity}`, xPos - (colWidths.quantity / 2), yPos, { align: 'center' });
       doc.setFont('helvetica', 'normal');
       xPos += colWidths.quantity;
       
       // Unit price - make it more prominent
       doc.setFont('helvetica', 'bold');
-      doc.text(formatCurrency(item.unitPrice, settings), xPos - 2, yPos, { align: 'right' });
+      doc.text(formatCurrency(item.unitPrice, settings), xPos - (colWidths.unitPrice / 2), yPos, { align: 'center' });
       doc.setFont('helvetica', 'normal');
       xPos += colWidths.unitPrice;
       
       // Amount - make it more prominent
       doc.setFont('helvetica', 'bold');
-      doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin - 2, yPos, { align: 'right' });
+      doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin - (colWidths.amount / 2), yPos, { align: 'center' });
       doc.setFont('helvetica', 'normal');
       
       yPos += rowHeight;
@@ -641,6 +681,17 @@ export async function downloadInvoicePDF(
     
     doc.text(`Tax Rate`, totalsX, currentY);
     doc.text(`${invoice.taxRate.toFixed(2)}%`, pageWidth - margin - 2, currentY, { align: 'right' });
+    currentY += 8;
+  }
+  
+  // Discount (if applicable)
+  if (invoice.discountRate > 0) {
+    doc.setFillColor(255, 255, 255); // White background
+    doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
+    doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'S'); // Border
+    
+    doc.text(`Discount Rate`, totalsX, currentY);
+    doc.text(`${invoice.discountRate.toFixed(2)}%`, pageWidth - margin - 2, currentY, { align: 'right' });
     currentY += 8;
   }
   
@@ -815,7 +866,7 @@ export async function downloadInvoicePDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
   const companyTextY = footerTopY + 6; // Position text relative to footer top (approx center)
-  if (companyDetails?.registrationNumber) {
+  if (companyDetails && companyDetails.registrationNumber) {
     doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, companyTextY, { align: 'center' });
   } else {
     doc.text('Your Company Name | SSM: 123456-A', pageWidth / 2, companyTextY, { align: 'center' });
@@ -906,7 +957,11 @@ export async function downloadReceiptPDF(
   // Company header & BRN (centered)
   doc.setFontSize(10);
   doc.setFont('courier', 'bold');
-  doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, margin + 5, { align: 'center' });
+  // Add null check for companyDetails
+  const companyHeaderText = companyDetails && companyDetails.legalName
+    ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
+    : 'Receipt';
+  doc.text(companyHeaderText, pageWidth / 2, margin + 5, { align: 'center' });
 
   // Company address (centered)
   doc.setFontSize(8);
@@ -942,7 +997,7 @@ export async function downloadReceiptPDF(
   doc.setFont('courier', 'normal');
   
   // Get current user/host name - replace with actual user data if available
-  const hostName = companyDetails?.ownerName || 'Host';
+  const hostName = companyDetails ? companyDetails.ownerName : 'Host';
   doc.text(`Host: ${hostName}`, margin, yPos);
   
   // Transaction date and time
@@ -1122,7 +1177,11 @@ export async function downloadReceiptPDF(
   yPos += 6;
   doc.text('Thanks for visiting', pageWidth / 2, yPos, { align: 'center' });
   yPos += 6;
-  doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, yPos, { align: 'center' });
+  // Add null check for companyDetails
+  const companyFooterText = companyDetails && companyDetails.legalName
+    ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
+    : 'Thank you for your business';
+  doc.text(companyFooterText, pageWidth / 2, yPos, { align: 'center' });
   yPos += 10;
   
   // Add "Powered by Invo" at the bottom

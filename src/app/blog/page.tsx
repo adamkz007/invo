@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Clock, User, Home, X, Filter } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, User, Home, X, Filter, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function BlogPage() {
@@ -123,9 +123,10 @@ export default function BlogPage() {
       {/* Home Link */}
       <div className="bg-background py-3 border-b">
         <div className="container mx-auto px-4">
-          <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
-            <Home className="h-4 w-4 mr-1" />
-            Back to Home
+          <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary bg-muted/50 px-2.5 py-1.5 rounded-md transition-colors hover:bg-muted">
+            <ArrowLeft className="h-4 w-4" />
+            <LayoutDashboard className="h-4 w-4" />
+            <span>Home</span>
           </Link>
         </div>
       </div>
@@ -401,4 +402,4 @@ export default function BlogPage() {
       </section>
     </div>
   );
-} 
+}

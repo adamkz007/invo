@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useSettings } from '@/contexts/settings-context';
@@ -44,10 +44,11 @@ export default function NewReceiptPage() {
       <div className="flex items-center">
         <Link 
           href="/receipts" 
-          className="mr-4 flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="mr-4 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground bg-muted/50 px-2.5 py-1.5 rounded-md transition-colors hover:bg-muted"
         >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to receipts
+          <ArrowLeft className="h-4 w-4" />
+          <Receipt className="h-4 w-4" />
+          <span>Receipts</span>
         </Link>
         <h1 className="text-3xl font-bold">Create New Receipt</h1>
       </div>
@@ -67,4 +68,4 @@ export default function NewReceiptPage() {
       </Card>
     </div>
   );
-} 
+}

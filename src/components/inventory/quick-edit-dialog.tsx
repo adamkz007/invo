@@ -152,7 +152,7 @@ export function QuickEditDialog({
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Disable Stock Management</FormLabel>
+                    <FormLabel>Don't Track Inventory</FormLabel>
                   </div>
                 </FormItem>
               )}

@@ -71,6 +71,7 @@ export default function RootLayout({
             <PWAProvider>
               <ToastProvider>
                 {children}
+                <div id="datepicker-portal" />
               </ToastProvider>
             </PWAProvider>
           </SettingsProvider>

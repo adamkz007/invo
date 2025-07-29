@@ -23,6 +23,7 @@ import { ProductWithRelations, ReceiptFormValues } from '@/types';
 import { useSettings } from '@/contexts/settings-context';
 import { useToast } from '@/components/ui/toast';
 import ProductFormDialog from '@/components/products/product-form-dialog';
+import { ReactDatePickerComponent } from '@/components/ui/react-date-picker';
 
 // Form validation schema
 const receiptFormSchema = z.object({
@@ -294,6 +295,18 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
           />
         </div>
 
+        {/* Receipt Date */}
+        <div className="p-4 border rounded-md bg-muted/10">
+          <ReactDatePickerComponent
+            name="receiptDate"
+            label="Receipt Date"
+            disabled={isSubmitting}
+            minDate={new Date()} // Set minimum date to today
+            dateFormat="PPP"
+            placeholder="Select receipt date"
+          />
+        </div>
+
         {/* Receipt Items */}
         <div className="p-4 border rounded-md">
           <div className="flex items-center justify-between mb-4">
@@ -510,4 +523,4 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
   );
 }
 
-export default ReceiptFormEnhanced; 
+export default ReceiptFormEnhanced;

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Mail, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, MapPin, Phone, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function ContactPage() {
@@ -263,11 +263,12 @@ export default function ContactPage() {
 
       {/* Back to Home */}
       <div className="container mx-auto px-4 py-8">
-        <Link href="/" className="inline-flex items-center text-primary hover:underline">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
+        <Link href="/" className="inline-flex items-center gap-1.5 text-primary bg-primary/10 px-2.5 py-1.5 rounded-md transition-colors hover:bg-primary/20 w-fit">
+          <ArrowLeft className="h-4 w-4" />
+          <LayoutDashboard className="h-4 w-4" />
+          <span>Home</span>
         </Link>
       </div>
     </div>
   );
-} 
+}

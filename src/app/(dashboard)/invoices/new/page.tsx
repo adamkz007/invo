@@ -2,7 +2,7 @@
 
 import React, { Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -26,10 +26,11 @@ export default function NewInvoicePage() {
       <div className="flex items-center">
         <Link 
           href="/invoices" 
-          className="mr-4 flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="mr-4 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground bg-muted/50 px-2.5 py-1.5 rounded-md transition-colors hover:bg-muted"
         >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to invoices
+          <ArrowLeft className="h-4 w-4" />
+          <FileText className="h-4 w-4" />
+          <span>Invoices</span>
         </Link>
         <h1 className="text-3xl font-bold">Create New Invoice</h1>
       </div>

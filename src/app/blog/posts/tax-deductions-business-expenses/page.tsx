@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CaptionedImage } from '@/components/ui/captioned-image';
 import Image from 'next/image';
@@ -61,9 +61,10 @@ export default function TaxDeductionsPost() {
       <header className="bg-primary text-white py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <Link href="/blog" className="inline-flex items-center text-white/90 hover:text-white mb-6">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Blog
+            <Link href="/blog" className="inline-flex items-center gap-1.5 text-white/90 hover:text-white mb-6 bg-white/10 px-2.5 py-1.5 rounded-md transition-colors hover:bg-white/20">
+              <ArrowLeft className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
+              <span>Blog</span>
             </Link>
             <div className="inline-block px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium mb-4">
               Taxes
@@ -475,4 +476,4 @@ export default function TaxDeductionsPost() {
       </article>
     </div>
   );
-} 
+}

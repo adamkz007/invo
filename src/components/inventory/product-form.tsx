@@ -44,7 +44,6 @@ interface ProductFormProps {
 
 export default function ProductForm({ defaultValues, isEditing = false, productId }: ProductFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [totalInventoryValue, setTotalInventoryValue] = useState(0);
   const router = useRouter();
   const { showToast } = useToast();
   const { settings } = useSettings();
@@ -66,22 +65,7 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
     },
   });
 
-  // Fetch total inventory value
-  useEffect(() => {
-    async function fetchInventoryValue() {
-      try {
-        const response = await fetch('/api/dashboard');
-        if (response.ok) {
-          const data = await response.json();
-          setTotalInventoryValue(data.inventoryValue || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching inventory value:', error);
-      }
-    }
 
-    fetchInventoryValue();
-  }, []);
 
   // Handle form submission
   async function onSubmit(values: ProductFormValues) {
@@ -145,14 +129,6 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Display total inventory value */}
-        <div className="bg-muted/50 p-4 rounded-lg mb-6">
-          <h3 className="text-lg font-medium mb-2">Inventory Summary</h3>
-          <div className="flex items-center justify-between">
-            <span>Total Inventory Value:</span>
-            <span className="font-bold">{formatCurrency(totalInventoryValue, settings)}</span>
-          </div>
-        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Product Name */}
@@ -315,7 +291,7 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>Disable Stock Management</FormLabel>
+                <FormLabel>Don't Track Inventory</FormLabel>
                 <FormDescription>
                   for service-based products or items that don&apos;t require inventory tracking
                 </FormDescription>

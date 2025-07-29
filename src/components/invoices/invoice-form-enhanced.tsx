@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { format } from 'date-fns';
 import { Trash2, Plus } from 'lucide-react';
-import { DatePicker } from '@/components/ui/date-picker';
+import { ReactDatePickerComponent } from '@/components/ui/react-date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 // Define InvoiceStatus enum locally
 export enum InvoiceStatus {
@@ -443,20 +443,23 @@ export default function InvoiceFormEnhanced({
             <CardContent className="pt-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Issue Date */}
-                <DatePicker
+                <ReactDatePickerComponent
                   name="issueDate"
                   label="Issue Date"
                   disabled={isSubmitting}
-                  minDate={new Date('2000-01-01')}
+                  minDate={new Date()} // Set minimum date to today
+                  dateFormat="yyyy-MM-dd"
+                  placeholder="YYYY-MM-DD"
                 />
 
                 {/* Due Date */}
-                <DatePicker
+                <ReactDatePickerComponent
                   name="dueDate"
                   label="Due Date"
                   disabled={isSubmitting}
-                  fromDate={minDueDate}
-                  minDate={new Date('1900-01-01')}
+                  minDate={minDueDate} // Set minimum date to issue date
+                  dateFormat="yyyy-MM-dd"
+                  placeholder="YYYY-MM-DD"
                 />
               </div>
             </CardContent>
@@ -583,7 +586,7 @@ export default function InvoiceFormEnhanced({
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
-                            <FormLabel>Disable Stock Management</FormLabel>
+                            <FormLabel>Don't Track Inventory</FormLabel>
                           </div>
                         </FormItem>
                       )}
@@ -748,4 +751,4 @@ export default function InvoiceFormEnhanced({
       </form>
     </Form>
   );
-} 
+}

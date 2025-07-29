@@ -78,6 +78,10 @@ export default function InventoryPage() {
         return total;
       }, 0);
       
+      // Calculate additional inventory metrics
+      const totalProducts = data.filter((p: ProductWithRelations) => !p.disableStockManagement).length;
+      const lowStockProducts = data.filter((p: ProductWithRelations) => !p.disableStockManagement && p.quantity <= 5).length;
+      
       setTotalInventoryValue(inventoryValue);
     } catch (err) {
       console.error('Error fetching products:', err);
@@ -230,11 +234,6 @@ export default function InventoryPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="px-3 py-1">
-                Total Value: {formatCurrency(totalInventoryValue, settings)}
-              </Badge>
-            </div>
           </div>
           
           {currentProducts.length === 0 ? (
@@ -317,6 +316,25 @@ export default function InventoryPage() {
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Inventory Summary Box */}
+               <div className="mt-6 bg-muted/50 p-4 rounded-lg">
+                 <h3 className="text-lg font-medium mb-2">Inventory Summary</h3>
+                 <div className="space-y-2">
+                   <div className="flex items-center justify-between">
+                     <span>Total Inventory Value:</span>
+                     <span className="font-bold">{formatCurrency(totalInventoryValue, settings)}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span>Total Products:</span>
+                     <span className="font-medium">{products.filter(p => !p.disableStockManagement).length}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span>Low Stock Items:</span>
+                     <span className="font-medium">{products.filter(p => !p.disableStockManagement && p.quantity <= 5).length}</span>
+                   </div>
+                 </div>
+               </div>
               
               {/* Pagination */}
               {totalPages > 1 && (

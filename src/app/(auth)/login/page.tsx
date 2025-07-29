@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -81,9 +81,10 @@ function LoginContent() {
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center p-4">
       <div className="mx-auto w-full max-w-md rounded-lg border p-8 shadow-md relative">
-        <Link href="/" className="absolute top-4 left-4 text-gray-500 hover:text-gray-800 flex items-center text-sm">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back to Home
+        <Link href="/" className="absolute top-4 left-4 text-gray-500 hover:text-gray-800 flex items-center gap-1.5 text-sm bg-gray-100 px-2.5 py-1.5 rounded-md transition-colors hover:bg-gray-200">
+          <ArrowLeft className="h-4 w-4" />
+          <LayoutDashboard className="h-4 w-4" />
+          <span>Home</span>
         </Link>
         
         <div className="mb-6 text-center">

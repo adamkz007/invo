@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { EnhancedDatePicker } from '@/components/ui/enhanced-date-picker';
 import {
   Form,
   FormControl,
@@ -261,20 +262,24 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
           <Card>
             <CardContent className="pt-6">
               {/* Issue Date */}
-              <DatePicker
+              <EnhancedDatePicker
                 name="issueDate"
                 label="Issue Date"
                 disabled={isSubmitting}
                 minDate={new Date('1900-01-01')}
+                dateFormat="yyyy-MM-dd"
+                placeholder="YYYY-MM-DD"
               />
 
               {/* Due Date */}
               <div className="mt-4">
-                <DatePicker
+                <EnhancedDatePicker
                   name="dueDate"
                   label="Due Date"
                   disabled={isSubmitting}
                   minDate={new Date('1900-01-01')}
+                  dateFormat="yyyy-MM-dd"
+                  placeholder="YYYY-MM-DD"
                 />
               </div>
             </CardContent>
