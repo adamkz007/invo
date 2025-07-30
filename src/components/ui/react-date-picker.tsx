@@ -25,6 +25,8 @@ interface ReactDatePickerProps {
   minDate?: Date
   maxDate?: Date
   dateFormat?: string
+  className?: string
+  labelClassName?: string
 }
 
 export function ReactDatePickerComponent({
@@ -34,7 +36,9 @@ export function ReactDatePickerComponent({
   disabled = false,
   minDate,
   maxDate,
-  dateFormat = "yyyy-MM-dd"
+  dateFormat = "yyyy-MM-dd",
+  className,
+  labelClassName
 }: ReactDatePickerProps) {
   const form = useFormContext()
   const [inputValue, setInputValue] = React.useState<string>("")  
@@ -64,7 +68,7 @@ export function ReactDatePickerComponent({
       name={name}
       render={({ field }) => (
         <FormItem className="flex flex-col space-y-2">
-          <FormLabel className="font-medium">{label}</FormLabel>
+          <FormLabel className={cn("font-medium", labelClassName)}>{label}</FormLabel>
           <div className="relative">
             <FormControl>
                 <div className="relative w-full">
@@ -77,7 +81,7 @@ export function ReactDatePickerComponent({
                     maxDate={maxDate}
                     placeholderText={placeholder}
                     disabled={disabled}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm pr-10 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    className={cn("w-full rounded-md border border-input bg-background px-3 py-2 text-sm pr-10 focus:border-primary focus:ring-1 focus:ring-primary transition-colors", className)}
                     showPopperArrow={false}
                     popperClassName="react-datepicker-popper"
                     popperPlacement="bottom-start"

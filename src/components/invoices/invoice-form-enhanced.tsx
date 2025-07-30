@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -101,6 +101,15 @@ export default function InvoiceFormEnhanced({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [minDueDate, setMinDueDate] = useState<Date>(form.getValues('issueDate'));
+  const [activeSection, setActiveSection] = useState('customer');
+  
+  // Refs for each section
+  const customerRef = useRef<HTMLDivElement>(null);
+  const datesRef = useRef<HTMLDivElement>(null);
+  const itemsRef = useRef<HTMLDivElement>(null);
+  const taxDiscountRef = useRef<HTMLDivElement>(null);
+  const notesRef = useRef<HTMLDivElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
 
   // Create field array for invoice items
   const { fields, append, remove } = useFieldArray({
@@ -177,6 +186,41 @@ export default function InvoiceFormEnhanced({
     };
     
     fetchData();
+  }, []);
+  
+  // Handle scroll to update active section
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 100; // Offset for the fixed header
+      
+      // Get positions of each section
+      const sections: Array<{ id: string; ref: React.RefObject<HTMLDivElement | null> }> = [
+        { id: 'customer', ref: customerRef },
+        { id: 'dates', ref: datesRef },
+        { id: 'items', ref: itemsRef },
+        { id: 'taxDiscount', ref: taxDiscountRef },
+        { id: 'notes', ref: notesRef },
+        { id: 'summary', ref: summaryRef },
+      ];
+      
+      // Find the current section in view
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section.ref.current && section.ref.current.offsetTop <= scrollPosition) {
+          setActiveSection(section.id);
+          break;
+        }
+      }
+    };
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+    
+    // Call once to set initial active section
+    handleScroll();
+    
+    // Clean up
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Handle form submission
@@ -307,6 +351,27 @@ export default function InvoiceFormEnhanced({
     }
   };
   
+  // Smooth scroll to section
+  const scrollToSection = (sectionId: string) => {
+    const sectionMap: Record<string, React.RefObject<HTMLDivElement | null>> = {
+      customer: customerRef,
+      dates: datesRef,
+      items: itemsRef,
+      taxDiscount: taxDiscountRef,
+      notes: notesRef,
+      summary: summaryRef,
+    };
+    
+    const ref = sectionMap[sectionId];
+    if (ref?.current) {
+      window.scrollTo({
+        top: ref.current.offsetTop - 80, // Offset for fixed header
+        behavior: 'smooth',
+      });
+      setActiveSection(sectionId);
+    }
+  };
+  
   // Handle new customer creation
   const handleCustomerCreated = (newCustomer: CustomerWithRelations) => {
     setCustomers(prev => [...prev, newCustomer]);
@@ -332,19 +397,69 @@ export default function InvoiceFormEnhanced({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
+      {/* Fixed-position section tabs - positioned below the header */}
+      <div className="sticky top-[72px] z-40 bg-white border-b shadow-sm py-1 mb-6 max-w-full">
+        <div className="w-full px-0 sm:px-4">
+          <div className="flex space-x-2 overflow-x-auto hide-scrollbar px-1">
+            <button
+              type="button"
+              onClick={() => scrollToSection('customer')}
+              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'customer' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+            >
+              Customer & Billing
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('dates')}
+              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'dates' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+            >
+              Dates
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('items')}
+              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'items' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+            >
+              Invoice Items
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('taxDiscount')}
+              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'taxDiscount' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+            >
+              Tax & Discount
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('notes')}
+              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'notes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+            >
+              Notes
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('summary')}
+              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'summary' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+            >
+              Summary
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-2 sm:space-y-6 sm:px-4">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2" ref={customerRef}>
           {/* Customer Selection */}
-          <Card>
-            <CardContent className="pt-6">
-              <FormLabel>Customer</FormLabel>
+          <Card className="p-3 sm:p-6">
+              <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+              <FormLabel className="text-sm sm:text-base">Customer</FormLabel>
               <FormField
                 control={form.control}
                 name="customerId"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <div className="flex gap-2 items-center">
+                      <div className="flex gap-1 sm:gap-2 items-center">
                         <div className="flex-1">
                           <Combobox
                             options={customers.map((customer) => ({
@@ -358,6 +473,7 @@ export default function InvoiceFormEnhanced({
                             searchPlaceholder="Search by name or phone number..."
                             emptyText="No customers found"
                             disabled={isSubmitting}
+                            className="text-xs sm:text-sm"
                           />
                         </div>
                         <CustomerFormDialog 
@@ -366,7 +482,7 @@ export default function InvoiceFormEnhanced({
                         />
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
@@ -376,62 +492,62 @@ export default function InvoiceFormEnhanced({
                 control={form.control}
                 name="status"
                 render={({ field }) => (
-                  <FormItem className="mt-4">
-                    <FormLabel>Status</FormLabel>
+                  <FormItem className="mt-2 sm:mt-4">
+                    <FormLabel className="text-sm sm:text-base">Status</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value}
                       disabled={isSubmitting}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
                           <SelectValue placeholder="Select status">
                             {field.value && (
                               <div className="flex items-center">
-                                {field.value === 'DRAFT' && <Badge className="bg-gray-100 text-gray-800 mr-2">Draft</Badge>}
-                                {field.value === 'SENT' && <Badge className="bg-blue-100 text-blue-800 mr-2">Sent</Badge>}
-                                {field.value === 'PAID' && <Badge className="bg-green-100 text-green-800 mr-2">Paid</Badge>}
-                                {field.value === 'PARTIAL' && <Badge className="bg-amber-100 text-amber-800 mr-2">Partial</Badge>}
-                                {field.value === 'OVERDUE' && <Badge className="bg-red-100 text-red-800 mr-2">Overdue</Badge>}
-                                {field.value === 'CANCELLED' && <Badge className="bg-purple-100 text-purple-800 mr-2">Cancelled</Badge>}
+                                {field.value === 'DRAFT' && <Badge className="bg-gray-100 text-gray-800 mr-1 sm:mr-2 text-xs">Draft</Badge>}
+                                {field.value === 'SENT' && <Badge className="bg-blue-100 text-blue-800 mr-1 sm:mr-2 text-xs">Sent</Badge>}
+                                {field.value === 'PAID' && <Badge className="bg-green-100 text-green-800 mr-1 sm:mr-2 text-xs">Paid</Badge>}
+                                {field.value === 'PARTIAL' && <Badge className="bg-amber-100 text-amber-800 mr-1 sm:mr-2 text-xs">Partial</Badge>}
+                                {field.value === 'OVERDUE' && <Badge className="bg-red-100 text-red-800 mr-1 sm:mr-2 text-xs">Overdue</Badge>}
+                                {field.value === 'CANCELLED' && <Badge className="bg-purple-100 text-purple-800 mr-1 sm:mr-2 text-xs">Cancelled</Badge>}
                               </div>
                             )}
                           </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="DRAFT">
+                        <SelectItem value="DRAFT" className="text-xs sm:text-sm">
                           <div className="flex items-center">
-                            <Badge className="bg-gray-100 text-gray-800 mr-2">Draft</Badge>
+                            <Badge className="bg-gray-100 text-gray-800 mr-1 sm:mr-2 text-xs">Draft</Badge>
                           </div>
                         </SelectItem>
-                        <SelectItem value="SENT">
+                        <SelectItem value="SENT" className="text-xs sm:text-sm">
                           <div className="flex items-center">
-                            <Badge className="bg-blue-100 text-blue-800 mr-2">Sent</Badge>
+                            <Badge className="bg-blue-100 text-blue-800 mr-1 sm:mr-2 text-xs">Sent</Badge>
                           </div>
                         </SelectItem>
-                        <SelectItem value="PAID">
+                        <SelectItem value="PAID" className="text-xs sm:text-sm">
                           <div className="flex items-center">
-                            <Badge className="bg-green-100 text-green-800 mr-2">Paid</Badge>
+                            <Badge className="bg-green-100 text-green-800 mr-1 sm:mr-2 text-xs">Paid</Badge>
                           </div>
                         </SelectItem>
-                        <SelectItem value="PARTIAL">
+                        <SelectItem value="PARTIAL" className="text-xs sm:text-sm">
                           <div className="flex items-center">
-                            <Badge className="bg-amber-100 text-amber-800 mr-2">Partial</Badge>
+                            <Badge className="bg-amber-100 text-amber-800 mr-1 sm:mr-2 text-xs">Partial</Badge>
                           </div>
                         </SelectItem>
-                        <SelectItem value="OVERDUE">
+                        <SelectItem value="OVERDUE" className="text-xs sm:text-sm">
                           <div className="flex items-center">
-                            <Badge className="bg-red-100 text-red-800 mr-2">Overdue</Badge>                          </div>
+                            <Badge className="bg-red-100 text-red-800 mr-1 sm:mr-2 text-xs">Overdue</Badge>                          </div>
                         </SelectItem>
-                        <SelectItem value="CANCELLED">
+                        <SelectItem value="CANCELLED" className="text-xs sm:text-sm">
                           <div className="flex items-center">
-                            <Badge className="bg-purple-100 text-purple-800 mr-2">Cancelled</Badge>
+                            <Badge className="bg-purple-100 text-purple-800 mr-1 sm:mr-2 text-xs">Cancelled</Badge>
                           </div>
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
@@ -439,9 +555,9 @@ export default function InvoiceFormEnhanced({
           </Card>
 
           {/* Dates */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid gap-4 sm:grid-cols-2">
+          <Card className="p-3 sm:p-6" ref={datesRef}>
+            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+              <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
                 {/* Issue Date */}
                 <ReactDatePickerComponent
                   name="issueDate"
@@ -450,6 +566,8 @@ export default function InvoiceFormEnhanced({
                   minDate={new Date()} // Set minimum date to today
                   dateFormat="yyyy-MM-dd"
                   placeholder="YYYY-MM-DD"
+                  className="text-xs sm:text-sm"
+                  labelClassName="text-sm sm:text-base"
                 />
 
                 {/* Due Date */}
@@ -460,6 +578,8 @@ export default function InvoiceFormEnhanced({
                   minDate={minDueDate} // Set minimum date to issue date
                   dateFormat="yyyy-MM-dd"
                   placeholder="YYYY-MM-DD"
+                  className="text-xs sm:text-sm"
+                  labelClassName="text-sm sm:text-base"
                 />
               </div>
             </CardContent>
@@ -467,10 +587,10 @@ export default function InvoiceFormEnhanced({
         </div>
 
         {/* Invoice Items */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">Invoice Items</h3>
+        <Card className="p-3 sm:p-6" ref={itemsRef}>
+            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-medium">Invoice Items</h3>
               <ProductFormDialog 
                 userId="1" 
                 onProductCreated={handleProductCreated} 
@@ -479,7 +599,7 @@ export default function InvoiceFormEnhanced({
             
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="p-4 border rounded-md">
+                <div key={field.id} className="p-2 sm:p-4 border rounded-md">
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-medium">Item {index + 1}</h4>
                     <Button
@@ -493,7 +613,7 @@ export default function InvoiceFormEnhanced({
                     </Button>
                   </div>
                   
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
                     {/* Product Selection */}
                     <FormField
                       control={form.control}
@@ -524,7 +644,7 @@ export default function InvoiceFormEnhanced({
                       )}
                     />
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-1 sm:gap-2">
                       {/* Quantity */}
                       <FormField
                         control={form.control}
@@ -572,7 +692,7 @@ export default function InvoiceFormEnhanced({
                       control={form.control}
                       name={`items.${index}.disableStockManagement`}
                       render={({ field }) => (
-                        <FormItem className="mt-2 flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormItem className="mt-1 sm:mt-2 flex flex-row items-start space-x-2 sm:space-x-3 space-y-0 rounded-md border p-2 sm:p-4">
                           <FormControl>
                             <Checkbox
                               checked={field.value}
@@ -598,7 +718,7 @@ export default function InvoiceFormEnhanced({
                     control={form.control}
                     name={`items.${index}.description`}
                     render={({ field }) => (
-                      <FormItem className="mt-2">
+                      <FormItem className="mt-1 sm:mt-2">
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Textarea
@@ -615,19 +735,18 @@ export default function InvoiceFormEnhanced({
               ))}
               
               <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append({
-                  productId: '',
-                  quantity: 1,
-                  unitPrice: 0,
-                  description: '',
-                  disableStockManagement: false,
-                })}
-                disabled={isSubmitting}
-                className="w-full"
-              >
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append({
+                    productId: '',
+                    quantity: 1,
+                    unitPrice: 0,
+                    description: '',
+                    disableStockManagement: false,
+                  })}
+                  disabled={isSubmitting}
+                  className="w-full py-1 h-8 sm:h-10">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Item
               </Button>
@@ -636,27 +755,28 @@ export default function InvoiceFormEnhanced({
         </Card>
 
         {/* Tax and Discount */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-2">
+        <Card className="p-3 sm:p-6" ref={taxDiscountRef}>
+            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+            <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
               {/* Tax Rate */}
               <FormField
                 control={form.control}
                 name="taxRate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tax Rate (%)</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Tax Rate (%)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min="0"
                         max="100"
                         step="0.01"
+                        className="h-8 sm:h-10 text-xs sm:text-sm"
                         {...field}
                         disabled={isSubmitting}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
@@ -667,18 +787,19 @@ export default function InvoiceFormEnhanced({
                 name="discountRate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Discount Rate (%)</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Discount Rate (%)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min="0"
                         max="100"
                         step="0.01"
+                        className="h-8 sm:h-10 text-xs sm:text-sm"
                         {...field}
                         disabled={isSubmitting}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs sm:text-sm" />
                   </FormItem>
                 )}
               />
@@ -687,23 +808,24 @@ export default function InvoiceFormEnhanced({
         </Card>
 
         {/* Notes */}
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="p-3 sm:p-6" ref={notesRef}>
+            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
             <FormField
               control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel className="text-sm sm:text-base">Notes</FormLabel>
                   <FormControl>
                     <Textarea
                       rows={3}
                       placeholder="Additional notes for the invoice"
+                      className="text-xs sm:text-sm"
                       {...field}
                       disabled={isSubmitting}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs sm:text-sm" />
                 </FormItem>
               )}
             />
@@ -711,23 +833,23 @@ export default function InvoiceFormEnhanced({
         </Card>
 
         {/* Invoice Summary */}
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="text-lg font-medium mb-4">Invoice Summary</h3>
+        <Card className="p-3 sm:p-6" ref={summaryRef}>
+            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+            <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Invoice Summary</h3>
             <div className="space-y-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm sm:text-base">
                 <span>Subtotal:</span>
                 <span>{formatCurrency(totals.subtotal)}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm sm:text-base">
                 <span>Tax ({form.watch('taxRate')}%):</span>
                 <span>{formatCurrency(totals.taxAmount)}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm sm:text-base">
                 <span>Discount ({form.watch('discountRate')}%):</span>
                 <span>-{formatCurrency(totals.discountAmount)}</span>
               </div>
-              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+              <div className="flex justify-between font-bold text-base sm:text-lg pt-2 border-t">
                 <span>Total:</span>
                 <span>{formatCurrency(totals.total)}</span>
               </div>
@@ -735,16 +857,21 @@ export default function InvoiceFormEnhanced({
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-2 sm:gap-4">
           <Button
             type="button"
             variant="outline"
             onClick={() => router.push('/invoices')}
             disabled={isSubmitting}
+            className="text-xs sm:text-sm py-1 h-8 sm:h-10"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="text-xs sm:text-sm py-1 h-8 sm:h-10"
+          >
             {isSubmitting ? 'Creating...' : 'Create Invoice'}
           </Button>
         </div>

@@ -148,9 +148,9 @@ export default function CustomersPage() {
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p>Loading customers...</p>
+        <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground font-medium">Loading customers...</p>
         </div>
       </div>
     );
@@ -159,9 +159,14 @@ export default function CustomersPage() {
   if (error) {
     return (
       <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-4">Error: {error}</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-md p-6 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/30 shadow-sm">
+          <p className="text-red-500 mb-4 font-medium">Error: {error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="bg-red-500 hover:bg-red-600 transition-colors duration-200"
+          >
+            Try Again
+          </Button>
         </div>
       </div>
     );
@@ -169,37 +174,39 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-in fade-in duration-500">
         <div>
           <h1 className="text-3xl font-bold">Customers</h1>
           {userSubscription === 'FREE' && (
-            <p className="text-muted-foreground mt-1">
-              Used {customers.length} of {PLAN_LIMITS.FREE.customers} customers
+            <p className="text-muted-foreground mt-1 flex items-center">
+              <span className="inline-flex items-center">
+                Used <span className="font-medium mx-1">{customers.length}</span> of <span className="font-medium mx-1">{PLAN_LIMITS.FREE.customers}</span> customers
+              </span>
               {customers.length >= PLAN_LIMITS.FREE.customers && (
-                <span className="ml-2 text-orange-500 font-medium">
-                  (Limit reached - <Link href="/settings" className="underline">upgrade</Link> for unlimited)
+                <span className="ml-2 text-orange-500 font-medium flex items-center">
+                  (Limit reached - <Link href="/settings" className="underline hover:text-orange-600 transition-colors duration-200 ml-1">upgrade</Link> for unlimited)
                 </span>
               )}
             </p>
           )}
         </div>
-        <Button asChild>
-          <Link href="/customers/new">
-            <Plus className="mr-2 h-4 w-4" />
+        <Button asChild className="shadow-sm hover:shadow-md transition-all duration-300 bg-primary hover:bg-primary/90">
+          <Link href="/customers/new" className="group">
+            <Plus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
             New Customer
           </Link>
         </Button>
       </div>
       
-      <Card>
-        <CardHeader>
+      <Card className="hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
+        <CardHeader className="border-b">
           <CardTitle>Manage Customers</CardTitle>
           <CardDescription>
             View and manage all your customer details in one place
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4 flex items-center gap-2 animate-in fade-in duration-500">
             <div className="relative flex-grow">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -209,12 +216,12 @@ export default function CustomersPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="hover:bg-muted/80 transition-colors duration-200">
               <Filter className="h-4 w-4" />
             </Button>
           </div>
           
-          <div className="rounded-md border">
+          <div className="rounded-md border shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -234,54 +241,69 @@ export default function CustomersPage() {
                   </TableRow>
                 ) : (
                   filteredCustomers?.map((customer) => (
-                    <TableRow key={customer.id} className="cursor-pointer" onClick={() => handleCustomerSelect(customer.id)}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
+                    <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors duration-200 group" onClick={() => handleCustomerSelect(customer.id)}>
+                      <TableCell className="font-medium group-hover:text-primary transition-colors duration-200">{customer.name}</TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{customer.phoneNumber}</TableCell>
                       <TableCell>{formatRelativeDate(customer.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="hover:bg-muted/80 transition-colors duration-200">
                               <MoreHorizontal className="h-4 w-4" />
                               <span className="sr-only">Open menu</span>
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="animate-in fade-in-50 zoom-in-95 duration-100">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/invoices/new?customerId=${customer.id}`);
-                            }}>
-                              <FileText className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/invoices/new?customerId=${customer.id}`);
+                              }}
+                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                            >
+                              <FileText className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
                               Create Invoice
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              window.location.href = `mailto:${customer.email}`;
-                            }}>
-                              <Mail className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.location.href = `mailto:${customer.email}`;
+                              }}
+                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                            >
+                              <Mail className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
                               Send Email
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              window.location.href = `tel:${customer.phoneNumber}`;
-                            }}>
-                              <Phone className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.location.href = `tel:${customer.phoneNumber}`;
+                              }}
+                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                            >
+                              <Phone className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
                               Call
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/customers/${customer.id}/edit`);
-                            }}>
-                              <Edit className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/customers/${customer.id}/edit`);
+                              }}
+                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                            >
+                              <Edit className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600" onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCustomer(customer.id);
-                            }}>
-                              <Trash className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem 
+                              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors duration-200 cursor-pointer group" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCustomer(customer.id);
+                              }}
+                            >
+                              <Trash className="mr-2 h-4 w-4 group-hover:text-red-600 transition-transform duration-200 group-hover:scale-110" />
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>

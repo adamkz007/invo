@@ -382,11 +382,11 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Dashboard</h1>
       
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in duration-500">
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-            <div className="rounded-full p-2 bg-primary/10 dark:bg-primary/20">
+            <div className="rounded-full p-2 bg-primary/10 dark:bg-primary/20 shadow-sm">
               <FileText className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
@@ -398,10 +398,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20">
+            <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
               <Users className="h-5 w-5 text-accent dark:text-accent-foreground" />
             </div>
           </CardHeader>
@@ -413,10 +413,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <div className="rounded-full p-2 bg-secondary/10 dark:bg-secondary/20">
+            <div className="rounded-full p-2 bg-secondary/10 dark:bg-secondary/20 shadow-sm">
               <Package className="h-5 w-5 text-secondary-foreground" />
             </div>
           </CardHeader>
@@ -428,10 +428,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <div className="rounded-full p-2 bg-green-500/10 dark:bg-green-500/20">
+            <div className="rounded-full p-2 bg-green-500/10 dark:bg-green-500/20 shadow-sm">
               <DollarSign className="h-5 w-5 text-green-500 dark:text-green-400" />
             </div>
           </CardHeader>
@@ -444,45 +444,45 @@ export default function DashboardPage() {
         </Card>
       </div>
       
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="charts">Charts</TabsTrigger>
-          <TabsTrigger value="recent">Recent Invoices</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="overview" className="mt-8">
+          <TabsList className="grid w-full grid-cols-3 p-1 bg-muted/50 rounded-xl shadow-sm">
+            <TabsTrigger value="overview" className="transition-all duration-300">Overview</TabsTrigger>
+<TabsTrigger value="charts" className="transition-all duration-300">Charts</TabsTrigger>
+<TabsTrigger value="recent" className="transition-all duration-300">Recent Invoices</TabsTrigger>
+          </TabsList>
         
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-6 animate-in fade-in duration-500">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">
                   Invoice Status
                 </CardTitle>
-                <div className="rounded-full p-2 bg-muted/50 dark:bg-muted/30">
+                <div className="rounded-full p-2 bg-muted/50 dark:bg-muted/30 shadow-sm">
                   <ClipboardList className="h-5 w-5 text-muted-foreground dark:text-muted-foreground/80" />
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm dark:text-foreground/90">
+                  <div className="flex items-center justify-between text-sm dark:text-foreground/90 hover:bg-green-50 dark:hover:bg-green-900/10 p-1 rounded-md transition-colors duration-200">
                     <div className="flex items-center">
-                      <div className="mr-2 h-3 w-3 rounded-full bg-green-500 dark:bg-green-400 dark:ring-1 dark:ring-green-400/30"></div>
+                      <div className="mr-2 h-3 w-3 rounded-full bg-green-500 dark:bg-green-400 dark:ring-1 dark:ring-green-400/30 shadow-sm"></div>
                       <span>Paid</span>
                     </div>
                     <span className="font-medium">{formatCurrency(stats?.invoiceStats.paidAmount || 0, settings)}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm dark:text-foreground/90">
+                  <div className="flex items-center justify-between text-sm dark:text-foreground/90 hover:bg-amber-50 dark:hover:bg-amber-900/10 p-1 rounded-md transition-colors duration-200">
                     <div className="flex items-center">
-                      <div className="mr-2 h-3 w-3 rounded-full bg-amber-500 dark:bg-amber-400 dark:ring-1 dark:ring-amber-400/30"></div>
+                      <div className="mr-2 h-3 w-3 rounded-full bg-amber-500 dark:bg-amber-400 dark:ring-1 dark:ring-amber-400/30 shadow-sm"></div>
                       <span>Pending</span>
                     </div>
                     <span className="font-medium">
                       {formatCurrency(stats?.invoiceStats.pendingAmount || 0, settings)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-sm dark:text-foreground/90">
+                  <div className="flex items-center justify-between text-sm dark:text-foreground/90 hover:bg-red-50 dark:hover:bg-red-900/10 p-1 rounded-md transition-colors duration-200">
                     <div className="flex items-center">
-                      <div className="mr-2 h-3 w-3 rounded-full bg-red-500 dark:bg-red-400 dark:ring-1 dark:ring-red-400/30"></div>
+                      <div className="mr-2 h-3 w-3 rounded-full bg-red-500 dark:bg-red-400 dark:ring-1 dark:ring-red-400/30 shadow-sm"></div>
                       <span>Overdue</span>
                     </div>
                     <span className="font-medium">{formatCurrency(stats?.invoiceStats.overdueAmount || 0, settings)}</span>
@@ -526,7 +526,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
             
-            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
                 <CardDescription className="dark:text-muted-foreground/80">
@@ -536,23 +536,23 @@ export default function DashboardPage() {
               <CardContent className="grid gap-2">
                 <a 
                   href="/invoices/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30"
+                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-primary/10 dark:border-border/60 dark:hover:bg-primary/20 dark:hover:border-primary/30 group"
                 >
-                  <FileText className="mr-2 h-5 w-5 text-primary dark:text-primary/80" />
+                  <FileText className="mr-2 h-5 w-5 text-primary dark:text-primary/80 group-hover:scale-110 transition-transform duration-200" />
                   Create New Invoice
                 </a>
                 <a 
                   href="/customers/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30"
+                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent/10 dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30 group"
                 >
-                  <Users className="mr-2 h-5 w-5 text-accent dark:text-accent/80" />
+                  <Users className="mr-2 h-5 w-5 text-accent dark:text-accent/80 group-hover:scale-110 transition-transform duration-200" />
                   Add New Customer
                 </a>
                 <a 
                   href="/inventory/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30"
+                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-secondary/10 dark:border-border/60 dark:hover:bg-secondary/20 dark:hover:border-secondary/30 group"
                 >
-                  <Package className="mr-2 h-5 w-5 text-secondary dark:text-secondary/80" />
+                  <Package className="mr-2 h-5 w-5 text-secondary dark:text-secondary/80 group-hover:scale-110 transition-transform duration-200" />
                   Add New Product
                 </a>
               </CardContent>
@@ -767,7 +767,7 @@ export default function DashboardPage() {
         </TabsContent>
         
         <TabsContent value="recent">
-          <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+          <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg transition-all duration-300">
             <CardHeader>
               <CardTitle>Recent Invoices</CardTitle>
               <CardDescription className="dark:text-muted-foreground/80">
@@ -784,7 +784,7 @@ export default function DashboardPage() {
                   stats.invoiceStats.recentInvoices.map((invoice) => (
                     <div 
                       key={invoice.id} 
-                      className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 dark:border-border/60 dark:hover:bg-accent/10 transition-colors"
+                      className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 dark:border-border/60 dark:hover:bg-accent/10 transition-all duration-200 hover:shadow-sm hover:scale-[1.01]"
                       onClick={() => handleViewInvoice(invoice.id)}
                     >
                       <div className="space-y-1">
@@ -794,7 +794,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium dark:text-foreground/90">{formatCurrency(invoice.amount, settings)}</p>
-                        <div className="mt-1">
+                        <div className="mt-1 transition-transform duration-200 group-hover:scale-105">
                           {getStatusBadge(invoice.status, true)}
                         </div>
                       </div>
@@ -803,10 +803,10 @@ export default function DashboardPage() {
                 )}
                 <a 
                   href="/invoices" 
-                  className="inline-flex items-center text-sm font-medium text-primary hover:underline dark:text-primary/90 dark:hover:text-primary"
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline dark:text-primary/90 dark:hover:text-primary group transition-all duration-200"
                 >
                   View all invoices
-                  <ArrowUpRight className="ml-1 h-5 w-5" />
+                  <ArrowUpRight className="ml-1 h-5 w-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
                 </a>
               </div>
             </CardContent>

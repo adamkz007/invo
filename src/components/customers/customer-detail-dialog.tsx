@@ -88,7 +88,7 @@ export function CustomerDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md animate-in fade-in-50 zoom-in-95 duration-200 dark:bg-gradient-to-br dark:from-card dark:to-card/95">
         <DialogHeader>
           <DialogTitle>Customer Details</DialogTitle>
           <DialogDescription>
@@ -98,12 +98,19 @@ export function CustomerDetailDialog({
         
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary shadow-sm"></div>
+            <p className="ml-3 text-muted-foreground animate-pulse">Loading...</p>
           </div>
         ) : error ? (
           <div className="py-6 text-center">
-            <p className="text-red-500 mb-4">Error: {error}</p>
-            <Button variant="outline" onClick={fetchCustomerDetails}>Try Again</Button>
+            <p className="text-red-500 mb-4 font-medium">Error: {error}</p>
+            <Button 
+              variant="outline" 
+              onClick={fetchCustomerDetails}
+              className="hover:bg-red-50 hover:text-red-600 border-red-200 text-red-500 transition-colors duration-200"
+            >
+              Try Again
+            </Button>
           </div>
         ) : customer ? (
           <div className="py-4">
@@ -111,12 +118,12 @@ export function CustomerDetailDialog({
               <h3 className="text-2xl font-bold mb-1">{customer.name}</h3>
               
               <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
+                <div className="bg-muted/50 p-4 rounded-lg shadow-sm hover:shadow-md hover:bg-muted/80 transition-all duration-200">
                   <p className="text-sm text-muted-foreground">Total Purchases</p>
                   <p className="text-xl font-semibold">{formatCurrency(customer.totalPurchases, settings)}</p>
                 </div>
                 
-                <div className="bg-muted/50 p-4 rounded-lg">
+                <div className="bg-muted/50 p-4 rounded-lg shadow-sm hover:shadow-md hover:bg-muted/80 transition-all duration-200">
                   <p className="text-sm text-muted-foreground">Invoice Count</p>
                   <p className="text-xl font-semibold">{customer.invoiceCount}</p>
                 </div>
@@ -125,30 +132,30 @@ export function CustomerDetailDialog({
             
             <div className="flex flex-col gap-3">
               <Button 
-                className="w-full justify-start" 
+                className="w-full justify-start hover:shadow-md transition-all duration-200 group" 
                 onClick={handleCreateInvoice}
               >
-                <FileText className="mr-2 h-4 w-4" />
+                <FileText className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                 Create New Invoice
               </Button>
               
               <Button 
-                className="w-full justify-start" 
+                className="w-full justify-start hover:shadow-sm hover:bg-primary/10 transition-all duration-200 group" 
                 variant="outline" 
                 onClick={handleSendEmail}
                 disabled={!customer.email}
               >
-                <Mail className="mr-2 h-4 w-4" />
+                <Mail className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                 Send Email
               </Button>
               
               <Button 
-                className="w-full justify-start" 
+                className="w-full justify-start hover:shadow-sm hover:bg-primary/10 transition-all duration-200 group" 
                 variant="outline" 
                 onClick={handleCall}
                 disabled={!customer.phoneNumber}
               >
-                <Phone className="mr-2 h-4 w-4" />
+                <Phone className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                 Call
               </Button>
             </div>
@@ -156,12 +163,16 @@ export function CustomerDetailDialog({
         ) : null}
         
         <DialogFooter className="sm:justify-start">
-          <Button variant="secondary" onClick={onClose}>
-            <X className="mr-2 h-4 w-4" />
+          <Button 
+            variant="secondary" 
+            onClick={onClose}
+            className="hover:bg-muted/80 transition-colors duration-200 group"
+          >
+            <X className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
             Close
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

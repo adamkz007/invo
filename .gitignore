@@ -44,4 +44,4 @@ next-env.d.ts
 # database
 *.db
 *.db-journal
-/prisma/schema.prisma
+schema.prisma

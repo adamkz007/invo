@@ -175,7 +175,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-background/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
+          isScrolled ? 'bg-background/95 backdrop-blur-md shadow-md border-b border-border/50' : 'bg-transparent'
         }`}
       >
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -192,20 +192,20 @@ export default function LandingPage() {
             <span className={`text-xl font-bold ${isDarkMode ? 'text-white' : isScrolled ? 'text-foreground' : 'text-primary'}`}>Invo</span>
           </Link>
           
-          <div className="hidden md:flex items-center space-x-6">
-            <a href="#features" className="text-sm font-medium hover:text-primary">Features</a>
-            <a href="#pricing" className="text-sm font-medium hover:text-primary">Pricing</a>
-            <a href="#testimonials" className="text-sm font-medium hover:text-primary">Testimonials</a>
-            <Link href="/blog" className="text-sm font-medium hover:text-primary">Blog</Link>
-            <Link href="/login" className="text-sm font-medium hover:text-primary">Login</Link>
+          <div className="hidden md:flex items-center space-x-8">
+            <a href="#features" className="text-sm font-medium hover:text-primary transition-colors">Features</a>
+            <a href="#pricing" className="text-sm font-medium hover:text-primary transition-colors">Pricing</a>
+            <a href="#testimonials" className="text-sm font-medium hover:text-primary transition-colors">Testimonials</a>
+            <Link href="/blog" className="text-sm font-medium hover:text-primary transition-colors">Blog</Link>
+            <Link href="/login" className="text-sm font-medium hover:text-primary transition-colors">Login</Link>
             <Link href="/signup">
-              <Button size="sm">Sign Up Free</Button>
+              <Button size="sm" className="shadow-md hover:shadow-lg transition-shadow">Sign Up Free</Button>
             </Link>
           </div>
           
           <div className="md:hidden">
             <Link href="/signup">
-              <Button size="sm">Get Started</Button>
+              <Button size="sm" className="shadow-md hover:shadow-lg transition-shadow">Get Started</Button>
             </Link>
           </div>
         </div>
@@ -215,10 +215,10 @@ export default function LandingPage() {
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-24 overflow-hidden">
         {/* Background elements */}
         <div className="absolute top-0 right-0 -z-10 w-1/2 h-full">
-          <div className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full bg-primary/5 animate-pulse"></div>
-          <div className="absolute bottom-1/3 right-1/3 w-48 h-48 rounded-full bg-primary/10 animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full bg-primary/10 animate-pulse"></div>
+          <div className="absolute bottom-1/3 right-1/3 w-48 h-48 rounded-full bg-primary/15 animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
-        <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full bg-primary/5 animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full bg-primary/10 animate-pulse" style={{ animationDelay: '1.5s' }}></div>
         
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2 items-center">
@@ -228,14 +228,14 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="text-center md:text-left"
             >
-              <div className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full">
+              <div className="inline-block mb-4 px-4 py-1.5 bg-primary/15 rounded-full shadow-sm">
                 <span className="text-sm font-medium text-primary">Made for Malaysian freelancers & SMEs</span>
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
                 Invoicing that <span className="text-primary relative">
                   works for you
                   <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 5.5C47.6667 1.5 154.4 -1.9 199 5.5" stroke="#02228F" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M1 5.5C47.6667 1.5 154.4 -1.9 199 5.5" stroke="#02228F" strokeWidth="2.5" strokeLinecap="round"/>
                   </svg>
                 </span>
               </h1>
@@ -244,13 +244,13 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <Link href="/signup">
-                  <Button size="lg" className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
                     Start for Free
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
                 <a href="#features">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto border-primary/30 hover:border-primary/50 shadow-sm hover:shadow-md transition-all">
                     See How It Works
                   </Button>
                 </a>
@@ -258,7 +258,7 @@ export default function LandingPage() {
               <p className="mt-4 text-sm text-muted-foreground line-through">
                 No credit card required. 14-day free trial.
               </p>
-              <p className="mt-2 text-sm font-medium bg-green-100/40 text-green-800 px-3 py-1 rounded-full inline-block">
+              <p className="mt-2 text-sm font-medium bg-green-100/50 text-green-800 px-4 py-1.5 rounded-full inline-block shadow-sm border border-green-200/50">
                 We're in beta! Enjoy all features free for a limited time
               </p>
             </motion.div>
@@ -269,8 +269,8 @@ export default function LandingPage() {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="relative"
             >
-              <div className="relative rounded-lg overflow-hidden shadow-2xl">
-                <div className="bg-gradient-to-br from-primary/10 to-primary/5 absolute inset-0"></div>
+              <div className="relative rounded-xl overflow-hidden shadow-xl border border-primary/20">
+                <div className="bg-gradient-to-br from-primary/15 to-primary/5 absolute inset-0"></div>
                 {/* Desktop image */}
                 <div className="hidden md:block relative z-10">
                   <Image 
@@ -297,34 +297,37 @@ export default function LandingPage() {
               </div>
               
               {/* Floating elements for visual interest */}
-              <div className="absolute -top-6 -right-6 h-12 w-12 rounded-full bg-primary/20 animate-pulse"></div>
-              <div className="absolute -bottom-4 -left-4 h-8 w-8 rounded-full bg-primary/30 animate-pulse" style={{ animationDelay: '1s' }}></div>
+              <div className="absolute -top-6 -right-6 h-12 w-12 rounded-full bg-primary/30 animate-pulse shadow-md"></div>
+              <div className="absolute -bottom-4 -left-4 h-8 w-8 rounded-full bg-primary/40 animate-pulse shadow-md" style={{ animationDelay: '1s' }}></div>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Trusted By Section */}
-      <section className="py-12 bg-muted/50">
+      <section className="py-12 md:py-16 bg-muted/40 border-y border-muted/60">
         <div className="container mx-auto px-4">
-          <p className="text-center text-sm font-medium text-muted-foreground mb-6">
+          <p className="text-center text-sm font-medium text-muted-foreground mb-10">
             TRUSTED BY BUSINESSES LIKE YOURS
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 max-w-5xl mx-auto">
             <motion.div
               key="yspoa"
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.7 }}
               transition={{ delay: 0 * 0.1, duration: 0.5 }}
               whileHover={{ opacity: 1 }}
+              className="group"
             >
-              <Image 
-                src="/logos/yspoa.jpg" 
-                alt="YSPOA" 
-                width={100} 
-                height={50} 
-                className="object-contain"
-              />
+              <div className="p-4 bg-white/50 rounded-xl shadow-sm border border-muted/40 group-hover:border-primary/30 group-hover:shadow-md transition-all">
+                <Image 
+                  src="/logos/yspoa.jpg" 
+                  alt="YSPOA" 
+                  width={100} 
+                  height={50} 
+                  className="object-contain filter grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all"
+                />
+              </div>
             </motion.div>
             {['Service Pro', 'Creative Studio', 'Food Truck', 'Online Store'].map((company, index) => (
               <motion.div
@@ -333,9 +336,11 @@ export default function LandingPage() {
                 animate={{ opacity: 0.7 }}
                 transition={{ delay: (index + 1) * 0.1, duration: 0.5 }}
                 whileHover={{ opacity: 1 }}
-                className="text-xl font-bold text-muted-foreground"
+                className="text-xl font-bold text-muted-foreground group-hover:text-foreground transition-colors group"
               >
-                {company}
+                <div className="p-4 bg-white/50 rounded-xl shadow-sm border border-muted/40 group-hover:border-primary/30 group-hover:shadow-md transition-all">
+                  {company}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -351,7 +356,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full"
+              className="inline-block mb-4 px-4 py-1.5 bg-primary/15 rounded-full shadow-sm"
             >
               <span className="text-sm font-medium text-primary">Practical Tools for Real Businesses</span>
             </motion.div>
@@ -381,11 +386,11 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="mb-16 rounded-xl overflow-hidden shadow-lg border border-primary/30"
+            className="mb-16 rounded-xl overflow-hidden shadow-xl border border-primary/40"
           >
-            <div className="bg-gradient-to-r from-primary/20 to-primary/5 p-8 md:p-12 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-primary/25 to-primary/10 p-8 md:p-12 relative overflow-hidden">
               {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0 opacity-15">
                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                   <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
                     <circle cx="10" cy="10" r="1.5" fill="currentColor" />
@@ -394,11 +399,11 @@ export default function LandingPage() {
                 </svg>
               </div>
               {/* Circular Gradient */}
-              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary/20 blur-3xl"></div>
+              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary/30 blur-3xl"></div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
                 <div>
-                  <div className="p-3 bg-white rounded-full w-fit mb-6 shadow-md">
+                  <div className="p-3 bg-white rounded-full w-fit mb-6 shadow-md border border-primary/20">
                     <FileText className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="text-2xl md:text-3xl font-bold mb-4 text-primary">Simple Invoicing</h3>
@@ -406,25 +411,25 @@ export default function LandingPage() {
                     Create professional invoices in seconds with templates designed for small businesses. No accounting degree needed!
                   </p>
                   <ul className="space-y-3 mb-6">
-                    <li className="flex items-start">
-                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Create invoices in seconds</span>
+                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                      <span className="font-medium">Create invoices in seconds</span>
                     </li>
-                    <li className="flex items-start">
-                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Automated numbering and dating</span>
+                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                      <span className="font-medium">Automated numbering and dating</span>
                     </li>
-                    <li className="flex items-start">
-                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Send via email or generate PDFs</span>
+                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                      <span className="font-medium">Send via email or generate PDFs</span>
                     </li>
-                    <li className="flex items-start">
-                      <Check className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                      <span>Support partial payments, discounts, and taxes</span>
+                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                      <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                      <span className="font-medium">Support partial payments, discounts, and taxes</span>
                     </li>
                   </ul>
                   <Link href="/signup">
-                    <Button className="group bg-white text-primary hover:bg-primary hover:text-white">
+                    <Button className="group bg-white text-primary hover:bg-primary hover:text-white shadow-md hover:shadow-lg transition-all">
                       Try Simple Invoicing
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
@@ -433,35 +438,35 @@ export default function LandingPage() {
                 
                 {/* Invoice example - now visible on both mobile and desktop */}
                 <div className="relative">
-                  <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-xl hidden md:block"></div>
+                  <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/20 blur-xl hidden md:block"></div>
                   {/* Stacked background card */}
-                  <div className="absolute top-6 left-6 w-full h-full rounded-lg bg-white/60 shadow-lg border border-primary/10 z-0 scale-95"></div>
+                  <div className="absolute top-6 left-6 w-full h-full rounded-lg bg-white/70 shadow-lg border border-primary/20 z-0 scale-95"></div>
                   {/* Main invoice card */}
-                  <div className="rounded-lg bg-white/80 backdrop-blur-sm p-6 shadow-xl border border-primary/20 relative z-10 mt-8 md:mt-0">
-                    <div className="flex justify-between items-center mb-4 pb-4 border-b">
+                  <div className="rounded-lg bg-white/90 backdrop-blur-sm p-6 shadow-xl border border-primary/30 relative z-10 mt-8 md:mt-0">
+                    <div className="flex justify-between items-center mb-4 pb-4 border-b border-primary/20">
                       <div>
                         <h4 className="font-bold">Invoice #INV-2023-001</h4>
                         <p className="text-sm text-muted-foreground">Due: Mar 15, 2025</p>
                       </div>
-                      <div className="bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium">
+                      <div className="bg-primary/15 text-primary rounded-full px-3 py-1.5 text-xs font-medium border border-primary/20 shadow-sm">
                         Pending
                       </div>
                     </div>
                     <div className="space-y-3 mb-4">
-                      <div className="flex justify-between">
+                      <div className="flex justify-between p-2 hover:bg-muted/10 rounded-md transition-colors">
                         <span className="text-muted-foreground">Catering - Hi-Tea Package 250pax</span>
                         <span className="font-medium">RM2,500.00</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between p-2 hover:bg-muted/10 rounded-md transition-colors">
                         <span className="text-muted-foreground">Delivery - Lorry</span>
                         <span className="font-medium">RM350.00</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between p-2 hover:bg-muted/10 rounded-md transition-colors">
                         <span className="text-muted-foreground">Tents & Equipments</span>
                         <span className="font-medium">RM550.00</span>
                       </div>
                     </div>
-                    <div className="flex justify-between pt-3 border-t font-bold">
+                    <div className="flex justify-between pt-3 border-t border-primary/20 font-bold bg-muted/10 p-2 rounded-md">
                       <span>Total</span>
                       <span>RM3,500.00</span>
                     </div>
@@ -608,7 +613,7 @@ export default function LandingPage() {
       </section>
 
       {/* Roadmap/Timeline Section */}
-      <section id="timeline" className="py-20">
+      <section id="timeline" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -616,7 +621,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full"
+              className="inline-block mb-4 px-5 py-1.5 bg-primary/15 rounded-full shadow-sm border border-primary/20"
             >
               <span className="text-sm font-medium text-primary">Always Improving</span>
             </motion.div>
@@ -642,7 +647,7 @@ export default function LandingPage() {
           
           <div className="relative">
             {/* Vertical line for timeline */}
-            <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-0.5 bg-primary/20 transform md:translate-x-px hidden md:block"></div>
+            <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-1 bg-primary/30 transform md:translate-x-px hidden md:block"></div>
             
             <div className="space-y-12">
               {timelineItems.map((item, index) => (
@@ -656,22 +661,22 @@ export default function LandingPage() {
                 >
                   <div className={`md:flex items-center ${index % 2 === 0 ? '' : 'md:flex-row-reverse'}`}>
                     {/* Timeline dot */}
-                    <div className="absolute left-0 md:left-1/2 w-5 h-5 rounded-full bg-primary transform -translate-x-1/2 hidden md:block"></div>
+                    <div className="absolute left-0 md:left-1/2 w-6 h-6 rounded-full bg-primary shadow-md border-2 border-white transform -translate-x-1/2 hidden md:block"></div>
                     
                     {/* Content */}
-                    <div className={`md:w-1/2 ${index % 2 === 0 ? 'md:pr-12' : 'md:pl-12'} pl-8 md:pl-0 border-l md:border-0 border-primary/20`}>
-                      <div className="bg-card rounded-lg p-6 shadow-sm border relative">
+                    <div className={`md:w-1/2 ${index % 2 === 0 ? 'md:pr-12' : 'md:pl-12'} pl-8 md:pl-0 border-l md:border-0 border-primary/30`}>
+                      <div className="bg-white rounded-lg p-6 shadow-lg border border-primary/20 relative hover:shadow-xl transition-all hover:border-primary/30">
                         <div className="absolute top-0 right-0 mt-4 mr-4">
-                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                            item.status === 'Coming Soon' ? 'bg-yellow-100 text-yellow-800' :
-                            item.status === 'In Development' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
+                          <span className={`text-xs font-bold px-3 py-1.5 rounded-full shadow-sm border ${
+                            item.status === 'Coming Soon' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                            item.status === 'In Development' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                            'bg-gray-100 text-gray-800 border-gray-200'
                           }`}>
                             {item.status}
                           </span>
                         </div>
-                        <div className="text-sm font-bold text-primary mb-2">{item.date}</div>
-                        <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                        <div className="text-sm font-bold text-primary mb-2 bg-primary/10 inline-block px-3 py-1 rounded-md">{item.date}</div>
+                        <h3 className="text-xl font-bold mb-3 border-b border-primary/10 pb-2">{item.title}</h3>
                         <p className="text-muted-foreground">{item.description}</p>
                       </div>
                     </div>
@@ -684,7 +689,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 bg-muted/50">
+      <section className="py-20 bg-gradient-to-b from-muted/30 to-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -692,7 +697,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full"
+              className="inline-block mb-4 px-5 py-1.5 bg-primary/15 rounded-full shadow-sm border border-primary/20"
             >
               <span className="text-sm font-medium text-primary">Quick Setup</span>
             </motion.div>
@@ -742,18 +747,18 @@ export default function LandingPage() {
                 transition={{ delay: index * 0.2, duration: 0.5 }}
                 className="relative"
               >
-                <div className="bg-background rounded-lg p-8 shadow-sm border relative z-10">
-                  <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary font-bold text-lg mb-4">
+                <div className="bg-white rounded-lg p-8 shadow-lg border border-primary/20 relative z-10 hover:shadow-xl transition-all hover:border-primary/30 group">
+                  <div className="flex items-center justify-center h-14 w-14 rounded-full bg-primary/15 text-primary font-bold text-lg mb-5 shadow-sm border border-primary/20 group-hover:bg-primary/25 transition-colors">
                     {item.step}
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                  <h3 className="text-xl font-bold mb-3 border-b border-primary/10 pb-2 group-hover:text-primary transition-colors">{item.title}</h3>
                   <p className="text-muted-foreground">{item.description}</p>
                 </div>
                 
                 {/* Connector line */}
                 {index < 2 && (
-                  <div className="hidden md:block absolute top-1/2 left-full w-full h-0.5 bg-primary/20 z-0 -translate-y-1/2">
-                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2">
+                  <div className="hidden md:block absolute top-1/2 left-full w-full h-1 bg-primary/30 z-0 -translate-y-1/2">
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2 bg-white rounded-full p-1 shadow-md border border-primary/20">
                       <ChevronRight className="h-6 w-6 text-primary" />
                     </div>
                   </div>
@@ -762,11 +767,11 @@ export default function LandingPage() {
             ))}
           </div>
           
-          <div className="text-center mt-12">
+          <div className="text-center mt-16">
             <Link href="/signup">
-              <Button size="lg">
+              <Button size="lg" className="shadow-md hover:shadow-lg transition-all px-8 py-6 text-base">
                 Get Started Now
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </div>
@@ -774,7 +779,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20">
+      <section id="pricing" className="py-20 bg-muted/30 border-y border-border/40">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -782,7 +787,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full"
+              className="inline-block mb-4 px-5 py-2 bg-primary/15 rounded-full shadow-sm border border-primary/20"
             >
               <span className="text-sm font-medium text-primary">Affordable Plans</span>
             </motion.div>
@@ -814,14 +819,14 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1, duration: 0.5 }}
-                className={`rounded-lg p-8 border ${
+                className={`rounded-xl p-8 border bg-background/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 ${
                   plan.highlighted 
-                    ? 'border-primary shadow-lg relative' 
-                    : 'border-border shadow-sm'
+                    ? 'border-primary shadow-lg relative hover:border-primary/80' 
+                    : 'border-border/60 shadow-md hover:border-primary/30'
                 }`}
               >
                 {plan.highlighted && (
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md border border-primary/20">
                     MOST POPULAR
                   </div>
                 )}
@@ -833,16 +838,16 @@ export default function LandingPage() {
                 <p className="text-muted-foreground mb-6">{plan.description}</p>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start">
-                      <Check className="h-5 w-5 text-primary shrink-0 mr-2" />
-                      <span>{feature}</span>
+                    <li key={feature} className="flex items-start bg-muted/40 px-3 py-2 rounded-lg hover:bg-muted/60 transition-colors">
+                      <Check className="h-5 w-5 text-primary shrink-0 mr-3 mt-0.5" />
+                      <span className="font-medium">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Link href={plan.name === "Enterprise" ? "/contact" : "/signup"}>
                   <Button 
                     variant={plan.highlighted ? "default" : "outline"} 
-                    className="w-full"
+                    className={`w-full font-medium text-base transition-all duration-300 ${plan.highlighted ? 'shadow-md hover:shadow-lg' : 'hover:border-primary/50 hover:text-primary'}`}
                   >
                     {plan.cta}
                   </Button>
@@ -854,7 +859,7 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 bg-muted/50">
+      <section id="testimonials" className="py-20 bg-muted/50 border-b border-border/40">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -862,7 +867,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="inline-block mb-4 px-4 py-1 bg-primary/10 rounded-full"
+              className="inline-block mb-4 px-5 py-2 bg-primary/15 rounded-full shadow-sm border border-primary/20"
             >
               <span className="text-sm font-medium text-primary">Real Stories</span>
             </motion.div>
@@ -895,12 +900,12 @@ export default function LandingPage() {
               },
               {
                 quote: "The inventory tracking alone has saved me so much time. I always know what's in stock and what I need to order. It's like having an extra employee without the cost.",
-                author: "Michael Chen",
+                author: "Michael",
                 role: "Retail Shop Owner"
               },
               {
                 quote: "I was spending hours each week on invoicing. Now it takes minutes. The recurring invoice feature is a game-changer for my consulting business.",
-                author: "Emma Rodriguez",
+                author: "Emma",
                 role: "Marketing Consultant"
               }
             ].map((testimonial, index) => (
@@ -910,17 +915,17 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="bg-background rounded-lg p-6 shadow-sm border relative"
+                className="bg-background/90 backdrop-blur-sm rounded-xl p-6 shadow-md border border-border/60 relative hover:shadow-lg hover:border-primary/30 transition-all duration-300"
               >
-                <div className="absolute -top-3 left-6 transform rotate-45 w-6 h-6 bg-background border-t border-l border-border"></div>
+                <div className="absolute -top-3 left-6 transform rotate-45 w-6 h-6 bg-background border-t border-l border-border shadow-sm"></div>
                 <div className="mb-4 text-primary">
                   {[...Array(5)].map((_, i) => (
-                    <span key={i} className="text-yellow-500">★</span>
+                    <span key={i} className="text-yellow-500 text-lg">★</span>
                   ))}
                 </div>
-                <p className="mb-6 italic">"{testimonial.quote}"</p>
-                <div>
-                  <p className="font-bold">{testimonial.author}</p>
+                <p className="mb-6 italic font-medium">"{testimonial.quote}"</p>
+                <div className="border-t border-border/40 pt-4">
+                  <p className="font-bold text-primary">{testimonial.author}</p>
                   <p className="text-sm text-muted-foreground">{testimonial.role}</p>
                 </div>
               </motion.div>
@@ -930,9 +935,12 @@ export default function LandingPage() {
       </section>
 
       {/* Blog Posts */}
-      <section id="blog" className="py-20 bg-muted/30">
+      <section id="blog" className="py-20 bg-muted/30 border-b border-border/40">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
+            <div className="inline-block mb-4 px-5 py-2 bg-primary/15 rounded-full shadow-sm border border-primary/20">
+              <span className="text-sm font-medium text-primary">Latest Updates</span>
+            </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Latest from Our Blog</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Tips, insights and resources to help you manage your business finances better
@@ -944,40 +952,40 @@ export default function LandingPage() {
               <Link 
                 key={index}
                 href={`/blog/posts/${post.slug}`}
-                className="group bg-background rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow flex flex-col h-full"
+                className="group bg-background/90 backdrop-blur-sm rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col h-full border border-border/40 hover:border-primary/30"
               >
-                <div className="h-48 overflow-hidden">
+                <div className="h-48 overflow-hidden rounded-t-xl">
                   <Image
                     src={post.image}
                     alt={post.title}
                     width={600}
                     height={400}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.src = `https://placehold.co/600x400/02228F/ffffff?text=${encodeURIComponent(post.category)}`;
                     }}
                   />
                 </div>
-                <div className="p-5 flex flex-col flex-grow">
+                <div className="p-6 flex flex-col flex-grow">
                   <div className="mb-auto">
-                  <div className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-3">
+                  <div className="inline-block px-3 py-1.5 bg-primary/15 text-primary rounded-full text-xs font-medium mb-3 shadow-sm border border-primary/20">
                     {post.category}
                   </div>
-                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+                    <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">
                       {post.title}
                     </h3>
-                    <p className="text-muted-foreground line-clamp-2">
+                    <p className="text-muted-foreground line-clamp-2 mb-1">
                     {post.excerpt}
                   </p>
                   </div>
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
-                    <div className="flex items-center text-xs text-muted-foreground">
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-border/40">
+                    <div className="flex items-center text-xs text-muted-foreground bg-muted/40 px-2 py-1 rounded-md">
                     <Calendar className="h-3 w-3 mr-1" />
                     <span>{post.date}</span>
                   </div>
-                    <div className="text-primary font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform">
+                    <div className="text-primary font-medium text-sm flex items-center group-hover:translate-x-1.5 transition-transform duration-300">
                       Read More
-                      <ArrowRight className="h-4 w-4 ml-1" />
+                      <ArrowRight className="h-4 w-4 ml-1 group-hover:ml-2 transition-all duration-300" />
                 </div>
                   </div>
                 </div>
@@ -987,9 +995,9 @@ export default function LandingPage() {
           
           <div className="text-center mt-12">
             <Link href="/blog">
-              <Button variant="outline" size="lg">
+              <Button variant="outline" size="lg" className="shadow-sm hover:shadow-md hover:border-primary/50 hover:text-primary transition-all duration-300">
                 View All Articles
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:ml-3 transition-all duration-300" />
               </Button>
             </Link>
           </div>
@@ -1004,12 +1012,12 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="bg-primary text-primary-foreground rounded-lg p-8 md:p-12 text-center relative overflow-hidden"
+            className="bg-primary text-primary-foreground rounded-xl p-8 md:p-12 text-center relative overflow-hidden shadow-xl border border-primary/30"
           >
             {/* Decorative elements */}
             <div className="absolute top-0 left-0 w-full h-full">
-              <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5"></div>
-              <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-white/5"></div>
+              <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
             </div>
             
             <div className="relative z-10">
@@ -1018,15 +1026,15 @@ export default function LandingPage() {
                 Join thousands of small businesses that use Invo to save time, get paid faster, and look more professional.
               </p>
               <Link href="/signup">
-                <Button size="lg" variant="secondary" className="font-bold">
+                <Button size="lg" variant="secondary" className="font-bold shadow-md hover:shadow-lg transition-all duration-300 border border-white/20">
                   Start Your Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:ml-3 transition-all duration-300" />
                 </Button>
               </Link>
               <p className="mt-4 text-sm opacity-80 line-through">
                 No credit card required. 14-day free trial.
               </p>
-              <p className="mt-2 text-sm font-medium bg-white/20 rounded-full px-3 py-1 inline-block">
+              <p className="mt-2 text-sm font-medium bg-white/20 rounded-full px-4 py-1.5 inline-block shadow-md border border-white/10">
                 We're in beta! Enjoy all features free for a limited time
               </p>
             </div>
@@ -1035,48 +1043,42 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <footer className="py-10 pb-6 bg-muted/70 border-t border-border/40">
+        <div className="container mx-auto px-8 md:px-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <h3 className="font-bold mb-4">Product</h3>
+              <h3 className="font-bold mb-3 text-base border-b border-border/40 pb-1">Product</h3>
               <ul className="space-y-2">
-                <li><a href="#features" className="text-sm text-muted-foreground hover:text-primary">Features</a></li>
-                <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-primary">Pricing</a></li>
-                <li><a href="#timeline" className="text-sm text-muted-foreground hover:text-primary">Roadmap</a></li>
+                <li><a href="#features" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Features</a></li>
+                <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Pricing</a></li>
+                <li><a href="#timeline" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Roadmap</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-bold mb-4">Company</h3>
+              <h3 className="font-bold mb-3 text-base border-b border-border/40 pb-1">Company</h3>
               <ul className="space-y-2">
-                <li><Link href="/about" className="text-sm text-muted-foreground hover:text-primary">About</Link></li>
-                <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
-                <li><Link href="/contact" className="text-sm text-muted-foreground hover:text-primary">Contact</Link></li>
+                <li><Link href="/about" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">About</Link></li>
+                <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Blog</Link></li>
+                <li><Link href="/contact" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Contact</Link></li>
+                <li><Link href="/changelog" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Changelog</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-bold mb-4">Resources</h3>
+              <h3 className="font-bold mb-3 text-base border-b border-border/40 pb-1">Legal</h3>
               <ul className="space-y-2">
-                <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
-                <li><Link href="/changelog" className="text-sm text-muted-foreground hover:text-primary">Changelog</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold mb-4">Legal</h3>
-              <ul className="space-y-2">
-                <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary">Privacy</Link></li>
-                <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-primary">Terms</Link></li>
-                <li><Link href="/cookie-policy" className="text-sm text-muted-foreground hover:text-primary">Cookie Policy</Link></li>
+                <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Privacy</Link></li>
+                <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Terms</Link></li>
+                <li><Link href="/cookie-policy" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Cookie Policy</Link></li>
               </ul>
             </div>
           </div>
           
-          <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-4 md:mb-0">
-              <Image src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} alt="Invo Logo" width={32} height={32} className="h-8 w-auto mr-2" />
+          <div className="mt-8 pt-6 border-t border-border/40 flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center mb-4 md:mb-0 bg-background/60 px-4 py-1.5 rounded-full shadow-sm border border-border/30 hover:shadow-md transition-all duration-300">
+              <Image src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} alt="Invo Logo" width={32} height={32} className="h-7 w-auto mr-2" />
               <span className={`font-bold ${isDarkMode ? "text-white" : "text-primary"}`}>Invo</span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground bg-muted/50 px-4 py-1.5 rounded-full">
               © {new Date().getFullYear()} Invo. Created by Halogen Services (002897568-V)
             </p>
           </div>
