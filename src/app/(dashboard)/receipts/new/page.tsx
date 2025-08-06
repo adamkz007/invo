@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, TooltipCardTitle } from '@/components/ui/card';
 import { ArrowLeft, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -55,10 +55,9 @@ export default function NewReceiptPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Receipt Details</CardTitle>
-          <CardDescription>
-            Create a new receipt for a quick cash/card payment
-          </CardDescription>
+          <TooltipCardTitle tooltip="Create a new receipt for a quick cash/card payment">
+            Receipt Details
+          </TooltipCardTitle>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<div className="py-6 text-center">Loading form...</div>}>

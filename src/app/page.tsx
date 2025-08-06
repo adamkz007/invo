@@ -411,19 +411,19 @@ export default function LandingPage() {
                     Create professional invoices in seconds with templates designed for small businesses. No accounting degree needed!
                   </p>
                   <ul className="space-y-3 mb-6">
-                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                    <li className="flex items-start text-sm">
                       <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
                       <span className="font-medium">Create invoices in seconds</span>
                     </li>
-                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                    <li className="flex items-start text-sm">
                       <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
                       <span className="font-medium">Automated numbering and dating</span>
                     </li>
-                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                    <li className="flex items-start text-sm">
                       <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
                       <span className="font-medium">Send via email or generate PDFs</span>
                     </li>
-                    <li className="flex items-start bg-white/60 p-2.5 rounded-lg border border-primary/20 shadow-sm">
+                    <li className="flex items-start text-sm">
                       <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
                       <span className="font-medium">Support partial payments, discounts, and taxes</span>
                     </li>
@@ -904,7 +904,7 @@ export default function LandingPage() {
                 role: "Retail Shop Owner"
               },
               {
-                quote: "I was spending hours each week on invoicing. Now it takes minutes. The recurring invoice feature is a game-changer for my consulting business.",
+                quote: "I was spending hours each week on invoicing. Now it takes minutes!",
                 author: "Emma",
                 role: "Marketing Consultant"
               }

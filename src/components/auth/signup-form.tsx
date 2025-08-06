@@ -184,9 +184,6 @@ export default function SignUpForm() {
     <div className="space-y-4">
       <div className="text-center">
         <h2 className="text-2xl font-bold">Create an Account</h2>
-        <p className="text-sm text-muted-foreground mt-2">
-          Sign up to start using Invo for your invoicing needs
-        </p>
       </div>
 
       <Form {...form}>
@@ -199,7 +196,7 @@ export default function SignUpForm() {
                 <FormLabel>Full Name</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Enter your full name"
+                    placeholder="e.g Atan Mahmood"
                     {...field}
                     disabled={isLoading}
                   />
@@ -217,7 +214,7 @@ export default function SignUpForm() {
                 <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Enter your email address"
+                    placeholder="e.g atan@gmail.com"
                     type="email"
                     {...field}
                     disabled={isLoading}
@@ -236,7 +233,7 @@ export default function SignUpForm() {
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
                   <PhoneInput
-                    placeholder="Enter your phone number"
+                    placeholder="123456789"
                     {...field}
                     disabled={isLoading}
                   />
@@ -254,7 +251,6 @@ export default function SignUpForm() {
                 <FormLabel>Password</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Create a password"
                     type="password"
                     {...field}
                     disabled={isLoading}
@@ -297,7 +293,6 @@ export default function SignUpForm() {
                 <FormLabel>Confirm Password</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Confirm your password"
                     type="password"
                     {...field}
                     disabled={isLoading}

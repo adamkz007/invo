@@ -11,6 +11,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  TooltipCardTitle,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -218,10 +219,9 @@ export default function InventoryPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Products</CardTitle>
-          <CardDescription>
-            Manage your products and inventory
-          </CardDescription>
+          <TooltipCardTitle tooltip="Manage your products and inventory">
+            Products
+          </TooltipCardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex items-center justify-between">

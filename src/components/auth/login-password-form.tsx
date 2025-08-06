@@ -90,7 +90,7 @@ export default function LoginPasswordForm({ initialPhoneNumber = '+60' }: LoginP
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
                   <PhoneInput
-                    placeholder="Enter your phone number"
+                    placeholder="123456789"
                     {...field}
                     disabled={isLoading}
                   />
@@ -108,7 +108,6 @@ export default function LoginPasswordForm({ initialPhoneNumber = '+60' }: LoginP
                 <FormLabel>Password</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Enter your password"
                     type="password"
                     {...field}
                     disabled={isLoading}

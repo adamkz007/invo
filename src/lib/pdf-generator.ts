@@ -292,13 +292,31 @@ export async function downloadInvoicePDF(
     yOffset += 5;
   }
   
-  // Add address if available
-  if (invoice.customer.address) {
-    const addressLines = invoice.customer.address.split('\n');
-    addressLines.forEach((line: string) => {
-      doc.text(line, margin, customerY + yOffset);
-      yOffset += 5;
-    });
+  // Add address if available using individual fields
+  if (invoice.customer.street) {
+    doc.text(invoice.customer.street, margin, customerY + yOffset);
+    yOffset += 5;
+  }
+  
+  if (invoice.customer.city && invoice.customer.postcode) {
+    doc.text(`${invoice.customer.city}, ${invoice.customer.postcode}`, margin, customerY + yOffset);
+    yOffset += 5;
+  } else if (invoice.customer.city) {
+    doc.text(invoice.customer.city, margin, customerY + yOffset);
+    yOffset += 5;
+  } else if (invoice.customer.postcode) {
+    doc.text(invoice.customer.postcode, margin, customerY + yOffset);
+    yOffset += 5;
+  }
+  
+  if (invoice.customer.state) {
+    doc.text(invoice.customer.state, margin, customerY + yOffset);
+    yOffset += 5;
+  }
+  
+  if (invoice.customer.country) {
+    doc.text(invoice.customer.country, margin, customerY + yOffset);
+    yOffset += 5;
   }
   
   // Invoice details - Right side

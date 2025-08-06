@@ -31,7 +31,6 @@ export default function SignUpPage() {
             />
             <h1 className={`text-3xl font-bold ${isDarkMode ? "text-white" : ""}`}>Invo</h1>
           </div>
-          <p className="text-sm text-muted-foreground">Invoice Management Made Simple</p>
         </div>
 
         <SignUpForm />

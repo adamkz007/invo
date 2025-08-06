@@ -122,13 +122,14 @@ export async function register({
     });
     console.log('User created successfully with ID:', user.id);
 
-    // Create a basic company record for the user with their email
+    // Create a basic company record for the user with their email and phone number
     console.log('Creating company record for user');
     await prisma.company.create({
       data: {
         legalName: name, // Default to user's name initially
         ownerName: name,
         email: email,    // Use the user's email
+        phoneNumber: phoneNumber, // Use the user's phone number
         userId: user.id,
       },
     });

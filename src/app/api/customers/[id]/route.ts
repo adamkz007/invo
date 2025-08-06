@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = await Promise.resolve(params.id);
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -55,7 +55,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = await Promise.resolve(params.id);
     const customerData = await request.json();
     
     // Get auth token from cookies
@@ -146,7 +146,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = await Promise.resolve(params.id);
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -204,4 +204,4 @@ export async function DELETE(
       status: 500 
     });
   }
-} 
+}

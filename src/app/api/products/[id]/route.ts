@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = params.id;
+    const productId = await Promise.resolve(params.id);
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -55,7 +55,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = params.id;
+    const productId = await Promise.resolve(params.id);
     const productData = await request.json();
     
     // Get auth token from cookies
@@ -125,7 +125,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = params.id;
+    const productId = await Promise.resolve(params.id);
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -190,7 +190,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = params.id;
+    const productId = await Promise.resolve(params.id);
     const productData = await request.json();
     
     // Get auth token from cookies
@@ -260,4 +260,4 @@ export async function PATCH(
       status: 500 
     });
   }
-} 
+}

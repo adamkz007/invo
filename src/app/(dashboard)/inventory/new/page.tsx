@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, TooltipCardTitle } from '@/components/ui/card';
 import ProductForm from '@/components/inventory/product-form';
 import { ArrowLeft, Package } from 'lucide-react';
 import Link from 'next/link';
@@ -22,10 +22,9 @@ export default function NewProductPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Product Details</CardTitle>
-          <CardDescription>
-            Add a new product or service to your inventory
-          </CardDescription>
+          <TooltipCardTitle tooltip="Add a new product or service to your inventory">
+            Product Details
+          </TooltipCardTitle>
         </CardHeader>
         <CardContent>
           <ProductForm />

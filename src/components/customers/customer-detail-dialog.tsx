@@ -26,6 +26,14 @@ interface CustomerDetails {
   name: string;
   email: string | null;
   phoneNumber: string | null;
+  street: string | null;
+  city: string | null;
+  postcode: string | null;
+  state: string | null;
+  country: string | null;
+  registrationType: 'NRIC' | 'BRN' | 'Passport' | null;
+  registrationNumber: string | null;
+  taxIdentificationNumber: string | null;
   totalPurchases: number;
   paidPurchases: number;
   invoiceCount: number;
@@ -116,6 +124,42 @@ export function CustomerDetailDialog({
           <div className="py-4">
             <div className="mb-6">
               <h3 className="text-2xl font-bold mb-1">{customer.name}</h3>
+              
+              {customer.registrationType && customer.registrationNumber && (
+                <div className="text-sm text-muted-foreground mb-2">
+                  <span className="font-medium">{customer.registrationType}:</span> {customer.registrationNumber}
+                </div>
+              )}
+              
+              {customer.taxIdentificationNumber && (
+                <div className="text-sm text-muted-foreground mb-2">
+                  <span className="font-medium">TIN:</span> {customer.taxIdentificationNumber}
+                </div>
+              )}
+              
+              {customer.phoneNumber && (
+                <div className="text-sm text-muted-foreground mb-2">
+                  <span className="font-medium">Phone:</span> {customer.phoneNumber}
+                </div>
+              )}
+              
+              {customer.email && (
+                <div className="text-sm text-muted-foreground mb-2">
+                  <span className="font-medium">Email:</span> {customer.email}
+                </div>
+              )}
+              
+              <div className="text-sm text-muted-foreground mb-4">
+                <span className="font-medium">Address:</span><br />
+                {customer.street && <span>{customer.street}<br /></span>}
+                {customer.city && customer.postcode && (
+                  <span>
+                    {customer.city}, {customer.postcode}<br />
+                  </span>
+                )}
+                {customer.state && <span>{customer.state}<br /></span>}
+                {customer.country && <span>{customer.country}</span>}
+              </div>
               
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="bg-muted/50 p-4 rounded-lg shadow-sm hover:shadow-md hover:bg-muted/80 transition-all duration-200">

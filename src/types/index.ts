@@ -57,7 +57,14 @@ export interface CustomerFormValues {
   name: string;
   email?: string;
   phoneNumber?: string;
-  address?: string;
+  street?: string;
+  city?: string;
+  postcode?: string;
+  state?: string;
+  country?: string;
+  registrationType?: 'NRIC' | 'BRN' | 'Passport';
+  registrationNumber?: string;
+  taxIdentificationNumber?: string;
   notes?: string;
 }
 
@@ -111,7 +118,11 @@ export interface CustomerWithDetails {
   name: string;
   email: string;
   phoneNumber?: string;
-  address?: string;
+  street?: string;
+  city?: string;
+  postcode?: string;
+  state?: string;
+  country?: string;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -149,7 +160,11 @@ export interface InvoiceWithDetails {
     name: string;
     email: string | null;
     phoneNumber: string | null;
-    address: string | null;
+    street: string | null;
+    city: string | null;
+    postcode: string | null;
+    state: string | null;
+    country: string | null;
   };
   issueDate: Date;
   dueDate: Date;

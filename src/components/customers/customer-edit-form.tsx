@@ -1,0 +1,348 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/toast';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { CustomerWithRelations } from '@/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Malaysia-specific phone number validation
+function isValidMalaysiaPhoneNumber(phone: string): boolean {
+  // Must start with Malaysia country code +60
+  if (!phone.startsWith('+60')) {
+    return false;
+  }
+  
+  // Get the number without country code
+  const numberWithoutCode = phone.substring(3);
+  
+  // Malaysia mobile numbers:
+  // - Must start with 1
+  // - Must be 9-10 digits after the country code
+  // - Common prefixes: 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+  return /^1[0-9]{8,9}$/.test(numberWithoutCode);
+}
+
+const customerEditSchema = z.object({
+  name: z.string().min(1, { message: 'Name is required' }),
+  email: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
+  phoneNumber: z.string()
+    .min(4, { message: 'Phone number is required' })
+    .refine(
+      (val) => isValidMalaysiaPhoneNumber(val),
+      { message: 'Please enter a valid Malaysian phone number (e.g. +60123456789)' }
+    ),
+  street: z.string().optional().or(z.literal('')),
+  city: z.string().optional().or(z.literal('')),
+  postcode: z.string().optional().or(z.literal('')),
+  state: z.string().optional().or(z.literal('')),
+  country: z.string().default('Malaysia'),
+  registrationType: z.enum(['NRIC', 'BRN', 'Passport']).default('NRIC'),
+  registrationNumber: z.string().optional().or(z.literal('')),
+  taxIdentificationNumber: z.string().optional().or(z.literal('')),
+  notes: z.string().optional().or(z.literal('')),
+});
+
+type CustomerEditFormValues = z.infer<typeof customerEditSchema>;
+
+interface CustomerEditFormProps {
+  customer: CustomerWithRelations;
+  onCustomerUpdated: (customer: CustomerWithRelations) => void;
+}
+
+export default function CustomerEditForm({ 
+  customer,
+  onCustomerUpdated 
+}: CustomerEditFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
+
+  const form = useForm<CustomerEditFormValues>({
+    resolver: zodResolver(customerEditSchema),
+    defaultValues: {
+      name: customer.name || '',
+      email: customer.email || '',
+      phoneNumber: customer.phoneNumber || '',
+      street: customer.street || '',
+      city: customer.city || '',
+      postcode: customer.postcode || '',
+      state: customer.state || '',
+      country: customer.country || 'Malaysia',
+      registrationType: (customer.registrationType as 'NRIC' | 'BRN' | 'Passport') || 'NRIC',
+      registrationNumber: customer.registrationNumber || '',
+      taxIdentificationNumber: customer.taxIdentificationNumber || '',
+      notes: customer.notes || '',
+    },
+  });
+
+  async function onSubmit(values: CustomerEditFormValues) {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/customers/${customer.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (response.status === 409) {
+        // Handle duplicate phone number error
+        const data = await response.json();
+        if (data.duplicatePhone) {
+          form.setError("phoneNumber", {
+            type: "manual",
+            message: "This phone number is already used by another customer"
+          });
+          showToast({
+            message: 'A customer with this phone number already exists',
+            variant: 'error',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to update customer');
+      }
+
+      const updatedCustomer = await response.json();
+      onCustomerUpdated(updatedCustomer);
+      showToast({
+        message: 'Customer updated successfully',
+        variant: 'success',
+      });
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      showToast({
+        message: 'Failed to update customer. Please try again.',
+        variant: 'error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input placeholder="Customer name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="registrationType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Registration Type</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select registration type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="NRIC">NRIC</SelectItem>
+                    <SelectItem value="BRN">BRN</SelectItem>
+                    <SelectItem value="Passport">Passport</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="registrationNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Registration No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="Registration number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <FormField
+          control={form.control}
+          name="taxIdentificationNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>TIN (Tax Identification Number)</FormLabel>
+              <FormControl>
+                <Input placeholder="Tax identification number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="Email address" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="phoneNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
+                <FormControl>
+                  <PhoneInput placeholder="Phone number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="street"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Street</FormLabel>
+                <FormControl>
+                  <Input placeholder="Street address" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City</FormLabel>
+                <FormControl>
+                  <Input placeholder="City" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="postcode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Postcode</FormLabel>
+                <FormControl>
+                  <Input placeholder="Postcode" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="state"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>State</FormLabel>
+                <FormControl>
+                  <Input placeholder="State" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <FormField
+          control={form.control}
+          name="country"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Country</FormLabel>
+              <FormControl>
+                <Input placeholder="Country" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Additional notes" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <div className="pt-4">
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Updating...' : 'Update Customer'}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}

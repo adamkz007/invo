@@ -37,10 +37,6 @@ export default function NewInvoicePage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Invoice Details</CardTitle>
-          <CardDescription>
-            Create a new invoice for your customer
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<div className="py-8 text-center">Loading form...</div>}>

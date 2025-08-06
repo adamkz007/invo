@@ -14,9 +14,11 @@ let mockCompanyStorage: Record<string, any> = {
     email: 'contact@democompany.com',
     phoneNumber: '123-456-7890',
     address: '123 Business Ave, Commerce City, Malaysia',
+    street: '123 Business Ave',
     addressLine1: '123 Business Ave',
     postcode: '50000',
     city: 'Commerce City',
+    state: 'Kuala Lumpur',
     country: 'Malaysia',
     termsAndConditions: 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
     paymentMethod: 'bank',
@@ -89,7 +91,9 @@ export async function GET(request: NextRequest) {
         if (!company) {
           // Check if we have mock data
           if (mockCompanyStorage[userId]) {
-            return NextResponse.json(mockCompanyStorage[userId]);
+            // Ensure mock data has address fields parsed
+            const parsedMockCompany = parseAddress(mockCompanyStorage[userId]);
+            return NextResponse.json(parsedMockCompany);
           }
           return NextResponse.json(null);
         }
@@ -107,7 +111,9 @@ export async function GET(request: NextRequest) {
     
     // Fall back to mock storage
     if (mockCompanyStorage[userId]) {
-      return NextResponse.json(mockCompanyStorage[userId]);
+      // Ensure mock data has address fields parsed
+      const parsedMockCompany = parseAddress(mockCompanyStorage[userId]);
+      return NextResponse.json(parsedMockCompany);
     }
     
     return NextResponse.json(null);
@@ -178,6 +184,11 @@ export async function POST(request: NextRequest) {
                 email: data.email,
                 phoneNumber: data.phoneNumber,
                 address: combinedAddress,
+                street: data.addressLine1 || data.street,
+                city: data.city,
+                postcode: data.postcode,
+                state: data.state,
+                country: data.country || 'Malaysia',
                 termsAndConditions: data.termsAndConditions,
                 paymentMethod: data.paymentMethod,
                 bankAccountName: data.bankAccountName,
@@ -200,6 +211,11 @@ export async function POST(request: NextRequest) {
                 email: data.email,
                 phoneNumber: data.phoneNumber,
                 address: combinedAddress,
+                street: data.addressLine1 || data.street,
+                city: data.city,
+                postcode: data.postcode,
+                state: data.state,
+                country: data.country || 'Malaysia',
                 termsAndConditions: data.termsAndConditions,
                 paymentMethod: data.paymentMethod,
                 bankAccountName: data.bankAccountName,
@@ -256,9 +272,11 @@ export async function POST(request: NextRequest) {
       email: data.email || 'contact@democompany.com',
       phoneNumber: data.phoneNumber || '123-456-7890',
       address: combinedAddress || '123 Business Ave, Commerce City, Malaysia',
-      addressLine1: data.addressLine1 || '123 Business Ave',
+      street: data.street || data.addressLine1 || '123 Business Ave',
+      addressLine1: data.addressLine1 || data.street || '123 Business Ave',
       postcode: data.postcode || '50000',
       city: data.city || 'Commerce City',
+      state: data.state || 'Kuala Lumpur',
       country: data.country || 'Malaysia',
       termsAndConditions: data.termsAndConditions || 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
       paymentMethod: data.paymentMethod || 'bank',
@@ -291,15 +309,36 @@ export async function POST(request: NextRequest) {
 
 // Format address from separate fields into a single combined address
 function formatAddress(data: any): string {
-  if (!data.addressLine1) {
+  // If no street/addressLine1 data is available, return existing address
+  if (!data.street && !data.addressLine1) {
     return data.address || '';
   }
   
-  // Format address with addressLine1 and a combined line for postcode, city, country
-  const addressParts = [
-    data.addressLine1,
-    `${data.postcode || ''} ${data.city || ''}${data.country ? ', ' + data.country : ''}`
-  ];
+  // Use street if available, otherwise use addressLine1
+  const streetAddress = data.street || data.addressLine1;
+  
+  // Build address parts array
+  const addressParts = [streetAddress];
+  
+  // Add city and postcode
+  let locationPart = '';
+  if (data.postcode || data.city) {
+    locationPart = `${data.postcode || ''} ${data.city || ''}`.trim();
+  }
+  
+  // Add state if available
+  if (data.state) {
+    locationPart = locationPart ? `${locationPart}, ${data.state}` : data.state;
+  }
+  
+  // Add country if available
+  if (data.country) {
+    locationPart = locationPart ? `${locationPart}, ${data.country}` : data.country;
+  }
+  
+  if (locationPart) {
+    addressParts.push(locationPart);
+  }
   
   // Join with comma, then clean up any consecutive commas or trailing commas
   let formattedAddress = addressParts.join(', ');
@@ -315,8 +354,28 @@ function formatAddress(data: any): string {
 
 // Parse a single address string into separate fields
 function parseAddress(company: any): any {
-  if (company.addressLine1) {
-    return company; // Already has separate fields
+  // If company already has all separate fields, return it as is
+  if (company.street && company.city && company.postcode) {
+    return company;
+  }
+  
+  // If company has addressLine1 but not street, use addressLine1 as street
+  if (company.addressLine1 && !company.street) {
+    company.street = company.addressLine1;
+  }
+  
+  // If company already has separate fields but not addressLine1, set it for backward compatibility
+  if (company.street && !company.addressLine1) {
+    company.addressLine1 = company.street;
+  }
+  
+  // If company has all separate fields but not address, we don't need to parse
+  if (company.street && company.city && company.postcode) {
+    // Ensure address is set for backward compatibility
+    if (!company.address) {
+      company.address = formatAddress(company);
+    }
+    return company;
   }
   
   const address = company.address || '';
@@ -324,19 +383,22 @@ function parseAddress(company: any): any {
   // Split by comma to get address parts
   const addressParts = address.split(',').map((part: string) => part.trim());
   
-  // Need at least 2 parts: addressLine1 and location (postcode city, country)
+  // Need at least 2 parts: street and location (postcode city, country)
   if (addressParts.length < 2) {
     return {
       ...company,
-      addressLine1: addressParts[0] || '',
-      postcode: '',
-      city: '',
-      country: 'Malaysia'
+      street: company.street || addressParts[0] || '',
+      addressLine1: company.addressLine1 || addressParts[0] || '',
+      postcode: company.postcode || '',
+      city: company.city || '',
+      state: company.state || '',
+      country: company.country || 'Malaysia'
     };
   }
   
-  // Get addressLine1 from first part
-  const addressLine1 = addressParts[0];
+  // Get street from first part
+  const street = company.street || addressParts[0];
+  const addressLine1 = company.addressLine1 || addressParts[0];
   
   // Try to parse the postcode, city and country from the second part
   const locationPart = addressParts[1];
@@ -344,24 +406,30 @@ function parseAddress(company: any): any {
   // Split location by commas to separate country
   const locationParts = locationPart.split(',').map((part: string) => part.trim());
   
-  let postcode = '';
-  let city = '';
-  let country = 'Malaysia';
+  let postcode = company.postcode || '';
+  let city = company.city || '';
+  let state = company.state || '';
+  let country = company.country || 'Malaysia';
   
   if (locationParts.length > 1) {
-    // If location has comma, the last part is country
-    country = locationParts[locationParts.length - 1] || 'Malaysia';
+    // Last part is country
+    country = company.country || locationParts[locationParts.length - 1] || 'Malaysia';
     
-    // The first part contains postcode and city
+    // Everything else is city and postcode
     const cityPostcodePart = locationParts[0];
     
-    // Try to extract postcode (assuming it starts with numbers)
+    // Try to extract postcode (assuming it's numeric and at the beginning)
     const postcodeMatch = cityPostcodePart.match(/^(\d+)/);
     if (postcodeMatch) {
-      postcode = postcodeMatch[0];
-      city = cityPostcodePart.replace(postcode, '').trim();
+      postcode = company.postcode || postcodeMatch[0];
+      city = company.city || cityPostcodePart.replace(postcodeMatch[0], '').trim();
     } else {
-      city = cityPostcodePart;
+      city = company.city || cityPostcodePart;
+    }
+    
+    // If there's a middle part, it might be the state
+    if (locationParts.length > 2) {
+      state = company.state || locationParts[1];
     }
   } else {
     // No comma in location, assume it's just postcode + city
@@ -370,18 +438,20 @@ function parseAddress(company: any): any {
     // Try to extract postcode (assuming it starts with numbers)
     const postcodeMatch = cityPostcodePart.match(/^(\d+)/);
     if (postcodeMatch) {
-      postcode = postcodeMatch[0];
-      city = cityPostcodePart.replace(postcode, '').trim();
+      postcode = company.postcode || postcodeMatch[0];
+      city = company.city || cityPostcodePart.replace(postcodeMatch[0], '').trim();
     } else {
-      city = cityPostcodePart;
+      city = company.city || cityPostcodePart;
     }
   }
   
   return {
     ...company,
+    street: street,
     addressLine1: addressLine1 || '',
     postcode: postcode || '',
     city: city || '',
+    state: state || '',
     country: country || 'Malaysia'
   };
-} 
+}

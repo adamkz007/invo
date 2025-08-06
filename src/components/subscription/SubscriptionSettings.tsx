@@ -378,9 +378,6 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
             {isSubscribed && <Badge className="bg-green-500">Premium</Badge>}
             {!isInTrial && !isSubscribed && <Badge>Free</Badge>}
           </CardTitle>
-          <CardDescription>
-            Manage your subscription and billing
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

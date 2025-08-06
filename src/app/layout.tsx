@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Serif_Text, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/providers/toast-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SettingsProvider } from '@/contexts/settings-context';
 import { PWAProvider } from "@/components/providers/pwa-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSerifText = DM_Serif_Text({
+  variable: "--font-dm-serif",
+  weight: ["400"],
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const openSans = Open_Sans({
+  variable: "--font-open-sans",
   subsets: ["latin"],
 });
 
@@ -59,7 +60,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${dmSerifText.variable} ${openSans.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"

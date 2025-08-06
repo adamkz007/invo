@@ -153,6 +153,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-receipts-module-enabled': settings.enableReceiptsModule ? 'true' : 'false'
         },
         body: JSON.stringify(receiptData),
       });

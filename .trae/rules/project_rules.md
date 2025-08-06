@@ -1,0 +1,1 @@
+1. When a development server is restarted, kill any existing instances first.

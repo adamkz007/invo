@@ -48,7 +48,6 @@ const customerFormSchema = z.object({
       (val) => isValidMalaysiaPhoneNumber(val),
       { message: 'Please enter a valid Malaysian phone number (e.g. +60123456789)' }
     ),
-  address: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   userId: z.string().optional(),
 });
@@ -73,7 +72,6 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
       name: '',
       email: '',
       phoneNumber: '',
-      address: '',
       notes: '',
       userId: '',
     },
@@ -212,27 +210,7 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
             )}
           />
 
-          {/* Address */}
-          <FormField
-            control={form.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address (optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter address"
-                    {...field}
-                    disabled={isSubmitting}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Business address for invoicing
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Address fields are now handled separately in the database */}
         </div>
 
         {/* Notes */}

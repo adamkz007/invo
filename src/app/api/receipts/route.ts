@@ -133,7 +133,19 @@ export const receipts = global._receipts;
  * but this API implementation is using mock data for simplicity.
  * In a production environment, this would use Prisma to query the database.
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // Since we can't access localStorage from the server,
+  // we need to rely on a different approach
+  
+  // Check for a custom header that the client can send to indicate module status
+  const headers = new Headers(request.headers);
+  const moduleEnabled = headers.get('x-receipts-module-enabled');
+  
+  // If the header explicitly says the module is disabled, return empty array
+  if (moduleEnabled === 'false') {
+    return NextResponse.json([]);
+  }
+  
   return NextResponse.json(receipts);
 }
 
@@ -147,6 +159,18 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
+    // Check for module status header
+    const headers = new Headers(request.headers);
+    const moduleEnabled = headers.get('x-receipts-module-enabled');
+    
+    // If the header explicitly says the module is disabled, return error
+    if (moduleEnabled === 'false') {
+      return NextResponse.json(
+        { error: 'Receipts module is disabled' },
+        { status: 403 }
+      );
+    }
+    
     const data = await request.json();
     
     // Generate a receipt number with "RCT-" prefix and 6 random alphanumeric characters
@@ -200,4 +224,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

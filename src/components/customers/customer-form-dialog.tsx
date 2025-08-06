@@ -27,6 +27,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { PhoneInput } from '@/components/ui/phone-input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Malaysia-specific phone number validation
 function isValidMalaysiaPhoneNumber(phone: string): boolean {
@@ -54,7 +61,14 @@ const customerFormSchema = z.object({
       (val) => isValidMalaysiaPhoneNumber(val),
       { message: 'Please enter a valid Malaysian phone number (e.g. +60123456789)' }
     ),
-  address: z.string().optional().or(z.literal('')),
+  street: z.string().optional().or(z.literal('')),
+  city: z.string().optional().or(z.literal('')),
+  postcode: z.string().optional().or(z.literal('')),
+  state: z.string().optional().or(z.literal('')),
+  country: z.string().default('Malaysia'),
+  registrationType: z.enum(['NRIC', 'BRN', 'Passport']).default('NRIC'),
+  registrationNumber: z.string().optional().or(z.literal('')),
+  taxIdentificationNumber: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
   userId: z.string(),
 });
@@ -82,7 +96,14 @@ export default function CustomerFormDialog({
       name: '',
       email: '',
       phoneNumber: '',
-      address: '',
+      street: '',
+      city: '',
+      postcode: '',
+      state: '',
+      country: 'Malaysia',
+      registrationType: 'NRIC',
+      registrationNumber: '',
+      taxIdentificationNumber: '',
       notes: '',
       userId,
     },
@@ -186,19 +207,138 @@ export default function CustomerFormDialog({
               </FormItem>
             )}
           />
+
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="street"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Street</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Street address" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input placeholder="City" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="postcode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Postcode</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Postcode" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <FormControl>
+                    <Input placeholder="State" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
           <FormField
             control={form.control}
-            name="address"
+            name="country"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Address (optional)</FormLabel>
+                <FormLabel>Country</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Customer address" {...field} />
+                  <Input placeholder="Country" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="registrationType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Registration Type</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select registration type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="NRIC">NRIC</SelectItem>
+                      <SelectItem value="BRN">BRN</SelectItem>
+                      <SelectItem value="Passport">Passport</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="registrationNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Registration No.</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Registration number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="taxIdentificationNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>TIN (Tax Identification Number)</FormLabel>
+                <FormControl>
+                  <Input placeholder="Tax identification number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
           <FormField
             control={form.control}
             name="notes"
@@ -282,19 +422,138 @@ export default function CustomerFormDialog({
                 </FormItem>
               )}
             />
+            {/* Address is now handled using individual fields (street, city, postcode, state, country) */}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="street"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Street address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="postcode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Postcode</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Postcode" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Input placeholder="State" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <FormField
               control={form.control}
-              name="address"
+              name="country"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address (optional)</FormLabel>
+                  <FormLabel>Country</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Customer address" {...field} />
+                    <Input placeholder="Country" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="registrationType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Registration Type</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select registration type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="NRIC">NRIC</SelectItem>
+                        <SelectItem value="BRN">BRN</SelectItem>
+                        <SelectItem value="Passport">Passport</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="registrationNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Registration No.</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Registration number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="taxIdentificationNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>TIN (Tax Identification Number)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Tax identification number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="notes"
@@ -318,4 +577,4 @@ export default function CustomerFormDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

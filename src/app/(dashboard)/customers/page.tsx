@@ -11,6 +11,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  TooltipCardTitle,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -200,10 +201,9 @@ export default function CustomersPage() {
       
       <Card className="hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
         <CardHeader className="border-b">
-          <CardTitle>Manage Customers</CardTitle>
-          <CardDescription>
-            View and manage all your customer details in one place
-          </CardDescription>
+          <TooltipCardTitle tooltip="View and manage all your customer details in one place">
+            Manage Customers
+          </TooltipCardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex items-center gap-2 animate-in fade-in duration-500">

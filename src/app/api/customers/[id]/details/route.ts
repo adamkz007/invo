@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const customerId = params.id;
+    const customerId = await Promise.resolve(params.id);
     
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
@@ -44,6 +44,27 @@ export async function GET(
       }
     });
     
+    // Type assertion to include the new fields
+    type CustomerWithInvoices = {
+      id: string;
+      name: string;
+      email: string | null;
+      phoneNumber: string | null;
+      street: string | null;
+      city: string | null;
+      postcode: string | null;
+      state: string | null;
+      country: string | null;
+      registrationType: string | null;
+      registrationNumber: string | null;
+      taxIdentificationNumber: string | null;
+      notes: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      userId: string;
+      invoices: { id: string; status: string; total: number; }[];
+    };
+    
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
@@ -59,15 +80,25 @@ export async function GET(
     // Count total invoices
     const invoiceCount = customer.invoices.length;
     
+    // Cast customer to include all the fields we need to return
+    const customerWithAllFields = customer as CustomerWithInvoices;
+    
     return NextResponse.json({
-      id: customer.id,
-      name: customer.name,
-      email: customer.email,
-      phoneNumber: customer.phoneNumber,
-      address: customer.address,
-      notes: customer.notes,
-      createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt,
+      id: customerWithAllFields.id,
+      name: customerWithAllFields.name,
+      email: customerWithAllFields.email,
+      phoneNumber: customerWithAllFields.phoneNumber,
+      street: customerWithAllFields.street,
+      city: customerWithAllFields.city,
+      postcode: customerWithAllFields.postcode,
+      state: customerWithAllFields.state,
+      country: customerWithAllFields.country,
+      registrationType: customerWithAllFields.registrationType,
+      registrationNumber: customerWithAllFields.registrationNumber,
+      taxIdentificationNumber: customerWithAllFields.taxIdentificationNumber,
+      notes: customerWithAllFields.notes,
+      createdAt: customerWithAllFields.createdAt,
+      updatedAt: customerWithAllFields.updatedAt,
       totalPurchases,
       paidPurchases,
       invoiceCount
@@ -80,4 +111,4 @@ export async function GET(
       status: 500 
     });
   }
-} 
+}

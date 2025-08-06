@@ -39,6 +39,18 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   try {
+    // Check for module status header
+    const headers = new Headers(request.headers);
+    const moduleEnabled = headers.get('x-receipts-module-enabled');
+    
+    // If the header explicitly says the module is disabled, return 404
+    if (moduleEnabled === 'false') {
+      return NextResponse.json(
+        { error: 'Receipt not found or module disabled' },
+        { status: 404 }
+      );
+    }
+    
     // Get the receipt ID from the route parameters
     const { id } = context.params;
     
@@ -61,4 +73,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, TooltipCardTitle } from "@/components/ui/card";
 import { ArrowLeft, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -35,10 +35,9 @@ export default function NewCustomerPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Customer Details</CardTitle>
-          <CardDescription>
-            Add a new customer to your business contacts. Only Name and Phone Number are required.
-          </CardDescription>
+          <TooltipCardTitle tooltip="Add a new customer to your business contacts. Only Name and Phone Number are required.">
+            Customer Details
+          </TooltipCardTitle>
         </CardHeader>
         <CardContent>
           {/* Import and render the dialog form directly */}

@@ -113,7 +113,11 @@ export default function ReceiptsPage() {
 
   const handleViewReceipt = (receipt: ReceiptWithDetails) => {
     // Fetch the complete receipt details with items
-    fetch(`/api/receipts/${receipt.id}`)
+    fetch(`/api/receipts/${receipt.id}`, {
+      headers: {
+        'x-receipts-module-enabled': settings.enableReceiptsModule ? 'true' : 'false'
+      }
+    })
       .then(response => {
         if (!response.ok) {
           throw new Error('Failed to fetch complete receipt details');
@@ -136,7 +140,11 @@ export default function ReceiptsPage() {
 
   const handleDownloadPDF = (receipt: ReceiptWithDetails) => {
     // Ensure we fetch the complete receipt with items
-    fetch(`/api/receipts/${receipt.id}`)
+    fetch(`/api/receipts/${receipt.id}`, {
+      headers: {
+        'x-receipts-module-enabled': settings.enableReceiptsModule ? 'true' : 'false'
+      }
+    })
       .then(response => {
         if (!response.ok) {
           throw new Error('Failed to fetch complete receipt details');
@@ -286,7 +294,12 @@ function ReceiptsList({
     async function fetchReceipts() {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/receipts');
+        // Include module status in the request header
+        const response = await fetch('/api/receipts', {
+          headers: {
+            'x-receipts-module-enabled': settings.enableReceiptsModule ? 'true' : 'false'
+          }
+        });
         
         if (!response.ok) {
           throw new Error('Failed to fetch receipts');
@@ -306,7 +319,7 @@ function ReceiptsList({
     }
     
     fetchReceipts();
-  }, [showToast]);
+  }, [showToast, settings.enableReceiptsModule]);
 
   // Filter receipts based on search term
   const filteredReceipts = receipts.filter(receipt => {
@@ -406,4 +419,4 @@ function ReceiptsList({
       </TableBody>
     </Table>
   );
-} 
+}

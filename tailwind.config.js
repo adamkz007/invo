@@ -17,6 +17,10 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-open-sans)", "sans-serif"],
+        serif: ["var(--font-dm-serif)", "serif"],
+      },
       colors: {
         border: "var(--border)",
         input: "var(--input)",
@@ -77,4 +81,4 @@ module.exports = {
     require("tailwindcss-animate"),
     require('@tailwindcss/typography'),
   ],
-} 
+}

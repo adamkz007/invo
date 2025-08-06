@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { TooltipCardTitle } from "./tooltip-card-title"
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -89,4 +90,5 @@ export {
   CardAction,
   CardDescription,
   CardContent,
+  TooltipCardTitle,
 }

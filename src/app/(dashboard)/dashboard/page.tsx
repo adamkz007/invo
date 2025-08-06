@@ -445,7 +445,7 @@ export default function DashboardPage() {
       </div>
       
       <Tabs defaultValue="overview" className="mt-8">
-          <TabsList className="grid w-full grid-cols-3 p-1 bg-muted/50 rounded-xl shadow-sm">
+          <TabsList className="grid w-full grid-cols-3 p-1 bg-muted rounded-xl shadow-sm">
             <TabsTrigger value="overview" className="transition-all duration-300">Overview</TabsTrigger>
 <TabsTrigger value="charts" className="transition-all duration-300">Charts</TabsTrigger>
 <TabsTrigger value="recent" className="transition-all duration-300">Recent Invoices</TabsTrigger>
@@ -831,8 +831,22 @@ export default function DashboardPage() {
                   {selectedInvoice.customer.phoneNumber && (
                     <p className="text-sm text-muted-foreground dark:text-muted-foreground/80">{selectedInvoice.customer.phoneNumber}</p>
                   )}
-                  {selectedInvoice.customer.address && (
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground/80 whitespace-pre-line">{selectedInvoice.customer.address}</p>
+                  {/* Display address using individual fields */}
+                  {(selectedInvoice.customer.street || selectedInvoice.customer.city || selectedInvoice.customer.postcode || selectedInvoice.customer.state || selectedInvoice.customer.country) && (
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground/80 whitespace-pre-line">
+                      {selectedInvoice.customer.street && <p>{selectedInvoice.customer.street}</p>}
+                      {selectedInvoice.customer.city && selectedInvoice.customer.postcode && (
+                        <p>{selectedInvoice.customer.city}, {selectedInvoice.customer.postcode}</p>
+                      )}
+                      {selectedInvoice.customer.city && !selectedInvoice.customer.postcode && (
+                        <p>{selectedInvoice.customer.city}</p>
+                      )}
+                      {!selectedInvoice.customer.city && selectedInvoice.customer.postcode && (
+                        <p>{selectedInvoice.customer.postcode}</p>
+                      )}
+                      {selectedInvoice.customer.state && <p>{selectedInvoice.customer.state}</p>}
+                      {selectedInvoice.customer.country && <p>{selectedInvoice.customer.country}</p>}
+                    </div>
                   )}
                 </div>
                 

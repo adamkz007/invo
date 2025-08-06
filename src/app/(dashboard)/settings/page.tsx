@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, TooltipCardTitle } from "@/components/ui/card"
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,6 +47,7 @@ const companyFormSchema = z.object({
   addressLine1: z.string().min(1, { message: 'Address line 1 is required' }),
   postcode: z.string().min(1, { message: 'Postcode is required' }),
   city: z.string().min(1, { message: 'City is required' }),
+  state: z.string().optional(),
   country: z.string().default('Malaysia'),
   termsAndConditions: z.string().optional(),
   paymentMethod: z.enum(['bank', 'qr']).optional(),
@@ -106,6 +107,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
       addressLine1: '',
       postcode: '',
       city: '',
+      state: '',
       country: 'Malaysia',
       termsAndConditions: '',
       paymentMethod: undefined,
@@ -159,9 +161,10 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
             taxIdentificationNumber: data.taxIdentificationNumber || '',
             email: data.email || '',
             phoneNumber: data.phoneNumber || '',
-            addressLine1: data.addressLine1 || '',
+            addressLine1: data.street || data.addressLine1 || '',
             postcode: data.postcode || '',
             city: data.city || '',
+            state: data.state || '',
             country: data.country || 'Malaysia',
             termsAndConditions: data.termsAndConditions || '',
             paymentMethod: data.paymentMethod || undefined,
@@ -347,10 +350,9 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Business Details</CardTitle>
-              <CardDescription>
-                Information about your business that will appear on your invoices
-              </CardDescription>
+              <TooltipCardTitle tooltip="Information about your business that will appear on your invoices">
+                Business Details
+              </TooltipCardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -467,9 +469,6 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                                 placeholder="Enter business phone number"
                               />
                             </FormControl>
-                            <FormDescription>
-                              This will be shown on your invoices
-                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -477,7 +476,10 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                     </div>
                     
                     <div className="mb-4">
-                      <h3 className="text-sm font-medium mb-2">Business Address</h3>
+                      <TooltipCardTitle tooltip="This information will be displayed on your invoices">
+                Business Address
+              </TooltipCardTitle>
+                      <br></br>
                       <div className="grid gap-4">
                         <FormField
                           control={form.control}
@@ -537,6 +539,24 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         
                         <FormField
                           control={form.control}
+                          name="state"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>State</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  disabled={isSaving}
+                                  placeholder="State"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
                           name="country"
                           render={({ field }) => (
                             <FormItem>
@@ -590,11 +610,10 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                     />
                     
                     <div className="mb-4">
-                      <h3 className="text-sm font-medium mb-2">Payment Information</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        This information will be displayed on your invoices to let your customers know how to pay you
-                      </p>
-                      
+              <TooltipCardTitle tooltip="This information will be displayed on your invoices to let your customers know how to pay you">
+                Payment Information
+              </TooltipCardTitle>
+                      <br></br>
                       <FormField
                         control={form.control}
                         name="paymentMethod"
@@ -716,10 +735,9 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                     
                     <Card className="bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900">
                       <CardHeader>
-                        <CardTitle>e-Invoicing</CardTitle>
-                        <CardDescription>
-                          Information required for Malaysia's e-invoicing compliance
-                        </CardDescription>
+                        <TooltipCardTitle tooltip="Information required for Malaysia's e-invoicing compliance">
+                          e-Invoicing
+                        </TooltipCardTitle>
                       </CardHeader>
                       <CardContent>
                         <FormField
@@ -765,10 +783,9 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
           
           <Card>
             <CardHeader>
-              <CardTitle>Currency Settings</CardTitle>
-              <CardDescription>
-                Set your default currency for invoices
-              </CardDescription>
+              <TooltipCardTitle tooltip="Set your default payment method & currency">
+                Payments & Currency
+              </TooltipCardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -806,10 +823,9 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
           
           <Card>
             <CardHeader>
-              <CardTitle>Module Settings</CardTitle>
-              <CardDescription>
-                Enable or disable optional modules
-              </CardDescription>
+              <TooltipCardTitle tooltip="Enable or disable optional modules">
+                Module Settings
+              </TooltipCardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -852,4 +868,4 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
       </div>
     </div>
   );
-} 
+}

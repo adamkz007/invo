@@ -434,8 +434,22 @@ export default function InvoicesPage() {
               {selectedInvoice?.customer.phoneNumber && (
                 <p className="text-sm text-muted-foreground">{selectedInvoice.customer.phoneNumber}</p>
               )}
-              {selectedInvoice?.customer.address && (
-                <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedInvoice.customer.address}</p>
+              {/* Display address using individual fields */}
+              {(selectedInvoice?.customer.street || selectedInvoice?.customer.city || selectedInvoice?.customer.postcode || selectedInvoice?.customer.state || selectedInvoice?.customer.country) && (
+                <div className="text-sm text-muted-foreground whitespace-pre-line">
+                  {selectedInvoice?.customer.street && <p>{selectedInvoice.customer.street}</p>}
+                  {selectedInvoice?.customer.city && selectedInvoice?.customer.postcode && (
+                    <p>{selectedInvoice.customer.city}, {selectedInvoice.customer.postcode}</p>
+                  )}
+                  {selectedInvoice?.customer.city && !selectedInvoice?.customer.postcode && (
+                    <p>{selectedInvoice.customer.city}</p>
+                  )}
+                  {!selectedInvoice?.customer.city && selectedInvoice?.customer.postcode && (
+                    <p>{selectedInvoice.customer.postcode}</p>
+                  )}
+                  {selectedInvoice?.customer.state && <p>{selectedInvoice.customer.state}</p>}
+                  {selectedInvoice?.customer.country && <p>{selectedInvoice.customer.country}</p>}
+                </div>
               )}
             </div>
             
