@@ -39,7 +39,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency, format } from '@/lib/utils';
-import { downloadReceiptPDF } from '@/lib/pdf-generator';
+// Dynamic import for PDF generator to reduce bundle size
+// import { downloadReceiptPDF } from '@/lib/pdf-generator';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
@@ -82,11 +83,6 @@ export default function ReceiptsPage() {
     }
   }, [settings.enableReceiptsModule, router, showToast]);
 
-  // If receipts module is disabled, return null to avoid rendering anything
-  if (!settings.enableReceiptsModule) {
-    return null;
-  }
-
   // Fetch company details
   useEffect(() => {
     async function fetchCompanyDetails() {
@@ -110,6 +106,11 @@ export default function ReceiptsPage() {
     
     fetchCompanyDetails();
   }, [showToast]);
+
+  // If receipts module is disabled, return null to avoid rendering anything
+  if (!settings.enableReceiptsModule) {
+    return null;
+  }
 
   const handleViewReceipt = (receipt: ReceiptWithDetails) => {
     // Fetch the complete receipt details with items
@@ -138,30 +139,32 @@ export default function ReceiptsPage() {
       });
   };
 
-  const handleDownloadPDF = (receipt: ReceiptWithDetails) => {
-    // Ensure we fetch the complete receipt with items
-    fetch(`/api/receipts/${receipt.id}`, {
-      headers: {
-        'x-receipts-module-enabled': settings.enableReceiptsModule ? 'true' : 'false'
-      }
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch complete receipt details');
+  const handleDownloadPDF = async (receipt: ReceiptWithDetails) => {
+    try {
+      // Dynamic import of PDF generator to reduce initial bundle size
+      const { downloadReceiptPDF } = await import('@/lib/pdf-generator');
+      
+      // Ensure we fetch the complete receipt with items
+      const response = await fetch(`/api/receipts/${receipt.id}`, {
+        headers: {
+          'x-receipts-module-enabled': settings.enableReceiptsModule ? 'true' : 'false'
         }
-        return response.json();
-      })
-      .then(completeReceipt => {
-        // Download PDF using the receipt-to-PDF function
-        downloadReceiptPDF(completeReceipt, companyDetails, settings);
-      })
-      .catch(error => {
-        console.error('Error generating receipt PDF:', error);
-        showToast({
-          variant: 'error',
-          message: 'Could not generate receipt PDF'
-        });
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch complete receipt details');
+      }
+      
+      const completeReceipt = await response.json();
+      // Download PDF using the receipt-to-PDF function
+      downloadReceiptPDF(completeReceipt, companyDetails, settings);
+    } catch (error) {
+      console.error('Error generating receipt PDF:', error);
+      showToast({
+        variant: 'error',
+        message: 'Could not generate receipt PDF'
+      });
+    }
   };
 
   return (

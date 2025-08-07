@@ -88,9 +88,11 @@ export default function AboutPage() {
               ].map((member) => (
                 <div key={member.name} className="text-center">
                   <div className="w-32 h-32 mx-auto rounded-full overflow-hidden mb-4">
-                    <img 
+                    <Image 
                       src={member.image} 
                       alt={member.name}
+                      width={128}
+                      height={128}
                       className="w-full h-full object-cover"
                     />
                   </div>

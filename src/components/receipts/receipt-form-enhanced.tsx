@@ -22,8 +22,8 @@ import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { ProductWithRelations, ReceiptFormValues } from '@/types';
 import { useSettings } from '@/contexts/settings-context';
 import { useToast } from '@/components/ui/toast';
-import ProductFormDialog from '@/components/products/product-form-dialog';
-import { ReactDatePickerComponent } from '@/components/ui/react-date-picker';
+// import ProductFormDialog from '@/components/products/product-form-dialog';
+import { ShadcnDatePickerComponent } from '@/components/ui/shadcn-date-picker';
 
 // Form validation schema
 const receiptFormSchema = z.object({
@@ -56,6 +56,9 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
     total: 0,
   });
   
+  // Dynamic component state
+  const [ProductFormDialog, setProductFormDialog] = useState<React.ComponentType<any> | null>(null);
+  
   const router = useRouter();
   const { settings } = useSettings();
   const { showToast } = useToast();
@@ -84,6 +87,13 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
 
     fetchProducts();
   }, [showToast]);
+  
+  // Dynamically load ProductFormDialog
+  useEffect(() => {
+    import('@/components/products/product-form-dialog').then(module => {
+      setProductFormDialog(() => module.default);
+    });
+  }, []);
 
   // Initialize form with default values or new receipt values
   const form = useForm<ReceiptFormValues>({
@@ -298,7 +308,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
 
         {/* Receipt Date */}
         <div className="p-4 border rounded-md bg-muted/10">
-          <ReactDatePickerComponent
+          <ShadcnDatePickerComponent
             name="receiptDate"
             label="Receipt Date"
             disabled={isSubmitting}
@@ -312,10 +322,12 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
         <div className="p-4 border rounded-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Receipt Items</h3>
-            <ProductFormDialog 
-              userId="1" 
-              onProductCreated={handleProductCreated} 
-            />
+            {ProductFormDialog && (
+              <ProductFormDialog 
+                userId="1" 
+                onProductCreated={handleProductCreated} 
+              />
+            )}
           </div>
           
           <div className="space-y-4">

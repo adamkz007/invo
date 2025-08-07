@@ -14,6 +14,13 @@ export default function ChangelogPage() {
         <p className="text-muted-foreground mb-8">See what's new and improved in Invo.</p>
         <div className="space-y-10">
           <div>
+            <h2 className="text-xl font-bold mb-2">v1.2.1</h2>
+            <ul className="list-disc pl-6 space-y-2 text-base">
+              <li>Fixes on Receipt module</li>
+              <li>Slight performance & UI improvements</li>
+            </ul>
+          </div>
+          <div>
             <h2 className="text-xl font-bold mb-2">v1.2</h2>
             <ul className="list-disc pl-6 space-y-2 text-base">
               <li>Improved Dark Mode</li>

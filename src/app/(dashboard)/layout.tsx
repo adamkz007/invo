@@ -3,7 +3,7 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -53,7 +53,7 @@ interface CompanyDetails {
   qrImageUrl?: string;
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+const DashboardLayout = memo(function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,8 +82,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isInitialLoad]);
   
-  // Fetch company details from the API
-  const fetchCompanyDetails = async () => {
+  // Fetch company details from the API - memoized to prevent recreation
+  const fetchCompanyDetails = useCallback(async () => {
     try {
       const response = await fetch('/api/company');
       if (response.ok) {
@@ -97,33 +97,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
       router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
     }
-  };
+  }, [router]);
 
-  const baseNavigationItems = [
+  // Memoize base navigation items to prevent recreation
+  const baseNavigationItems = useMemo(() => [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Invoices', href: '/invoices', icon: FileText },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Settings', href: '/settings', icon: Settings },
-  ];
+  ], []);
   
-  // Add Receipts menu item if enabled in settings
-  const navigationItems = settings.enableReceiptsModule 
-    ? [
-        ...baseNavigationItems.slice(0, 2), 
-        { name: 'Receipts', href: '/receipts', icon: Receipt },
-        ...baseNavigationItems.slice(2)
-      ]
-    : baseNavigationItems;
+  // Add Receipts menu item if enabled in settings - memoized
+  const navigationItems = useMemo(() => {
+    return settings.enableReceiptsModule 
+      ? [
+          ...baseNavigationItems.slice(0, 2), 
+          { name: 'Receipts', href: '/receipts', icon: Receipt },
+          ...baseNavigationItems.slice(2)
+        ]
+      : baseNavigationItems;
+  }, [settings.enableReceiptsModule, baseNavigationItems]);
 
   // Show loading state or login redirect
   if (loading) {
@@ -277,4 +280,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ProfileNotification />
     </div>
   );
-}
+});
+
+DashboardLayout.displayName = 'DashboardLayout';
+
+export default DashboardLayout;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { mockReceipts, receipts } from '../route';
+import { receipts } from '../route';
 
 // Define a Receipt type to match the mock data structure
 interface ReceiptItem {
@@ -27,12 +27,11 @@ interface Receipt {
   createdAt: Date;
 }
 
+// Import Prisma client for database operations
+import { prisma } from '@/lib/prisma';
+
 /**
- * GET /api/receipts/[id] - Get a single receipt by ID
- * 
- * Note: The database schema has been updated with Receipt and ReceiptItem models,
- * but this API implementation is using mock data for simplicity.
- * In a production environment, this would use Prisma to query the database.
+ * GET /api/receipts/[id] - Get a single receipt by ID from the database
  */
 export async function GET(
   request: Request,
@@ -51,21 +50,45 @@ export async function GET(
       );
     }
     
-    // Get the receipt ID from the route parameters
-    const { id } = context.params;
+    // Get the receipt ID from the route parameters - using await to fix the warning
+    const params = await context.params;
+    const id = params.id;
     
-    // Find the receipt with the given ID from all receipts (both mock and created)
-    const receipt = receipts.find((r: Receipt) => r.id === id);
+    // Find the receipt with the given ID from the database
+    const receipt = await prisma.receipt.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
+      }
+    });
     
     if (!receipt) {
-      console.log(`Receipt with ID ${id} not found`);
-      return NextResponse.json(
-        { error: 'Receipt not found' },
-        { status: 404 }
-      );
+      // If not found in database, try the in-memory array as fallback
+      const memoryReceipt = receipts.find((r: Receipt) => r.id === id);
+      
+      if (!memoryReceipt) {
+        console.log(`Receipt with ID ${id} not found in database or memory`);
+        return NextResponse.json(
+          { error: 'Receipt not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json(memoryReceipt);
     }
     
-    return NextResponse.json(receipt);
+    // Add any fields needed for backward compatibility
+    const enhancedReceipt = {
+      ...receipt,
+      invoiceId: null, // These fields aren't in the database schema
+      orderNumber: null // but might be expected by the client
+    };
+    
+    return NextResponse.json(enhancedReceipt);
   } catch (error) {
     console.error('Error fetching receipt:', error);
     return NextResponse.json(

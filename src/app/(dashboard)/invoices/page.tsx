@@ -45,7 +45,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency, format, formatRelativeDate, calculateDueDays } from '@/lib/utils';
-import { downloadInvoicePDF, downloadReceiptPDF } from '@/lib/pdf-generator';
+// Dynamic import for PDF generator to reduce bundle size
+// import { downloadInvoicePDF, downloadReceiptPDF } from '@/lib/pdf-generator';
 import { InvoiceWithDetails } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
@@ -206,52 +207,82 @@ export default function InvoicesPage() {
       });
   };
 
-  const handleDownloadPDF = (invoice: InvoiceWithDetails) => {
-    // Fetch full invoice details with items before generating PDF
-    fetch(`/api/invoices/${invoice.id}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch complete invoice details for PDF');
-        }
-        return response.json();
-      })
-      .then(completeInvoice => {
-        // Pass complete invoice data with items to the PDF generator
-        downloadInvoicePDF(completeInvoice, companyDetails);
-      })
-      .catch(error => {
-        console.error('Error fetching invoice for PDF:', error);
+  const handleDownloadPDF = async (invoice: InvoiceWithDetails) => {
+    try {
+      // Dynamic import of PDF generator to reduce initial bundle size
+      const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
+      
+      // Fetch full invoice details with items before generating PDF
+      const response = await fetch(`/api/invoices/${invoice.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch complete invoice details for PDF');
+      }
+      
+      const completeInvoice = await response.json();
+      // Pass complete invoice data with items to the PDF generator
+      downloadInvoicePDF(completeInvoice, companyDetails);
+    } catch (error) {
+      console.error('Error fetching invoice for PDF:', error);
         showToast({
           variant: 'error',
           message: 'Could not generate PDF with complete data'
         });
         // Fall back to using the original invoice data
-        downloadInvoicePDF(invoice, companyDetails);
-      });
+        const { downloadInvoicePDF: fallbackDownloadInvoicePDF } = await import('@/lib/pdf-generator');
+        fallbackDownloadInvoicePDF(invoice, companyDetails);
+    }
   };
 
-  const handleGenerateReceipt = (invoice: InvoiceWithDetails) => {
-    // Fetch full invoice details with items before generating receipt
-    fetch(`/api/invoices/${invoice.id}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch complete invoice details for receipt');
-        }
-        return response.json();
-      })
-      .then(completeInvoice => {
-        // Pass complete invoice data with items to the receipt generator
-        downloadReceiptPDF(completeInvoice, companyDetails, settings);
-      })
-      .catch(error => {
-        console.error('Error fetching invoice for receipt:', error);
-        showToast({
-          variant: 'error',
-          message: 'Could not generate receipt with complete data'
+  const handleGenerateReceipt = async (invoice: InvoiceWithDetails) => {
+    try {
+      // First, check if receipts module is enabled and if a receipt already exists for this paid invoice
+      if (settings.enableReceiptsModule && invoice.status === 'PAID') {
+        const receiptsResponse = await fetch(`/api/receipts?invoiceId=${invoice.invoiceNumber}`, {
+          headers: {
+            'x-receipts-module-enabled': 'true'
+          }
         });
-        // Fall back to using the original invoice data
-        downloadReceiptPDF(invoice, companyDetails, settings);
+        
+        if (receiptsResponse.ok) {
+          const existingReceipts = await receiptsResponse.json();
+          
+          // If a receipt exists for this invoice, download that instead
+          if (existingReceipts.length > 0) {
+            const existingReceipt = existingReceipts[0]; // Get the first (most recent) receipt
+            
+            // Dynamic import of PDF generator
+            const { downloadReceiptPDF } = await import('@/lib/pdf-generator');
+            
+            // Download the existing receipt
+            downloadReceiptPDF(existingReceipt, companyDetails, settings);
+            return;
+          }
+        }
+      }
+      
+      // If receipts module is disabled, no existing receipt found, or invoice is not paid, generate a new receipt
+      // Dynamic import of PDF generator to reduce initial bundle size
+      const { downloadReceiptPDF } = await import('@/lib/pdf-generator');
+      
+      // Fetch full invoice details with items before generating receipt
+      const response = await fetch(`/api/invoices/${invoice.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch complete invoice details for receipt');
+      }
+      
+      const completeInvoice = await response.json();
+      // Pass complete invoice data with items to the receipt generator
+      downloadReceiptPDF(completeInvoice, companyDetails, settings);
+    } catch (error) {
+      console.error('Error fetching invoice for receipt:', error);
+      showToast({
+        variant: 'error',
+        message: 'Could not generate receipt with complete data'
       });
+      // Fall back to using the original invoice data
+      const { downloadReceiptPDF: fallbackDownloadReceiptPDF } = await import('@/lib/pdf-generator');
+      fallbackDownloadReceiptPDF(invoice, companyDetails, settings);
+    }
   };
 
   const handleCancelInvoice = async (invoice: InvoiceWithDetails) => {

@@ -921,16 +921,17 @@ export async function downloadInvoicePDF(
   }
 
   // Save the PDF
-  doc.save(`invoice-${invoice.invoiceNumber}.pdf`);
+  doc.save(`${invoice.invoiceNumber}.pdf`);
 }
 
 /**
- * Generate and download a receipt for a paid invoice
+ * Generate and download a receipt for a paid invoice or standalone receipt
  */
 export async function downloadReceiptPDF(
   invoice: InvoiceWithDetails, 
   companyDetails: CompanyDetails | null = null,
-  settings: AppSettings = defaultSettings
+  settings: AppSettings = defaultSettings,
+  receiptData?: any // Optional receipt-specific data
 ): Promise<void> {
   // Create a new PDF document with elongated receipt size (80mm width, taller height)
   const doc = new jsPDF({
@@ -949,27 +950,53 @@ export async function downloadReceiptPDF(
   // Set monospace font for the whole receipt
   doc.setFont('courier', 'normal');
   
-  // Format dates properly
+  // Format dates properly with validation
   const formatDate = (date: Date | string) => {
-    if (typeof date === 'string') {
-      date = new Date(date);
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) {
+        return new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+      }
+      return dateObj.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      });
+    } catch (error) {
+      return new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      });
     }
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
-    });
   };
   
   const formatTime = (date: Date | string) => {
-    if (typeof date === 'string') {
-      date = new Date(date);
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) {
+        return new Date().toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+      }
+      return dateObj.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+    } catch (error) {
+      return new Date().toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+      });
     }
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: true 
-    });
   };
   
   // Company header & BRN (centered)
@@ -1004,10 +1031,27 @@ export async function downloadReceiptPDF(
   doc.text(companyDetails?.phoneNumber || '888-888-8888', pageWidth / 2, yPos, { align: 'center' });
   yPos += 8;
   
-  // Order number (centered and bold)
+  // Receipt number (centered and bold) - use proper logic for invoice vs cash receipts
   doc.setFontSize(10);
   doc.setFont('courier', 'bold');
-  doc.text(`Order: ${invoice.invoiceNumber}`, pageWidth / 2, yPos, { align: 'center' });
+  
+  // Determine receipt number based on receipt type
+  let receiptNumber: string;
+  if (receiptData?.receiptNumber) {
+    // This is a standalone receipt - use the receipt number
+    receiptNumber = receiptData.receiptNumber;
+  } else if ((invoice as any).receiptNumber) {
+    // This is a receipt object passed as invoice - use its receipt number
+    receiptNumber = (invoice as any).receiptNumber;
+  } else {
+    // This is from an invoice - use the invoice number with RCT prefix
+    // Add null check to prevent TypeError
+    receiptNumber = invoice.invoiceNumber 
+      ? `RCT-${invoice.invoiceNumber.replace(/^INV-/, '')}` 
+      : 'RCT-UNKNOWN';
+  }
+  
+  doc.text(`Receipt No.: ${receiptNumber}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 8;
   
   // Host and date information
@@ -1056,7 +1100,56 @@ export async function downloadReceiptPDF(
     invoice.items.forEach(item => {
       const quantityText = item.quantity.toString();
       const priceText = formatCurrency(item.unitPrice * item.quantity, settings);
-      const itemName = item.product?.name || item.description || 'Item';
+      // Enhanced product name resolution with better fallbacks
+      let itemName = '';
+      
+      // First try to get name from item.product
+      if (item.product && item.product.name) {
+        itemName = item.product.name;
+      }
+      // Then try item description
+      else if (item.description) {
+        itemName = item.description;
+      }
+      // Then try to find product in receiptData items
+      else if (receiptData?.items && Array.isArray(receiptData.items)) {
+        // Log for debugging
+        console.log('Looking for product match in receiptData items');
+        console.log('Item:', JSON.stringify(item));
+        
+        // Try multiple matching strategies
+        let matchingItem = null;
+        
+        // First try matching by product ID if available
+        if (item.product && 'id' in item.product) {
+          matchingItem = receiptData.items.find((rItem: any) => 
+            (rItem.product?.id === (item.product as any).id));
+        }
+        
+        // If no match, try matching by productId property if it exists
+         // Use type assertion to handle potential missing property
+         const itemProductId = (item as any).productId;
+         if (!matchingItem && itemProductId) {
+           matchingItem = receiptData.items.find((rItem: any) => 
+             (rItem.productId === itemProductId || rItem.product?.id === itemProductId));
+         }
+        
+        // If we found a match with a product name, use it
+        if (matchingItem?.product?.name) {
+          itemName = matchingItem.product.name;
+        }
+      }
+      
+      // If still no name, use product ID or default with more descriptive fallback
+      if (!itemName) {
+        if (item.product && 'id' in item.product) {
+           itemName = `Product #${(item.product as any).id}`;
+         } else if ((item as any).productId) {
+           itemName = `Product #${(item as any).productId}`;
+         } else {
+           itemName = 'Product Item';
+         }
+      }
       const unitPriceText = formatCurrency(item.unitPrice, settings);
       
       // Handle long item names by wrapping if needed
@@ -1127,26 +1220,50 @@ export async function downloadReceiptPDF(
   
   yPos += 8;
   
-  // Totals
+  // Totals - Calculate from items if not provided (for receipt objects)
+  let subtotal = invoice.subtotal;
+  let taxAmount = invoice.taxAmount;
+  const total = invoice.total || 0;
+  
+  // If subtotal or taxAmount are not provided, calculate them from items
+  if (subtotal === undefined || subtotal === null || taxAmount === undefined || taxAmount === null) {
+    // Calculate subtotal from items
+    const calculatedSubtotal = invoice.items?.reduce((sum: number, item: any) => {
+      return sum + (item.quantity * item.unitPrice);
+    }, 0) || 0;
+    
+    // If we have a tax rate, calculate tax from subtotal
+    if (invoice.taxRate && invoice.taxRate > 0) {
+      subtotal = calculatedSubtotal;
+      taxAmount = calculatedSubtotal * (invoice.taxRate / 100);
+    } else {
+      // No tax rate available, assume no tax
+      subtotal = total;
+      taxAmount = 0;
+    }
+  }
+  
+  // Ensure values are numbers and not NaN
+  subtotal = subtotal || 0;
+  taxAmount = taxAmount || 0;
+  
+  // Display Subtotal first, then Tax (standard order)
+  // Subtotal
   doc.text('Subtotal', margin, yPos);
-  doc.text(formatCurrency(invoice.subtotal, settings), pageWidth - margin, yPos, { align: 'right' });
+  doc.text(formatCurrency(subtotal, settings), pageWidth - margin, yPos, { align: 'right' });
   yPos += 6;
   
-  // Tax
-  const taxAmount = invoice.total - invoice.subtotal;
-  doc.text('Tax', margin, yPos);
-  doc.text(formatCurrency(taxAmount, settings), pageWidth - margin, yPos, { align: 'right' });
-  yPos += 6;
-  
-  // SalesTax (could be duplicate, but keeping with the receipt example)
-  doc.text('SalesTax', margin, yPos);
-  doc.text(formatCurrency(taxAmount, settings), pageWidth - margin, yPos, { align: 'right' });
-  yPos += 6;
+  // Tax (only show if there is tax)
+  if (taxAmount > 0) {
+    doc.text('Tax', margin, yPos);
+    doc.text(formatCurrency(taxAmount, settings), pageWidth - margin, yPos, { align: 'right' });
+    yPos += 6;
+  }
   
   // Total
   doc.setFont('courier', 'bold');
   doc.text('Total:', margin, yPos);
-  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, yPos, { align: 'right' });
+  doc.text(formatCurrency(total, settings), pageWidth - margin, yPos, { align: 'right' });
   yPos += 8;
   
   // Transaction information
@@ -1182,7 +1299,7 @@ export async function downloadReceiptPDF(
   // Total after tip (no tip field)
   doc.setFont('courier', 'bold');
   doc.text('=Total:', margin, yPos);
-  doc.text(formatCurrency(invoice.total, settings), pageWidth - margin, yPos, { align: 'right' });
+  doc.text(formatCurrency(total, settings), pageWidth - margin, yPos, { align: 'right' });
   yPos += 12;
   
   // Signature line
@@ -1285,6 +1402,10 @@ export async function downloadReceiptPDF(
     doc.internal.pageSize.height = yPos + margin + 10;
   }
   
-  // Save the PDF with a name including invoice number
-  doc.save(`Receipt-${invoice.invoiceNumber}.pdf`);
+  // Save the PDF with proper receipt number format
+  // Add null check to prevent TypeError
+  const pdfReceiptNumber = receiptData?.receiptNumber || 
+    (invoice as any).receiptNumber ||
+    (invoice.invoiceNumber ? `RCT-${invoice.invoiceNumber.replace(/^INV-/, '')}` : 'RCT-UNKNOWN');
+  doc.save(`${pdfReceiptNumber}.pdf`);
 }

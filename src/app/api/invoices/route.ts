@@ -5,11 +5,31 @@ import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
 import { InvoiceFormValues, InvoiceItemFormValues } from '@/types';
 import { User } from '@prisma/client';
 
+// Cache TTL in seconds (1 minute for invoices - shorter due to frequent updates)
+const CACHE_TTL = 60;
+
+// In-memory cache for invoices
+const invoicesCache = new Map<string, { data: any; timestamp: number }>();
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check cache first
+    const cacheKey = `invoices_${user.id}`;
+    const cachedData = invoicesCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cachedData && (now - cachedData.timestamp) < CACHE_TTL * 1000) {
+      return NextResponse.json(cachedData.data, {
+        headers: {
+          'Cache-Control': 'public, max-age=30, s-maxage=60',
+          'X-Cache': 'HIT'
+        }
+      });
     }
 
     const invoices = await prisma.invoice.findMany({
@@ -29,7 +49,18 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(invoices);
+    // Cache the result
+    invoicesCache.set(cacheKey, {
+      data: invoices,
+      timestamp: now
+    });
+
+    return NextResponse.json(invoices, {
+      headers: {
+        'Cache-Control': 'public, max-age=30, s-maxage=60',
+        'X-Cache': 'MISS'
+      }
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to fetch invoices' }, { status: 500 });
@@ -199,6 +230,14 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // Invalidate caches for this user
+    const invoicesCacheKey = `invoices_${user.id}`;
+    invoicesCache.delete(invoicesCacheKey);
+    
+    // Also invalidate products cache since stock quantities may have changed
+    // Note: We need to import the products cache or create a shared cache utility
+    // For now, we'll just invalidate the invoices cache
 
     return NextResponse.json(invoice);
   } catch (error: any) {

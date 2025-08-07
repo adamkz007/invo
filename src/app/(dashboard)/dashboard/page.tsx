@@ -12,7 +12,8 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { downloadInvoicePDF } from '@/lib/pdf-generator';
+// Dynamic import for PDF generator to reduce bundle size
+// import { downloadInvoicePDF } from '@/lib/pdf-generator';
 import { InvoiceWithDetails } from '@/types';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
@@ -343,28 +344,30 @@ export default function DashboardPage() {
   };
 
   // Handle PDF download
-  const handleDownloadPDF = (invoice: InvoiceWithDetails) => {
-    // Fetch complete invoice details with items before generating PDF
-    fetch(`/api/invoices/${invoice.id}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch complete invoice details for PDF');
-        }
-        return response.json();
-      })
-      .then(completeInvoice => {
-        // Pass complete invoice data with items to the PDF generator
-        downloadInvoicePDF(completeInvoice, companyDetails);
-      })
-      .catch(error => {
-        console.error('Error fetching invoice for PDF:', error);
-        showToast({
-          message: 'Could not generate PDF with complete data',
-          variant: 'error',
-        });
-        // Fall back to using the original invoice data
-        downloadInvoicePDF(invoice, companyDetails);
+  const handleDownloadPDF = async (invoice: InvoiceWithDetails) => {
+    try {
+      // Dynamic import of PDF generator to reduce initial bundle size
+      const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
+      
+      // Fetch complete invoice details with items before generating PDF
+      const response = await fetch(`/api/invoices/${invoice.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch complete invoice details for PDF');
+      }
+      
+      const completeInvoice = await response.json();
+      // Pass complete invoice data with items to the PDF generator
+      downloadInvoicePDF(completeInvoice, companyDetails);
+    } catch (error) {
+      console.error('Error fetching invoice for PDF:', error);
+      showToast({
+        message: 'Could not generate PDF with complete data',
+        variant: 'error',
       });
+      // Fall back to using the original invoice data
+      const { downloadInvoicePDF: fallbackDownloadInvoicePDF } = await import('@/lib/pdf-generator');
+      fallbackDownloadInvoicePDF(invoice, companyDetails);
+    }
   };
 
   if (loading) {

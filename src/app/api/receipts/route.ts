@@ -1,137 +1,44 @@
 import { NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 
-// Mock products for the implementation
-const mockProducts = [
-  {
-    id: 'prod_1',
-    name: 'Pizza',
-    description: 'Delicious cheese pizza',
-    price: 12.99,
-    quantity: 50
-  },
-  {
-    id: 'prod_2',
-    name: 'Burger',
-    description: 'Classic beef burger',
-    price: 8.99,
-    quantity: 30
-  },
-  {
-    id: 'prod_3',
-    name: 'Fries',
-    description: 'Crispy french fries',
-    price: 3.99,
-    quantity: 100
-  },
-  {
-    id: 'prod_4',
-    name: 'Cola',
-    description: 'Refreshing soda',
-    price: 1.99,
-    quantity: 200
-  }
-];
+// Products will be fetched from the database in a real implementation
 
 // Function to get products - in a real app this would fetch from database
 async function getProducts() {
   // In a real implementation, this would be:
   // return await prisma.product.findMany();
-  return mockProducts;
+  return [];
 }
 
-// Mock data for receipts
-export const mockReceipts = [
-  {
-    id: '1',
-    receiptNumber: 'RCT-ABC123',
-    customerName: 'Walk-in Customer',
-    customerPhone: null,
-    receiptDate: new Date('2023-04-15'),
-    paymentMethod: 'CASH',
-    total: 24.99,
-    notes: 'First purchase',
-    items: [
-      {
-        id: '101',
-        productId: '1',
-        product: { name: 'Coffee', description: 'Freshly brewed coffee' },
-        quantity: 2,
-        unitPrice: 4.99,
-        description: ''
-      },
-      {
-        id: '102',
-        productId: '2',
-        product: { name: 'Bagel', description: 'Fresh bagel with cream cheese' },
-        quantity: 1,
-        unitPrice: 15.01,
-        description: 'With extra topping'
-      }
-    ],
-    createdAt: new Date('2023-04-15')
-  },
-  {
-    id: '2',
-    receiptNumber: 'RCT-DEF456',
-    customerName: 'John Doe',
-    customerPhone: '+1234567890',
-    receiptDate: new Date('2023-04-16'),
-    paymentMethod: 'CARD',
-    total: 35.50,
-    notes: 'Regular customer',
-    items: [
-      {
-        id: '103',
-        productId: '3',
-        product: { name: 'Sandwich', description: 'Club sandwich' },
-        quantity: 1,
-        unitPrice: 12.50,
-        description: ''
-      },
-      {
-        id: '104',
-        productId: '4',
-        product: { name: 'Soup', description: 'Soup of the day' },
-        quantity: 1,
-        unitPrice: 8.00,
-        description: ''
-      },
-      {
-        id: '105',
-        productId: '5',
-        product: { name: 'Coffee', description: 'Large coffee' },
-        quantity: 2,
-        unitPrice: 7.50,
-        description: 'One with sugar, one without'
-      }
-    ],
-    createdAt: new Date('2023-04-16')
-  }
-];
+// Import Prisma client for database operations
+import { prisma } from '@/lib/prisma';
 
-// In-memory storage for created receipts
-// Use a global variable that persists across API calls
-// This is a workaround for the development server reloading modules
+// Function to get a valid user ID from the database
+async function getValidUserId() {
+  const users = await prisma.user.findMany({ take: 1 });
+  if (users.length === 0) {
+    throw new Error('No users found in the database');
+  }
+  return users[0].id;
+}
+
+// For backward compatibility, we'll keep the in-memory storage
+// but primarily use the database for persistence
 declare global {
   var _receipts: any[] | undefined;
 }
 
 // Initialize global receipts array if it doesn't exist
 if (!global._receipts) {
-  global._receipts = [...mockReceipts];
+  global._receipts = [];
 }
 
-// Export the global receipts array
+// Export the global receipts array for backward compatibility
 export const receipts = global._receipts;
 
 /**
  * GET /api/receipts
- * Get all receipts
- * 
- * Note: The database schema has been updated with Receipt and ReceiptItem models,
- * but this API implementation is using mock data for simplicity.
- * In a production environment, this would use Prisma to query the database.
+ * Get all receipts from the database
  */
 export async function GET(request: Request) {
   // Since we can't access localStorage from the server,
@@ -146,16 +53,48 @@ export async function GET(request: Request) {
     return NextResponse.json([]);
   }
   
-  return NextResponse.json(receipts);
+  // Check for invoice ID query parameter
+  const url = new URL(request.url);
+  const invoiceId = url.searchParams.get('invoiceId');
+  
+  try {
+    // Fetch receipts from the database with their items and related product information
+    const dbReceipts = await prisma.receipt.findMany({
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    // Filter by invoice ID if provided (check notes field for invoice reference)
+    let filteredReceipts = dbReceipts;
+    if (invoiceId) {
+      filteredReceipts = dbReceipts.filter(receipt => 
+        receipt.notes?.includes(`Invoice ${invoiceId}`) || 
+        receipt.notes?.includes(`Payment for Invoice INV-${invoiceId}`)
+      );
+    }
+    
+    // For backward compatibility, update the in-memory array
+    global._receipts = dbReceipts;
+    
+    return NextResponse.json(filteredReceipts);
+  } catch (error) {
+    console.error('Error fetching receipts from database:', error);
+    // Fallback to in-memory receipts if database query fails
+    return NextResponse.json(receipts);
+  }
 }
 
 /**
  * POST /api/receipts
- * Create a new receipt
- * 
- * Note: The database schema has been updated with Receipt and ReceiptItem models,
- * but this API implementation is using mock data for simplicity.
- * In a production environment, this would use Prisma to create records in the database.
+ * Create a new receipt in the database
  */
 export async function POST(request: Request) {
   try {
@@ -179,41 +118,56 @@ export async function POST(request: Request) {
     // Default to 'Walk-in Customer' if no customer name provided
     const customerName = data.customerName || 'Walk-in Customer';
     
-    // Fetch product details to ensure we have the correct product names
-    // Since we're using mock data, we need to make sure product info is correctly passed
-    // Get the products array for product lookups
-    const products = await getProducts();
+    // Create the receipt in the database using Prisma transaction
+    const newReceipt = await prisma.$transaction(async (tx) => {
+      // Create the receipt record
+      const receipt = await tx.receipt.create({
+        data: {
+          receiptNumber,
+          customerName,
+          customerPhone: data.customerPhone || null,
+          receiptDate: data.receiptDate ? new Date(data.receiptDate) : new Date(), // Default to current date if not provided
+          paymentMethod: data.paymentMethod,
+          notes: data.notes || '',
+          total: data.total,
+          userId: data.userId || await getValidUserId(), // Get a valid user ID from the database
+          // We don't store invoiceId and orderNumber in the database schema,
+          // but we'll include them in the response for backward compatibility
+        },
+      });
+      
+      // Create receipt items
+      const items = await Promise.all(
+        data.items.map(async (item: any) => {
+          // Create the receipt item
+          const receiptItem = await tx.receiptItem.create({
+            data: {
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              description: item.description || '',
+              receiptId: receipt.id,
+              productId: item.productId,
+            },
+            include: {
+              product: true,
+            },
+          });
+          
+          return receiptItem;
+        })
+      );
+      
+      // Return the complete receipt with items
+      return {
+        ...receipt,
+        items,
+        // Add these fields for backward compatibility
+        invoiceId: data.invoiceId || null,
+        orderNumber: data.orderNumber || null,
+      };
+    });
     
-    // Create a new receipt
-    const newReceipt = {
-      id: nanoid(),
-      receiptNumber,
-      customerName,
-      customerPhone: data.customerPhone || null,
-      receiptDate: new Date(data.receiptDate),
-      paymentMethod: data.paymentMethod,
-      notes: data.notes || '',
-      total: data.total,
-      items: data.items.map((item: any) => {
-        // Find the product to get its name
-        const product = products.find((p: any) => p.id === item.productId);
-        return {
-          id: nanoid(),
-          productId: item.productId,
-          product: { 
-            name: product?.name || item.description || 'Unknown Product', 
-            description: product?.description || item.description || '' 
-          },
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          description: item.description || ''
-        };
-      }),
-      createdAt: new Date(),
-      userId: '1'
-    };
-    
-    // Add to our in-memory receipts array (using the global reference)
+    // For backward compatibility, also add to in-memory array
     receipts.unshift(newReceipt);
     
     return NextResponse.json(newReceipt);

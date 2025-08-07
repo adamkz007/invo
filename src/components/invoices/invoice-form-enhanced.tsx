@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { format } from 'date-fns';
 import { Trash2, Plus } from 'lucide-react';
-import { ReactDatePickerComponent } from '@/components/ui/react-date-picker';
+import { ShadcnDatePickerComponent } from '@/components/ui/shadcn-date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 // Define InvoiceStatus enum locally
 export enum InvoiceStatus {
@@ -35,12 +35,13 @@ export enum InvoiceStatus {
 }
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues } from '@/types';
-import CustomerFormDialog from '@/components/customers/customer-form-dialog';
-import ProductFormDialog from '@/components/products/product-form-dialog';
+// Dynamic imports for form dialogs to reduce bundle size
+// import CustomerFormDialog from '@/components/customers/customer-form-dialog';
+// import ProductFormDialog from '@/components/products/product-form-dialog';
 import { useToast } from '@/components/ui/toast';
 import { Badge } from '@/components/ui/badge';
 
-// Form validation schema
+// Form validation schema - memoized to prevent recreation
 const invoiceFormSchema = z.object({
   customerId: z.string().min(1, { message: 'Please select a customer' }),
   issueDate: z.date(),
@@ -65,7 +66,7 @@ interface InvoiceFormProps {
   preSelectedCustomerId?: string | null;
 }
 
-export default function InvoiceFormEnhanced({ 
+const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({ 
   defaultValues, 
   isEditing = false,
   preSelectedCustomerId = null 
@@ -73,10 +74,9 @@ export default function InvoiceFormEnhanced({
   const router = useRouter();
   const { showToast } = useToast();
 
-  // Initialize form first, before any effects that depend on it
-  const form = useForm<InvoiceFormValues>({
-    resolver: zodResolver(invoiceFormSchema),
-    defaultValues: defaultValues || {
+  // Memoize default form values to prevent recreation
+  const memoizedDefaultValues = useMemo(() => {
+    return defaultValues || {
       customerId: preSelectedCustomerId || '',
       issueDate: new Date(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Default to 30 days from now
@@ -86,7 +86,13 @@ export default function InvoiceFormEnhanced({
       discountRate: 0,
       notes: '',
       userId: '',
-    },
+    };
+  }, [defaultValues, preSelectedCustomerId]);
+
+  // Initialize form first, before any effects that depend on it
+  const form = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceFormSchema),
+    defaultValues: memoizedDefaultValues,
   });
 
   // State declarations
@@ -103,6 +109,10 @@ export default function InvoiceFormEnhanced({
   const [minDueDate, setMinDueDate] = useState<Date>(form.getValues('issueDate'));
   const [activeSection, setActiveSection] = useState('customer');
   
+  // Dynamic component states
+  const [CustomerFormDialog, setCustomerFormDialog] = useState<React.ComponentType<any> | null>(null);
+  const [ProductFormDialog, setProductFormDialog] = useState<React.ComponentType<any> | null>(null);
+  
   // Refs for each section
   const customerRef = useRef<HTMLDivElement>(null);
   const datesRef = useRef<HTMLDivElement>(null);
@@ -116,6 +126,24 @@ export default function InvoiceFormEnhanced({
     control: form.control,
     name: 'items',
   });
+
+  // Memoize customer options to prevent recreation on every render
+  const customerOptions = useMemo(() => {
+    return customers.map((customer) => ({
+      value: customer.id,
+      label: customer.name,
+      details: customer.phoneNumber || ''
+    }));
+  }, [customers]);
+
+  // Memoize product options to prevent recreation on every render
+  const productOptions = useMemo(() => {
+    return products.map((product) => ({
+      value: product.id,
+      label: product.name,
+      details: `$${product.price.toFixed(2)}`
+    }));
+  }, [products]);
 
   // Update minDueDate when issue date changes
   useEffect(() => {
@@ -188,6 +216,19 @@ export default function InvoiceFormEnhanced({
     fetchData();
   }, []);
   
+  // Dynamically load form dialog components
+  useEffect(() => {
+    // Load CustomerFormDialog
+    import('@/components/customers/customer-form-dialog').then(module => {
+      setCustomerFormDialog(() => module.default);
+    });
+    
+    // Load ProductFormDialog
+    import('@/components/products/product-form-dialog').then(module => {
+      setProductFormDialog(() => module.default);
+    });
+  }, []);
+  
   // Handle scroll to update active section
   useEffect(() => {
     const handleScroll = () => {
@@ -223,8 +264,8 @@ export default function InvoiceFormEnhanced({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Handle form submission
-  async function onSubmit(values: InvoiceFormValues) {
+  // Handle form submission - memoized to prevent recreation
+  const onSubmit = useCallback(async (values: InvoiceFormValues) => {
     setIsSubmitting(true);
     
     try {
@@ -334,10 +375,10 @@ export default function InvoiceFormEnhanced({
     } finally {
       setIsSubmitting(false);
     }
-  }
+  }, [router, showToast, totals]);
 
-  // Handle product selection to auto-fill price
-  const handleProductChange = (productId: string, index: number) => {
+  // Handle product selection to auto-fill price - memoized to prevent recreation
+  const handleProductChange = useCallback((productId: string, index: number) => {
     const product = products.find(p => p.id === productId);
     if (product) {
       form.setValue(`items.${index}.unitPrice`, product.price);
@@ -349,10 +390,10 @@ export default function InvoiceFormEnhanced({
         form.setValue(`items.${index}.quantity`, 1);
       }
     }
-  };
+  }, [products, form]);
   
-  // Smooth scroll to section
-  const scrollToSection = (sectionId: string) => {
+  // Smooth scroll to section - memoized to prevent recreation
+  const scrollToSection = useCallback((sectionId: string) => {
     const sectionMap: Record<string, React.RefObject<HTMLDivElement | null>> = {
       customer: customerRef,
       dates: datesRef,
@@ -370,26 +411,26 @@ export default function InvoiceFormEnhanced({
       });
       setActiveSection(sectionId);
     }
-  };
+  }, [setActiveSection]);
   
-  // Handle new customer creation
-  const handleCustomerCreated = (newCustomer: CustomerWithRelations) => {
+  // Handle new customer creation - memoized to prevent recreation
+  const handleCustomerCreated = useCallback((newCustomer: CustomerWithRelations) => {
     setCustomers(prev => [...prev, newCustomer]);
     form.setValue('customerId', newCustomer.id);
     showToast({
       variant: 'success',
       message: `Customer "${newCustomer.name}" created successfully!`
     });
-  };
+  }, [form, showToast]);
   
-  // Handle new product creation
-  const handleProductCreated = (newProduct: ProductWithRelations) => {
+  // Handle new product creation - memoized to prevent recreation
+  const handleProductCreated = useCallback((newProduct: ProductWithRelations) => {
     setProducts(prev => [...prev, newProduct]);
     showToast({
       variant: 'success',
       message: `Product "${newProduct.name}" created successfully!`
     });
-  };
+  }, [showToast]);
 
   if (isLoading) {
     return <div className="flex justify-center p-8">Loading...</div>;
@@ -462,11 +503,7 @@ export default function InvoiceFormEnhanced({
                       <div className="flex gap-1 sm:gap-2 items-center">
                         <div className="flex-1">
                           <Combobox
-                            options={customers.map((customer) => ({
-                              value: customer.id,
-                              label: customer.name,
-                              details: customer.phoneNumber || ''
-                            }))}
+                            options={customerOptions}
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Select a customer"
@@ -476,10 +513,12 @@ export default function InvoiceFormEnhanced({
                             className="text-xs sm:text-sm"
                           />
                         </div>
-                        <CustomerFormDialog 
-                          userId="1" 
-                          onCustomerCreated={handleCustomerCreated} 
-                        />
+                        {CustomerFormDialog && (
+                          <CustomerFormDialog 
+                            userId="1" 
+                            onCustomerCreated={handleCustomerCreated} 
+                          />
+                        )}
                       </div>
                     </FormControl>
                     <FormMessage className="text-xs sm:text-sm" />
@@ -559,7 +598,7 @@ export default function InvoiceFormEnhanced({
             <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
               <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
                 {/* Issue Date */}
-                <ReactDatePickerComponent
+                <ShadcnDatePickerComponent
                   name="issueDate"
                   label="Issue Date"
                   disabled={isSubmitting}
@@ -571,7 +610,7 @@ export default function InvoiceFormEnhanced({
                 />
 
                 {/* Due Date */}
-                <ReactDatePickerComponent
+                <ShadcnDatePickerComponent
                   name="dueDate"
                   label="Due Date"
                   disabled={isSubmitting}
@@ -591,10 +630,12 @@ export default function InvoiceFormEnhanced({
             <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
             <div className="flex items-center justify-between mb-2 sm:mb-4">
               <h3 className="text-base sm:text-lg font-medium">Invoice Items</h3>
-              <ProductFormDialog 
-                userId="1" 
-                onProductCreated={handleProductCreated} 
-              />
+              {ProductFormDialog && (
+                <ProductFormDialog 
+                  userId="1" 
+                  onProductCreated={handleProductCreated} 
+                />
+              )}
             </div>
             
             <div className="space-y-4">
@@ -878,4 +919,8 @@ export default function InvoiceFormEnhanced({
       </form>
     </Form>
   );
-}
+});
+
+InvoiceFormEnhanced.displayName = 'InvoiceFormEnhanced';
+
+export default InvoiceFormEnhanced;

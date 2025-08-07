@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, TooltipCardTitle } from "@/components/ui/card"
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -698,9 +699,11 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                                   <div className="space-y-4">
                                     {field.value && (
                                       <div className="border p-4 rounded-md w-48 h-48 flex items-center justify-center">
-                                        <img 
+                                        <Image 
                                           src={field.value} 
                                           alt="Payment QR Code" 
+                                          width={192}
+                                          height={192}
                                           className="max-w-full max-h-full object-contain"
                                         />
                                       </div>

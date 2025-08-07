@@ -286,6 +286,53 @@ export async function PATCH(
           }
         }
       });
+      
+      // Create a receipt record when invoice is fully paid
+      if (newStatus === InvoiceStatus.PAID) {
+        try {
+          // Import nanoid for receipt number generation
+          const { nanoid } = await import('nanoid');
+          
+          // Generate a receipt number
+          const receiptNumber = `RCT-${nanoid(6).toUpperCase()}`;
+          
+          // Create receipt data to send to receipts API
+          const receiptData = {
+            receiptNumber,
+            customerName: updatedInvoice.customer.name,
+            customerPhone: updatedInvoice.customer.phoneNumber,
+            receiptDate: new Date().toISOString(),
+            paymentMethod: 'INVOICE_PAYMENT',
+            total: updatedInvoice.total,
+            notes: `Payment for Invoice ${updatedInvoice.invoiceNumber}`,
+            items: updatedInvoice.items.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              description: item.description || ''
+            })),
+            invoiceId: updatedInvoice.id,
+            orderNumber: updatedInvoice.invoiceNumber
+          };
+          
+          // Call the receipts API to create the receipt
+          const receiptsResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/receipts`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-receipts-module-enabled': 'true'
+            },
+            body: JSON.stringify(receiptData)
+          });
+          
+          if (!receiptsResponse.ok) {
+            console.error('Failed to create receipt for paid invoice:', await receiptsResponse.text());
+          }
+        } catch (receiptError) {
+          console.error('Error creating receipt for paid invoice:', receiptError);
+          // Don't fail the invoice update if receipt creation fails
+        }
+      }
     } else {
       return NextResponse.json({ 
         error: 'Invalid action' 
@@ -389,4 +436,4 @@ export async function DELETE(
       status: 500 
     });
   }
-} 
+}

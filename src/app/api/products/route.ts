@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
+// Cache TTL in seconds (2 minutes for products)
+const CACHE_TTL = 120;
+
+// In-memory cache for products
+const productsCache = new Map<string, { data: any; timestamp: number }>();
+
 export async function GET(request: NextRequest) {
   try {
     // Get auth token from cookies
@@ -22,6 +28,20 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    // Check cache first
+    const cacheKey = `products_${userId}`;
+    const cachedData = productsCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cachedData && (now - cachedData.timestamp) < CACHE_TTL * 1000) {
+      return NextResponse.json(cachedData.data, {
+        headers: {
+          'Cache-Control': 'public, max-age=60, s-maxage=120',
+          'X-Cache': 'HIT'
+        }
+      });
+    }
+
     // Find products for this user
     const products = await prisma.product.findMany({
       where: {
@@ -32,7 +52,18 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(products);
+    // Cache the result
+    productsCache.set(cacheKey, {
+      data: products,
+      timestamp: now
+    });
+
+    return NextResponse.json(products, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, s-maxage=120',
+        'X-Cache': 'MISS'
+      }
+    });
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ 
@@ -88,6 +119,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Invalidate cache for this user
+    const cacheKey = `products_${userId}`;
+    productsCache.delete(cacheKey);
+
     return NextResponse.json(newProduct, { status: 201 });
   } catch (error) {
     console.error('Error creating product:', error);
@@ -107,4 +142,4 @@ export async function POST(request: NextRequest) {
       status: 500 
     });
   }
-} 
+}

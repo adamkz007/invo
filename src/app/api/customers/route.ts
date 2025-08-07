@@ -4,11 +4,31 @@ import { getUserFromRequest } from '@/lib/auth';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
 import { User } from '@prisma/client';
 
+// Cache TTL in seconds (2 minutes for customers)
+const CACHE_TTL = 120;
+
+// In-memory cache for customers
+const customersCache = new Map<string, { data: any; timestamp: number }>();
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check cache first
+    const cacheKey = `customers_${user.id}`;
+    const cachedData = customersCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cachedData && (now - cachedData.timestamp) < CACHE_TTL * 1000) {
+      return NextResponse.json(cachedData.data, {
+        headers: {
+          'Cache-Control': 'public, max-age=60, s-maxage=120',
+          'X-Cache': 'HIT'
+        }
+      });
     }
 
     const customers = await prisma.customer.findMany({
@@ -20,7 +40,18 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(customers);
+    // Cache the result
+    customersCache.set(cacheKey, {
+      data: customers,
+      timestamp: now
+    });
+
+    return NextResponse.json(customers, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, s-maxage=120',
+        'X-Cache': 'MISS'
+      }
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to fetch customers' }, { status: 500 });
@@ -116,9 +147,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Invalidate cache for this user
+    const cacheKey = `customers_${user.id}`;
+    customersCache.delete(cacheKey);
+
     return NextResponse.json(customer);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 });
   }
-} 
+}
