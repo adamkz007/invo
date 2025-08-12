@@ -39,7 +39,7 @@ export async function GET(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
     
-    return NextResponse.json(product);
+    return NextResponse.json({ product });
   } catch (error) {
     console.error('Error fetching product:', error);
     return NextResponse.json({ 
@@ -99,7 +99,7 @@ export async function PUT(
       }
     });
     
-    return NextResponse.json(updatedProduct);
+    return NextResponse.json({ product: updatedProduct });
   } catch (error) {
     console.error('Error updating product:', error);
     
@@ -158,13 +158,13 @@ export async function DELETE(
     }
     
     // Delete the product
-    await prisma.product.delete({
+    const deletedProduct = await prisma.product.delete({
       where: {
         id: productId
       }
     });
     
-    return NextResponse.json({ message: 'Product deleted successfully' });
+    return NextResponse.json({ message: 'Product deleted successfully', product: deletedProduct });
   } catch (error) {
     console.error('Error deleting product:', error);
     
@@ -233,7 +233,7 @@ export async function PATCH(
     if (quantity !== undefined) updateData.quantity = quantity;
     if (disableStockManagement !== undefined) updateData.disableStockManagement = disableStockManagement;
     
-    // Update the product with only the specified fields
+    // Update the product with only the fields that are provided
     const updatedProduct = await prisma.product.update({
       where: {
         id: productId
@@ -241,7 +241,7 @@ export async function PATCH(
       data: updateData
     });
     
-    return NextResponse.json(updatedProduct);
+    return NextResponse.json({ product: updatedProduct });
   } catch (error) {
     console.error('Error updating product:', error);
     

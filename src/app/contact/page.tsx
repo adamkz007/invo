@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail, MapPin, Phone, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InlineLoading } from '@/components/ui/loading';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -202,7 +203,7 @@ export default function ContactPage() {
                         className="w-full" 
                         disabled={isSubmitting}
                       >
-                        {isSubmitting ? 'Sending...' : 'Send Message'}
+                        {isSubmitting ? <InlineLoading text="Sending..." /> : 'Send Message'}
                       </Button>
                     </div>
                   </form>

@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { InlineLoading } from '@/components/ui/loading';
 import dynamic from 'next/dynamic';
 
 // Use dynamic import with ssr: false to prevent server rendering issues
 const InvoiceFormEnhanced = dynamic(
   () => import('@/components/invoices/invoice-form-enhanced').then(mod => mod.default),
   {
-    loading: () => <div className="py-8 text-center">Loading form...</div>,
+    loading: () => <InlineLoading text="Loading form..." />,
     ssr: false // Disable server-side rendering to avoid hydration issues
   }
 );
@@ -39,7 +40,7 @@ export default function NewInvoicePage() {
         <CardHeader>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div className="py-8 text-center">Loading form...</div>}>
+          <Suspense fallback={<InlineLoading text="Loading form..." />}>
             <InvoiceFormEnhanced preSelectedCustomerId={customerId} />
           </Suspense>
         </CardContent>

@@ -160,6 +160,191 @@ A fixed-position tab navigation component that updates as the user scrolls throu
 - Don't rely solely on color to convey information
 - Maintain readable text sizes (minimum 16px for body text)
 
+## Blog Content Formatting
+
+### Typography Hierarchy
+
+#### Article Titles (H1)
+- **Font Size**: 3xl-5xl (responsive)
+- **Font Weight**: Bold (700)
+- **Line Height**: 1.2
+- **Color**: White (on primary background) or primary color
+- **Margin**: 0 top, 1.5rem bottom
+
+#### Main Section Headings (H2)
+- **Font Size**: 2xl-3xl (responsive)
+- **Font Weight**: Bold (700)
+- **Line Height**: 1.3
+- **Color**: Primary color
+- **Margin**: 2.5rem top, 1.5rem bottom
+
+#### Subsection Headings (H3)
+- **Font Size**: xl-2xl (responsive)
+- **Font Weight**: Bold (700)
+- **Line Height**: 1.4
+- **Color**: Primary color
+- **Margin**: 2rem top, 1rem bottom
+
+#### Minor Headings (H4)
+- **Font Size**: lg-xl (responsive)
+- **Font Weight**: Semibold (600)
+- **Line Height**: 1.4
+- **Color**: Primary color
+- **Margin**: 1.5rem top, 0.75rem bottom
+
+### Body Text Styling
+
+#### Paragraphs
+- **Font Size**: Base (16px)
+- **Line Height**: Relaxed (1.625)
+- **Color**: Text foreground
+- **Margin**: 1.5rem bottom
+
+#### Lead Paragraphs
+- **Font Size**: Large (18px)
+- **Font Weight**: Medium (500)
+- **Line Height**: Relaxed (1.625)
+- **Color**: Muted foreground
+- **Margin**: 2rem bottom
+
+#### Emphasis and Links
+- **Strong Text**: Primary color, bold weight
+- **Links**: Primary color, no underline default, underline on hover
+- **Emphasis**: Italic styling
+
+### Spacing Standards
+
+#### Vertical Rhythm
+- **Base Unit**: 1.5rem (24px)
+- **Section Spacing**: 2.5rem between major sections
+- **Paragraph Spacing**: 1.5rem between paragraphs
+- **List Spacing**: 1.5rem between list groups
+
+#### Component Spacing
+- **Callout Boxes**: 2rem margin top/bottom
+- **Image Figures**: 2rem margin top/bottom
+- **Code Blocks**: 1.5rem margin top/bottom
+
+### Blog Components
+
+#### Disclaimer Box
+- **Background**: Yellow-50 with yellow-400 left border (4px)
+- **Padding**: 1.25rem
+- **Text**: Small size, yellow-800 color
+- **Usage**: Legal disclaimers, important warnings
+
+#### Info Box
+- **Background**: Primary/5 opacity
+- **Padding**: 1.5rem
+- **Border Radius**: 0.5rem
+- **Title**: Medium weight, margin bottom 1rem
+- **Usage**: Calculations, examples, detailed explanations
+
+#### Tip Box
+- **Background**: Yellow-50 with yellow-400 left border (4px)
+- **Padding**: 1.25rem
+- **Text**: Small size, yellow-800 color
+- **Icon**: Lightbulb or tip icon
+- **Usage**: Helpful tips, best practices
+
+#### Checklist Component
+- **Items**: Flex layout with checkmark icons
+- **Spacing**: 0.5rem between items
+- **Icons**: Primary color checkmarks
+- **Usage**: Feature lists, requirements
+
+#### Numbered Steps
+- **Layout**: Flex with numbered circles
+- **Numbers**: Primary background, white text, rounded full
+- **Spacing**: 1rem between steps
+- **Usage**: Process explanations, tutorials
+
+#### Author Section
+- **Background**: Muted/30 opacity
+- **Padding**: 1.5rem
+- **Border Radius**: 0.5rem
+- **Layout**: Flex (responsive stack)
+- **Avatar**: 4rem circle with fallback
+- **Typography**: Bold name, muted role
+
+#### Share Section
+- **Layout**: Flex between (responsive stack)
+- **Borders**: Top and bottom borders
+- **Padding**: 1.5rem vertical
+- **Buttons**: Outline style, rounded full icons
+
+#### CTA Section
+- **Background**: Primary color
+- **Text**: White color
+- **Padding**: 2rem
+- **Border Radius**: 0.5rem
+- **Layout**: Centered content
+- **Buttons**: Secondary and outline variants
+
+### Responsive Design
+
+#### Mobile Optimization
+- **Typography**: Smaller font sizes on mobile
+- **Spacing**: Reduced margins and padding
+- **Layout**: Stack components vertically
+- **Touch Targets**: Minimum 44px for interactive elements
+
+#### Grid Layouts
+- **Desktop**: 3-column grid for related posts
+- **Tablet**: 2-column grid
+- **Mobile**: Single column
+
+## SEO Optimization Standards
+
+### Metadata Requirements
+
+#### Page-Level Metadata
+- **Title**: Descriptive with brand suffix (max 60 characters)
+- **Description**: Compelling summary (150-160 characters)
+- **Keywords**: Relevant terms (5-10 keywords)
+- **Authors**: Content creator information
+- **Open Graph**: Complete social media metadata
+- **Twitter Cards**: Summary with large image
+
+#### Structured Data (JSON-LD)
+- **Organization Schema**: Company information
+- **Article Schema**: Blog post metadata
+- **Breadcrumb Schema**: Navigation structure
+- **Website Schema**: Site-wide information
+
+### Performance Optimization
+
+#### Image Optimization
+- **Formats**: WebP, AVIF with fallbacks
+- **Sizes**: Responsive image sizes
+- **Loading**: Lazy loading for non-critical images
+- **Dimensions**: Explicit width/height to prevent layout shift
+
+#### Font Optimization
+- **Loading**: `font-display: swap` for all fonts
+- **Preloading**: Critical fonts with `preload: true`
+- **Fallbacks**: System font fallbacks
+
+#### Core Web Vitals
+- **LCP**: Optimize largest contentful paint
+- **FID**: Minimize first input delay
+- **CLS**: Prevent cumulative layout shift
+- **Bundle Splitting**: Separate vendor and common chunks
+
+### Content Standards
+
+#### Accessibility
+- **Color Contrast**: WCAG AA compliance (4.5:1 minimum)
+- **Focus States**: Visible focus indicators
+- **Screen Readers**: Proper heading hierarchy
+- **Alt Text**: Descriptive image alternatives
+
+#### Technical SEO
+- **Sitemap**: Auto-generated XML sitemap
+- **Robots.txt**: Proper crawling directives
+- **Canonical URLs**: Prevent duplicate content
+- **Meta Robots**: Appropriate indexing instructions
+
 ---
 
-These guidelines should be followed for all new components and UI updates to maintain a consistent, professional, and engaging user experience across the Invo application.
+These guidelines should be followed for all new components, blog content, and UI updates to maintain a consistent, professional, SEO-optimized, and engaging user experience across the Invo application.

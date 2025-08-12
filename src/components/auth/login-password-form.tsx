@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { InlineLoading } from '@/components/ui/loading';
 
 const formSchema = z.object({
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
@@ -123,10 +124,10 @@ export default function LoginPasswordForm({ initialPhoneNumber = '+60' }: LoginP
           )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? <InlineLoading text="Logging in..." className="text-white" /> : 'Login'}
           </Button>
         </form>
       </Form>
     </div>
   );
-} 
+}

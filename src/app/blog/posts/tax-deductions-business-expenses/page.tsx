@@ -6,6 +6,9 @@ import { ArrowLeft, Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin, 
 import { Button } from '@/components/ui/button';
 import { CaptionedImage } from '@/components/ui/captioned-image';
 import Image from 'next/image';
+import { ArticleContainer, DisclaimerBox, InfoBox, TipBox, CheckList, NumberedSteps, ShareSection, AuthorSection, CTASection } from '@/components/blog/formatting-components';
+import { RelatedPosts } from '@/components/blog/related-posts';
+import { ArticleSchema } from '@/components/seo/structured-data';
 
 export default function TaxDeductionsPost() {
   // Define related posts
@@ -139,11 +142,9 @@ export default function TaxDeductionsPost() {
               In this article, we'll explore often-missed tax deductions that could save your business thousands of ringgit when filing your annual tax returns.
             </p>
 
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-5 my-8">
-              <p className="text-sm text-yellow-800 m-0">
-                <strong>Disclaimer:</strong> While this article provides general information about tax deductions in Malaysia, tax laws change frequently. Always consult with a qualified tax professional for advice specific to your business situation.
-              </p>
-            </div>
+            <DisclaimerBox>
+              While this article provides general information about tax deductions in Malaysia, tax laws change frequently. Always consult with a qualified tax professional for advice specific to your business situation.
+            </DisclaimerBox>
 
             <h2 className="mt-10">Home Office Deductions</h2>
             <p>
@@ -158,9 +159,8 @@ export default function TaxDeductionsPost() {
               <li><strong>Home office renovations:</strong> Modifications made specifically for business purposes</li>
             </ul>
             
-            <div className="bg-primary/5 p-6 rounded-lg my-6">
-              <h4 className="mt-0 mb-4">Calculation Example:</h4>
-              <p className="my-0">
+            <InfoBox title="Calculation Example">
+              <p>
                 If your home is 1,500 square feet and your home office occupies 150 square feet (10% of the total area), you can deduct 10% of eligible home expenses:
               </p>
               <ul className="mt-4 mb-0">
@@ -171,7 +171,7 @@ export default function TaxDeductionsPost() {
               <p className="mt-4 mb-0">
                 Total annual deduction: RM245 × 12 months = RM2,940
               </p>
-            </div>
+            </InfoBox>
 
             <h2 className="mt-10">Professional Development and Education</h2>
             <p>
@@ -241,11 +241,9 @@ export default function TaxDeductionsPost() {
               </div>
             </div>
             
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-5 my-8">
-              <p className="text-sm text-yellow-800 m-0">
-                <strong>Documentation Tip:</strong> Keep a detailed log of all business travel, including dates, destinations, purpose, and mileage. Use apps like Invo to capture and categorize receipts immediately to ensure nothing is missed.
-              </p>
-            </div>
+            <TipBox>
+              Keep a detailed log of all business travel, including dates, destinations, purpose, and mileage. Use apps like Invo to capture and categorize receipts immediately to ensure nothing is missed.
+            </TipBox>
 
             <h2 className="mt-10">Technology and Digital Expenses</h2>
             <p>
@@ -305,11 +303,9 @@ export default function TaxDeductionsPost() {
               <li><strong>Foreign transaction fees:</strong> Fees for international business payments</li>
             </ul>
             
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-5 my-8">
-              <p className="text-sm text-yellow-800 m-0">
-                <strong>Important Note:</strong> Interest on loans used for both personal and business purposes must be allocated proportionally. Only the business portion is deductible.
-              </p>
-            </div>
+            <TipBox>
+              Interest on loans used for both personal and business purposes must be allocated proportionally. Only the business portion is deductible.
+            </TipBox>
 
             <h2 className="mt-10">Bad Debts</h2>
             <p>
@@ -330,35 +326,27 @@ export default function TaxDeductionsPost() {
 
             <h2 className="mt-10">Maximizing Your Deductions: Best Practices</h2>
             
-            <div className="bg-primary/5 p-6 rounded-lg my-6">
-              <h3 className="mt-0 mb-4">Tips for Proper Documentation:</h3>
-              <ol className="space-y-4 my-0 list-none pl-0">
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">1</span>
-                  <div>
-                    <strong>Separate business and personal expenses:</strong> Maintain dedicated business accounts and credit cards
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">2</span>
-                  <div>
-                    <strong>Digitize receipts immediately:</strong> Use apps like Invo to capture and categorize receipts before they're lost
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">3</span>
-                  <div>
-                    <strong>Record business purpose:</strong> Note the business reason for each expense (client name, business discussion, etc.)
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary text-white text-xs font-bold mr-3 shrink-0">4</span>
-                  <div>
-                    <strong>Maintain organized records:</strong> Keep supporting documents for at least 7 years (LHDN requirement)
-                  </div>
-                </li>
-              </ol>
-            </div>
+            <NumberedSteps 
+              title="Tips for Proper Documentation"
+              steps={[
+                {
+                  title: "Separate business and personal expenses",
+                  description: "Maintain dedicated business accounts and credit cards"
+                },
+                {
+                  title: "Digitize receipts immediately",
+                  description: "Use apps like Invo to capture and categorize receipts before they're lost"
+                },
+                {
+                  title: "Record business purpose",
+                  description: "Note the business reason for each expense (client name, business discussion, etc.)"
+                },
+                {
+                  title: "Maintain organized records",
+                  description: "Keep supporting documents for at least 7 years (LHDN requirement)"
+                }
+              ]}
+            />
 
             <h2 className="mt-10">Conclusion</h2>
             <p>
@@ -372,108 +360,85 @@ export default function TaxDeductionsPost() {
             </p>
           </motion.div>
 
-          {/* Share Section */}
-          <div className="border-t border-b py-6 my-8">
-            <div className="flex flex-col sm:flex-row items-center justify-between">
-              <p className="font-medium mb-4 sm:mb-0">Share this article:</p>
-              <div className="flex space-x-4">
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Facebook className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Twitter className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Linkedin className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ShareSection />
 
-          {/* Author Section */}
-          <div className="bg-muted/30 rounded-lg p-6 my-8">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex-shrink-0">
-                <Image
-                  src="/blog/authors/adam.jpg"
-                  alt="Adam"
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = "https://placehold.co/200x200/02228F/ffffff?text=A";
-                  }}
-                />
-              </div>
-              <div className="text-center sm:text-left">
-                <h3 className="font-bold text-lg">Adam</h3>
-                <p className="text-sm text-muted-foreground mb-2">Founder</p>
-                <p className="text-sm">
-                  Adam consults for both large organizations and SMEs to identify & optimize finance processes. Growing tired of clunky invoice tools available in the market, he sets out to build Invo.
-                </p>
-              </div>
-            </div>
-          </div>
+          <AuthorSection 
+            name="Adam"
+            role="Founder"
+            bio="Adam consults for both large organizations and SMEs to identify & optimize finance processes. Growing tired of clunky invoice tools available in the market, he sets out to build Invo."
+            image="/blog/authors/adam.jpg"
+          />
 
-          {/* Related Posts */}
-          <div className="my-12">
-            <h3 className="text-2xl font-bold mb-6">Related Articles</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedPosts.map((post, index) => (
-                <Link 
-                  key={index}
-                  href={`/blog/posts/${post.slug}`}
-                  className="group bg-background rounded-lg overflow-hidden shadow-sm border hover:shadow-md transition-shadow flex flex-col h-full"
-                >
-                  <div className="h-40 overflow-hidden">
-                    <Image
-                      src={post.image}
-                      alt={post.title}
-                      width={400}
-                      height={250}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://placehold.co/400x250/02228F/ffffff?text=Related+Article";
-                      }}
-                    />
-                  </div>
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h4 className="font-bold mb-2 group-hover:text-primary transition-colors">{post.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.excerpt}</p>
-                    <div className="flex items-center text-xs text-muted-foreground mt-auto">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        <span>{post.date}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <RelatedPosts posts={[
+            {
+              id: "1",
+              title: "Small Business Accounting Best Practices",
+              excerpt: "Essential accounting practices every small business owner should know to stay organized and compliant.",
+              date: "December 15, 2024",
+              author: "Sarah Johnson",
+              readTime: "8 min read",
+              category: "Accounting",
+              image: "/images/blog/accounting-practices.jpg",
+              slug: "small-business-accounting-best-practices"
+            },
+            {
+              id: "2",
+              title: "Invoice Management for Tax Season",
+              excerpt: "How proper invoice management can save you time and money during tax preparation.",
+              date: "December 10, 2024",
+              author: "Mike Chen",
+              readTime: "6 min read",
+              category: "Tax Planning",
+              image: "/images/blog/invoice-management.jpg",
+              slug: "invoice-management-tax-season"
+            },
+            {
+              id: "3",
+              title: "Digital Receipt Organization Tips",
+              excerpt: "Modern strategies for organizing and storing digital receipts for your business.",
+              date: "December 5, 2024",
+              author: "Lisa Rodriguez",
+              readTime: "5 min read",
+              category: "Organization",
+              image: "/images/blog/digital-receipts.jpg",
+              slug: "digital-receipt-organization-tips"
+            }
+          ]} />
 
-          {/* CTA Section */}
-          <div className="bg-primary text-white p-8 rounded-lg my-12">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold mb-4">Make tax season easier with Invo</h3>
-              <p className="mb-6 text-white/90 max-w-2xl mx-auto">
-                Automatically track expenses, categorize receipts, and generate tax-ready reports. Invo helps Malaysian businesses stay organized year-round and maximize deductions at tax time.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Button variant="secondary" size="lg" asChild>
-                  <Link href="/signup">Start Free Trial</Link>
-                </Button>
-                <Button variant="outline" className="bg-transparent border-white text-white hover:bg-white/10" size="lg" asChild>
-                  <Link href="/contact">Contact Sales</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
+          <CTASection
+            title="Ready to Maximize Your Tax Deductions?"
+            description="Let our invoice management system help you track and organize all your business expenses for maximum tax savings."
+            primaryButton={{
+              text: "Start Free Trial",
+              href: "/signup"
+            }}
+            secondaryButton={{
+              text: "Learn More",
+              href: "/features"
+            }}
+          />
         </div>
       </article>
+      
+      <ArticleSchema 
+        post={{
+          title: "Tax Deductions: Business Expenses You Might Be Missing",
+          excerpt: "Discover often-missed tax deductions for Malaysian businesses. Learn about home office, professional development, vehicle, technology, and insurance deductions that could save thousands.",
+          featuredImage: "https://invo.my/blog/tax-deductions.jpg",
+          slug: "tax-deductions-business-expenses",
+          publishedAt: "2023-01-30T00:00:00.000Z",
+          updatedAt: "2023-01-30T00:00:00.000Z",
+          author: {
+            name: "Adam",
+            title: "Founder",
+            bio: "Adam consults for both large organizations and SMEs to identify & optimize finance processes."
+          },
+          category: "Taxes",
+          tags: ['tax deductions', 'business expenses', 'Malaysia tax', 'LHDN', 'SME tax savings'],
+          wordCount: 2500,
+          readTime: 7
+        }}
+      />
     </div>
   );
 }

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { InlineLoading } from '@/components/ui/loading';
 import { 
   Dialog,
   DialogContent,
@@ -162,10 +162,7 @@ export default function PasswordResetForm() {
               
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
+                  <InlineLoading text="Updating..." />
                 ) : (
                   'Update Password'
                 )}
@@ -192,4 +189,4 @@ export default function PasswordResetForm() {
       </Dialog>
     </>
   );
-} 
+}

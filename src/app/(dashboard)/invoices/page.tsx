@@ -43,6 +43,7 @@ import {
   Send,
   Receipt
 } from 'lucide-react';
+import { WhatsAppInvoiceButton, WhatsAppFollowUpButton } from '@/components/whatsapp';
 import Link from 'next/link';
 import { formatCurrency, format, formatRelativeDate, calculateDueDays } from '@/lib/utils';
 // Dynamic import for PDF generator to reduce bundle size
@@ -50,6 +51,7 @@ import { formatCurrency, format, formatRelativeDate, calculateDueDays } from '@/
 import { InvoiceWithDetails } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
+import { InvoicesLoading } from '@/components/ui/loading';
 import { useSettings } from '@/contexts/settings-context';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
@@ -429,14 +431,7 @@ export default function InvoicesPage() {
         />
       </div>
 
-      <Suspense fallback={
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary mx-auto"></div>
-            <p>Loading invoices...</p>
-          </div>
-        </div>
-      }>
+      <Suspense fallback={<InvoicesLoading />}>
         <InvoicesList 
           searchTerm={searchTerm} 
           onViewInvoice={handleViewInvoice} 
@@ -604,16 +599,25 @@ export default function InvoicesPage() {
             </div>
           </div>
           
-          {/* Download PDF Button */}
+          {/* Action Buttons */}
           {selectedInvoice && (
-            <div className="flex justify-center mt-6">
+            <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
               <Button 
                 onClick={() => handleDownloadPDF(selectedInvoice)}
                 className="flex items-center gap-2"
+                variant="outline"
               >
                 <Download className="h-4 w-4" />
                 Download PDF
               </Button>
+              
+              {selectedInvoice.customer.phoneNumber && (
+                <WhatsAppInvoiceButton
+                  invoice={selectedInvoice}
+                  companyName={companyDetails?.legalName || 'Your Company'}
+                  className="flex items-center gap-2"
+                />
+              )}
             </div>
           )}
         </DialogContent>
@@ -890,6 +894,15 @@ function InvoicesList({
                             <Receipt className="mr-2 h-4 w-4" /> Generate Receipt
                           </DropdownMenuItem>
                         )}
+                        {/* WhatsApp Follow-up for overdue invoices */}
+                        {calculateDueDays(invoice.dueDate) < 0 && invoice.customer.phone && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                          <WhatsAppFollowUpButton
+                            invoice={invoice}
+                            companyDetails={companyDetails}
+                            reminderType="gentle"
+                            asDropdownItem
+                          />
+                        )}
                         {invoice.status !== 'CANCELLED' && (
                           <DropdownMenuItem onSelect={() => onCancelInvoice(invoice)}>
                             <XCircle className="mr-2 h-4 w-4" /> Cancel Invoice
@@ -991,6 +1004,15 @@ function InvoicesList({
                           <DropdownMenuItem onSelect={() => onGenerateReceipt(invoice)}>
                             <Receipt className="mr-2 h-4 w-4" /> Generate Receipt
                           </DropdownMenuItem>
+                        )}
+                        {/* WhatsApp Follow-up for overdue invoices */}
+                        {calculateDueDays(invoice.dueDate) < 0 && invoice.customer.phone && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                          <WhatsAppFollowUpButton
+                            invoice={invoice}
+                            companyDetails={companyDetails}
+                            reminderType="gentle"
+                            asDropdownItem
+                          />
                         )}
                         {invoice.status !== 'CANCELLED' && (
                           <DropdownMenuItem onSelect={() => onCancelInvoice(invoice)}>

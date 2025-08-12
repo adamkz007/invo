@@ -1,7 +1,10 @@
 # TODO:
 
-- [x] remove-mock-receipts: Remove mockReceipts array from /Users/adamkz/invo/src/app/api/receipts/route.ts (priority: High)
-- [x] remove-mock-products: Remove mockProducts array from /Users/adamkz/invo/src/app/api/receipts/route.ts (priority: High)
-- [x] update-global-receipts: Update global._receipts initialization to use empty array instead of mockReceipts (priority: High)
-- [x] update-getproducts: Update getProducts function to return empty array (priority: Medium)
-- [x] fix-receipts-id-route: Remove mockReceipts import from /Users/adamkz/invo/src/app/api/receipts/[id]/route.ts (priority: Medium)
+- [x] 1: Create WhatsApp utility functions for link generation with phone formatting and message templates (priority: High)
+- [x] 2: Add WhatsApp button component with proper styling using shadcn/ui (priority: High)
+- [x] 3: Integrate WhatsApp send button in invoice details page (priority: High)
+- [x] 4: Add WhatsApp functionality to receipt generation (priority: Medium)
+- [x] 5: Implement WhatsApp contact buttons in customer management (priority: Medium)
+- [x] 6: Create follow-up WhatsApp functionality for overdue invoices (priority: Medium)
+- [x] 7: Test all WhatsApp integrations and ensure proper URL encoding (priority: Medium)
+- [x] 8: Update UI components to include WhatsApp icons and styling (priority: Low)

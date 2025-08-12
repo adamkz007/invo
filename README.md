@@ -9,6 +9,7 @@ Invo is a simple, practical invoicing solution designed specifically for Malaysi
 - **Business Insights**: See how your business is performing with easy-to-understand charts
 - **Time-Saving Tools**: Set up recurring invoices and automated reminders
 - **Work Anywhere**: Access your business from your phone, tablet, or computer
+- **POS System**: Manage restaurant tables and orders with our integrated POS system
 
 ## PWA Support
 
@@ -31,6 +32,17 @@ To install Invo on your device:
 - TypeScript
 - Tailwind CSS
 - Framer Motion
+
+## Database Migrations
+
+Invo uses Prisma for local development and Supabase in production. To keep the databases in sync, we have several migration scripts:
+
+- `npm run db:deploy` - Deploy Prisma schema changes to the local database
+- `node migrate-to-supabase.js` - Migrate the basic schema to Supabase
+- `node sync-schema-migration.js` - Sync additional fields to Supabase
+- `node migrate-pos-tables.js` - Migrate POS tables to Supabase
+
+When adding new POS tables or modifying existing ones, make sure to run the appropriate migration scripts.
 
 ## License
 

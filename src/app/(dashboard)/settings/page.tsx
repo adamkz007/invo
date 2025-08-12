@@ -19,7 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/components/ui/toast';
-import { Loader2 } from 'lucide-react';
+import { SettingsLoading, InlineLoading } from '@/components/ui/loading';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AppSettings } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
@@ -176,8 +176,8 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
             msicCode: data.msicCode || '',
           });
           
-          // Lock certain fields if company exists (this is just an example)
-          setFieldsLocked(!!data.registrationNumber);
+          // No longer locking fields
+          setFieldsLocked(false);
         }
         
         setFormIsDirty(false);
@@ -317,7 +317,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
     }
   };
   
-  const updateAppSettings = async (newSettings: Partial<{currency: {code: string, locale: string}, enableReceiptsModule: boolean}>) => {
+  const updateAppSettings = async (newSettings: Partial<{currency: {code: string, locale: string}, enableReceiptsModule: boolean, enablePosModule: boolean}>) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
       updateSettings(updatedSettings);
@@ -347,8 +347,8 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
         <SubscriptionSettings user={userData} onSubscriptionChange={refreshUserData} />
       )}
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-6">
+      <div className="grid gap-8">
+        <div className="space-y-6 w-full">
           <Card>
             <CardHeader>
               <TooltipCardTitle tooltip="Information about your business that will appear on your invoices">
@@ -357,9 +357,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="flex items-center justify-center h-40">
-                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                </div>
+                <SettingsLoading />
               ) : (
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -373,15 +371,9 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                             <FormControl>
                               <Input 
                                 {...field} 
-                                disabled={isSaving || fieldsLocked} 
-                                className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                                disabled={isSaving} 
                               />
                             </FormControl>
-                            {fieldsLocked && (
-                              <FormDescription>
-                                This field cannot be changed after confirmation
-                              </FormDescription>
-                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -412,15 +404,9 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                             <FormControl>
                               <Input 
                                 {...field} 
-                                disabled={isSaving || fieldsLocked}
-                                className={fieldsLocked ? "bg-muted text-muted-foreground" : ""}
+                                disabled={isSaving}
                               />
                             </FormControl>
-                            {fieldsLocked && (
-                              <FormDescription>
-                                This field cannot be changed after confirmation
-                              </FormDescription>
-                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -771,12 +757,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                       disabled={isSaving || !formIsDirty}
                       className="w-full"
                     >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : 'Save Changes'}
+                      {isSaving ? <InlineLoading text="Saving..." /> : 'Save Changes'}
                     </Button>
                   </form>
                 </Form>
@@ -834,6 +815,35 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
+                    <label className="block text-sm font-medium">POS Module</label>
+                    <p className="text-sm text-muted-foreground">
+                      Enable Point of Sale system for in-person transactions
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant={settings.enablePosModule ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        updateAppSettings({ enablePosModule: true });
+                      }}
+                    >
+                      Enable
+                    </Button>
+                    <Button 
+                      variant={!settings.enablePosModule ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        updateAppSettings({ enablePosModule: false });
+                      }}
+                    >
+                      Disable
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
                     <label className="block text-sm font-medium">Receipts Module</label>
                     <p className="text-sm text-muted-foreground">
                       Enable quick receipt generation for walk-in customers
@@ -865,7 +875,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           <PasswordResetForm />
         </div>
       </div>

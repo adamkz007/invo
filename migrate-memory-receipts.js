@@ -1,20 +1,13 @@
-// Script to migrate in-memory receipts to the database
+// Script to migrate receipts to the database
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Function to fetch the in-memory receipts from the API
-async function fetchInMemoryReceipts() {
-  try {
-    const response = await fetch('http://localhost:3001/api/check-receipts');
-    if (!response.ok) {
-      throw new Error(`Failed to fetch receipts: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data.receipts || [];
-  } catch (error) {
-    console.error('Error fetching in-memory receipts:', error);
-    return [];
-  }
+// Function to get receipts from database or other source
+async function getReceiptsToMigrate() {
+  // TODO: Replace with your actual source of receipts
+  // This is a placeholder - implement your own logic to get receipts that need migration
+  console.log('Getting receipts to migrate from source...');
+  return [];
 }
 
 // Function to get a valid user ID from the database
@@ -104,13 +97,13 @@ async function migrateReceipt(receipt) {
 // Main migration function
 async function migrateReceipts() {
   try {
-    console.log('Starting migration of in-memory receipts to database...');
+    console.log('Starting migration of receipts to database...');
     
-    // Fetch in-memory receipts
-    const memoryReceipts = await fetchInMemoryReceipts();
-    console.log(`Found ${memoryReceipts.length} receipts in memory`);
+    // Get receipts to migrate
+    const receiptsToMigrate = await getReceiptsToMigrate();
+    console.log(`Found ${receiptsToMigrate.length} receipts to migrate`);
     
-    if (memoryReceipts.length === 0) {
+    if (receiptsToMigrate.length === 0) {
       console.log('No receipts to migrate');
       return;
     }
@@ -119,7 +112,7 @@ async function migrateReceipts() {
     let successCount = 0;
     let failCount = 0;
     
-    for (const receipt of memoryReceipts) {
+    for (const receipt of receiptsToMigrate) {
       const result = await migrateReceipt(receipt);
       if (result) {
         successCount++;

@@ -8,6 +8,7 @@ import { RequestTACFormValues } from '@/types';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertCircle } from 'lucide-react';
+import { InlineLoading } from '@/components/ui/loading';
 
 // Malaysia phone number validation schema
 const formSchema = z.object({
@@ -155,7 +156,7 @@ export default function RequestTACForm({ onSuccess, isLogin = true, initialPhone
           )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Sending...' : 'Request Verification Code'}
+            {isLoading ? <InlineLoading text="Sending..." className="text-white" /> : 'Request Verification Code'}
           </Button>
         </form>
       </Form>

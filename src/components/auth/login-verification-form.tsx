@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { LoginFormValues } from '@/types';
 import { useRouter } from 'next/navigation';
 import { TACInput } from '@/components/ui/tac-input';
+import { InlineLoading } from '@/components/ui/loading';
 
 const formSchema = z.object({
   tac: z.string().length(6, 'Authentication code must be 6 digits'),
@@ -117,7 +118,7 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
 
           <div className="flex flex-col space-y-2">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Verifying...' : 'Verify and Login'}
+              {isLoading ? <InlineLoading text="Verifying..." className="text-white" /> : 'Verify and Login'}
             </Button>
             <Button
               type="button"

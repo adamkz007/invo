@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { SignUpFormValues } from '@/types';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { InlineLoading } from '@/components/ui/loading';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -308,7 +309,7 @@ export default function SignUpForm() {
           )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Signing up...' : 'Sign Up'}
+            {isLoading ? <InlineLoading text="Signing up..." className="text-white" /> : 'Sign Up'}
           </Button>
         </form>
       </Form>

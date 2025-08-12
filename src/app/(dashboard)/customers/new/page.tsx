@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, TooltipCardTitle } from "@/co
 import { ArrowLeft, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { InlineLoading } from '@/components/ui/loading';
 import { CustomerWithRelations } from '@/types';
 
 export default function NewCustomerPage() {
@@ -69,7 +70,7 @@ function CustomerForm({ userId, onCustomerCreated }: { userId: string, onCustome
     });
   }, []);
   
-  if (!Component) return <div>Loading form...</div>;
+  if (!Component) return <InlineLoading text="Loading form..." />;
   
   return <Component userId={userId} onCustomerCreated={onCustomerCreated} />;
 }

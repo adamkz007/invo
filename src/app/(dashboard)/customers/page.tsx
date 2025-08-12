@@ -33,6 +33,7 @@ import { Input } from '@/components/ui/input';
 import { formatRelativeDate } from '@/lib/utils';
 import { CustomerWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
+import { CustomersLoading } from '@/components/ui/loading';
 import { CustomerDetailDialog } from '@/components/customers/customer-detail-dialog';
 import { PLAN_LIMITS } from '@/lib/stripe';
 
@@ -147,14 +148,7 @@ export default function CustomersPage() {
   );
 
   if (isLoading) {
-    return (
-      <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground font-medium">Loading customers...</p>
-        </div>
-      </div>
-    );
+    return <CustomersLoading />;
   }
 
   if (error) {

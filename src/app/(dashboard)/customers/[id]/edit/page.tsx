@@ -7,11 +7,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CustomerWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
+import { CustomerEditLoading } from '@/components/ui/loading';
 import CustomerEditForm from '@/components/customers/customer-edit-form';
 
-export default function EditCustomerPage({ params }: { params: { id: string } }) {
-  // Access params directly
-  const resolvedParams = params;
+export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
+  // Unwrap params using React.use()
+  const resolvedParams = React.use(params);
   const router = useRouter();
   const { showToast } = useToast();
   const [customer, setCustomer] = useState<CustomerWithRelations | null>(null);
@@ -60,34 +61,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center">
-          <Link 
-            href="/customers" 
-            className="mr-4 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground bg-muted/50 px-2.5 py-1.5 rounded-md transition-colors hover:bg-muted"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <Users className="h-4 w-4" />
-            <span>Customers</span>
-          </Link>
-          <h1 className="text-3xl font-bold">Edit Customer</h1>
-        </div>
-        
-        <Card>
-          <CardHeader>
-            <TooltipCardTitle tooltip="Please wait while we load the customer data.">
-              Loading...
-            </TooltipCardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full h-40 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <CustomerEditLoading />;
   }
 
   if (error || !customer) {

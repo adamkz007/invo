@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, TooltipCardTitle } from '@/co
 import { ArrowLeft, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { InlineLoading } from '@/components/ui/loading';
 import { useSettings } from '@/contexts/settings-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
@@ -13,7 +14,7 @@ import { useToast } from '@/components/ui/toast';
 const ReceiptForm = dynamic(
   () => import('@/components/receipts/receipt-form-enhanced').then(mod => mod.default),
   {
-    loading: () => <div className="py-6 text-center">Loading form...</div>,
+    loading: () => <InlineLoading text="Loading form..." />,
     ssr: false // Disable server-side rendering to avoid hydration issues
   }
 );
@@ -60,7 +61,7 @@ export default function NewReceiptPage() {
           </TooltipCardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div className="py-6 text-center">Loading form...</div>}>
+          <Suspense fallback={<InlineLoading text="Loading form..." />}>
             <ReceiptForm />
           </Suspense>
         </CardContent>

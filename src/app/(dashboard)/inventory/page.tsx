@@ -33,6 +33,7 @@ import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
 import { ProductWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
+import { InventoryLoading } from '@/components/ui/loading';
 import { useSettings } from '@/contexts/settings-context';
 import { QuickEditDialog } from '@/components/inventory/quick-edit-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -68,10 +69,10 @@ export default function InventoryPage() {
       }
       
       const data = await response.json();
-      setProducts(data);
+      setProducts(data.products || []);
       
       // Calculate total inventory value - only include physical products (not services)
-      const inventoryValue = data.reduce((total: number, product: any) => {
+      const inventoryValue = data.products.reduce((total: number, product: any) => {
         // Only include products where disableStockManagement is false (physical products)
         if (!product.disableStockManagement) {
           return total + (product.price * product.quantity);
@@ -80,8 +81,8 @@ export default function InventoryPage() {
       }, 0);
       
       // Calculate additional inventory metrics
-      const totalProducts = data.filter((p: ProductWithRelations) => !p.disableStockManagement).length;
-      const lowStockProducts = data.filter((p: ProductWithRelations) => !p.disableStockManagement && p.quantity <= 5).length;
+      const totalProducts = data.products.filter((p: ProductWithRelations) => !p.disableStockManagement).length;
+      const lowStockProducts = data.products.filter((p: ProductWithRelations) => !p.disableStockManagement && p.quantity <= 5).length;
       
       setTotalInventoryValue(inventoryValue);
     } catch (err) {
@@ -195,14 +196,7 @@ export default function InventoryPage() {
   }, []);
   
   if (isLoading) {
-    return (
-      <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p>Loading inventory...</p>
-        </div>
-      </div>
-    );
+    return <InventoryLoading />;
   }
   
   return (

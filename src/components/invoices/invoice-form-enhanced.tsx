@@ -40,6 +40,7 @@ import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues } from '
 // import ProductFormDialog from '@/components/products/product-form-dialog';
 import { useToast } from '@/components/ui/toast';
 import { Badge } from '@/components/ui/badge';
+import { InlineLoading } from '@/components/ui/loading';
 
 // Form validation schema - memoized to prevent recreation
 const invoiceFormSchema = z.object({
@@ -433,7 +434,7 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
   }, [showToast]);
 
   if (isLoading) {
-    return <div className="flex justify-center p-8">Loading...</div>;
+    return <InlineLoading message="Loading form data..." />;
   }
 
   return (
@@ -913,7 +914,7 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
             disabled={isSubmitting}
             className="text-xs sm:text-sm py-1 h-8 sm:h-10"
           >
-            {isSubmitting ? 'Creating...' : 'Create Invoice'}
+            {isSubmitting ? <InlineLoading text="Creating..." className="text-white" /> : 'Create Invoice'}
           </Button>
         </div>
       </form>

@@ -28,6 +28,7 @@ import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues, Invoice
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
 import { useToast } from '@/components/ui/toast';
+import { InlineLoading } from '@/components/ui/loading';
 
 // Define valid invoice statuses
 const INVOICE_STATUSES = ['DRAFT', 'SENT', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED'] as const;
@@ -43,7 +44,7 @@ const invoiceFormSchema = z.object({
     quantity: z.coerce.number().min(1, { message: 'Quantity must be at least 1' }),
     unitPrice: z.coerce.number().min(0.01, { message: 'Price must be greater than 0' }),
     description: z.string().optional(),
-    disableStockManagement: z.boolean().optional(),
+    disableStockManagement: z.boolean().default(false),
   })).min(1, { message: 'Add at least one item' }),
   taxRate: z.coerce.number().min(0).max(100),
   discountRate: z.coerce.number().min(0).max(100),
@@ -92,7 +93,7 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
           throw new Error('Failed to fetch products');
         }
         const productsData = await productsResponse.json();
-        setProducts(productsData);
+        setProducts(productsData.products || []);
       } catch (error) {
         console.error('Error fetching data:', error);
         showToast({
@@ -184,9 +185,11 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
         ...updatedItems[index],
         unitPrice: product.price,
         description: product.description || '',
+        disableStockManagement: product.disableStockManagement || false,
       };
       form.setValue(`items.${index}.unitPrice`, product.price);
       form.setValue(`items.${index}.description`, product.description || '');
+      form.setValue(`items.${index}.disableStockManagement`, product.disableStockManagement || false);
     }
   };
 
@@ -300,6 +303,7 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
                   quantity: 1,
                   unitPrice: 0,
                   description: '',
+                  disableStockManagement: false,
                 })}
                 disabled={isSubmitting}
               >
@@ -433,6 +437,32 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
                         </FormItem>
                       )}
                     />
+                    
+                    {/* Disable Stock Management */}
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.disableStockManagement`}
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-4 flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              Disable Stock Management
+                            </FormLabel>
+                            <FormDescription>
+                              Check this if you don't want to track inventory for this item
+                            </FormDescription>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </div>
               ))}
@@ -557,7 +587,7 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting
-              ? 'Saving...'
+              ? <InlineLoading text="Saving..." />
               : isEditing
               ? 'Update Invoice'
               : 'Create Invoice'}

@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
+import { InlineLoading } from '@/components/ui/loading';
 
 const productFormSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
@@ -256,7 +257,7 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
             />
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating...' : 'Create Product'}
+                {isSubmitting ? <InlineLoading text="Creating..." /> : 'Create Product'}
               </Button>
             </DialogFooter>
           </form>
@@ -264,4 +265,4 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
       </DialogContent>
     </Dialog>
   );
-} 
+}

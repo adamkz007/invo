@@ -37,12 +37,14 @@ import {
   CreditCard,
   Phone
 } from 'lucide-react';
+import { WhatsAppReceiptButton } from '@/components/whatsapp';
 import Link from 'next/link';
 import { formatCurrency, format } from '@/lib/utils';
 // Dynamic import for PDF generator to reduce bundle size
 // import { downloadReceiptPDF } from '@/lib/pdf-generator';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
+import { ReceiptsLoading } from '@/components/ui/loading';
 import { useSettings } from '@/contexts/settings-context';
 import { ReceiptWithDetails } from '@/types';
 
@@ -197,6 +199,7 @@ export default function ReceiptsPage() {
             searchTerm={searchTerm}
             onViewReceipt={handleViewReceipt}
             onDownloadPDF={handleDownloadPDF}
+            companyDetails={companyDetails}
           />
         </CardContent>
       </Card>
@@ -263,7 +266,7 @@ export default function ReceiptsPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-3">
             <Button 
               variant="outline" 
               onClick={() => selectedReceipt && handleDownloadPDF(selectedReceipt)}
@@ -271,6 +274,14 @@ export default function ReceiptsPage() {
               <Download className="mr-2 h-4 w-4" />
               Download PDF
             </Button>
+            
+            {selectedReceipt?.customerPhone && (
+              <WhatsAppReceiptButton
+                receipt={selectedReceipt}
+                companyName={companyDetails?.legalName || 'Your Company'}
+                className="flex items-center gap-2"
+              />
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -281,11 +292,13 @@ export default function ReceiptsPage() {
 function ReceiptsList({ 
   searchTerm,
   onViewReceipt,
-  onDownloadPDF
+  onDownloadPDF,
+  companyDetails
 }: { 
   searchTerm: string,
   onViewReceipt: (receipt: ReceiptWithDetails) => void,
-  onDownloadPDF: (receipt: ReceiptWithDetails) => void
+  onDownloadPDF: (receipt: ReceiptWithDetails) => void,
+  companyDetails: CompanyDetails | null
 }) {
   const [receipts, setReceipts] = useState<ReceiptWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -338,7 +351,7 @@ function ReceiptsList({
   });
 
   if (isLoading) {
-    return <div className="flex justify-center p-4">Loading receipts...</div>;
+    return <ReceiptsLoading />;
   }
 
   if (receipts.length === 0) {
@@ -414,6 +427,17 @@ function ReceiptsList({
                   <DropdownMenuItem onClick={() => onDownloadPDF(receipt)}>
                     Download PDF
                   </DropdownMenuItem>
+                  {receipt.customerPhone && (
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        const { generateReceiptWhatsAppURL } = require('@/lib/whatsapp');
+                        const url = generateReceiptWhatsAppURL(receipt, companyDetails?.legalName || 'Your Company');
+                        window.open(url, '_blank');
+                      }}
+                    >
+                      Send via WhatsApp
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>

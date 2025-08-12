@@ -22,6 +22,7 @@ import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { ProductWithRelations, ReceiptFormValues } from '@/types';
 import { useSettings } from '@/contexts/settings-context';
 import { useToast } from '@/components/ui/toast';
+import { InlineLoading } from '@/components/ui/loading';
 // import ProductFormDialog from '@/components/products/product-form-dialog';
 import { ShadcnDatePickerComponent } from '@/components/ui/shadcn-date-picker';
 
@@ -528,7 +529,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Receipt'}
+            {isSubmitting ? <InlineLoading text="Creating..." /> : 'Create Receipt'}
           </Button>
         </div>
       </form>

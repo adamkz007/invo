@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { InlineLoading } from '@/components/ui/loading';
 import { CustomerWithRelations } from '@/types';
 import {
   Select,
@@ -339,7 +340,7 @@ export default function CustomerEditForm({
         
         <div className="pt-4">
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Updating...' : 'Update Customer'}
+            {isSubmitting ? <InlineLoading text="Updating..." /> : 'Update Customer'}
           </Button>
         </div>
       </form>

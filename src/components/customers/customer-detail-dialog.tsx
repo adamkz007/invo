@@ -12,8 +12,11 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FileText, Mail, Phone, X } from 'lucide-react';
+import { WhatsAppContactButton } from '@/components/whatsapp';
+import { generateCustomerWhatsAppURL } from '@/lib/whatsapp';
 import { formatCurrency } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
+import { InlineLoading } from '@/components/ui/loading';
 
 interface CustomerDetailDialogProps {
   customerId: string;
@@ -105,10 +108,7 @@ export function CustomerDetailDialog({
         </DialogHeader>
         
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary shadow-sm"></div>
-            <p className="ml-3 text-muted-foreground animate-pulse">Loading...</p>
-          </div>
+          <InlineLoading text="Loading customer details..." />
         ) : error ? (
           <div className="py-6 text-center">
             <p className="text-red-500 mb-4 font-medium">Error: {error}</p>
@@ -202,6 +202,21 @@ export function CustomerDetailDialog({
                 <Phone className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                 Call
               </Button>
+              
+              {customer.phoneNumber && (
+                <WhatsAppContactButton
+                  phoneNumber={customer.phoneNumber}
+                  whatsappUrl={generateCustomerWhatsAppURL(
+                    customer.phoneNumber,
+                    {
+                      customerName: customer.name,
+                      companyName: "Your Company"
+                    }
+                  )}
+                  className="w-full justify-start hover:shadow-sm hover:bg-green-50 hover:border-green-200 transition-all duration-200 group"
+                  variant="outline"
+                />
+              )}
             </div>
           </div>
         ) : null}

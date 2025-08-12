@@ -20,6 +20,7 @@ import {
 import { CustomerWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { InlineLoading } from '@/components/ui/loading';
 
 // Malaysia-specific phone number validation
 function isValidMalaysiaPhoneNumber(phone: string): boolean {
@@ -248,7 +249,7 @@ export default function CustomerForm({ defaultValues, isEditing = false, custome
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting
-              ? 'Saving...'
+              ? <InlineLoading text="Saving..." />
               : isEditing
               ? 'Update Customer'
               : 'Create Customer'}

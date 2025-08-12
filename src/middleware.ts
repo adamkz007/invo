@@ -95,7 +95,8 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = path.startsWith('/dashboard') || 
                            path.startsWith('/invoices') || 
                            path.startsWith('/customers') ||
-                           path.startsWith('/inventory');
+                           path.startsWith('/inventory') ||
+                           path.startsWith('/pos');
   
   // Special case for the landing page routes
   if (path === '/landing' || path === '/home') {

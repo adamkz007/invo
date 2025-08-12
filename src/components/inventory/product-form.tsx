@@ -92,6 +92,9 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
       
       const data = await response.json();
       
+      // Log the response for debugging
+      console.log('Product API response:', data);
+      
       showToast({
         message: isEditing ? 'Product updated successfully!' : 'Product created successfully!',
         variant: 'success',

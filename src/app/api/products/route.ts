@@ -54,11 +54,11 @@ export async function GET(request: NextRequest) {
 
     // Cache the result
     productsCache.set(cacheKey, {
-      data: products,
+      data: { products },
       timestamp: now
     });
 
-    return NextResponse.json(products, {
+    return NextResponse.json({ products }, {
       headers: {
         'Cache-Control': 'public, max-age=60, s-maxage=120',
         'X-Cache': 'MISS'
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     const cacheKey = `products_${userId}`;
     productsCache.delete(cacheKey);
 
-    return NextResponse.json(newProduct, { status: 201 });
+    return NextResponse.json({ product: newProduct }, { status: 201 });
   } catch (error) {
     console.error('Error creating product:', error);
     

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       })
     );
     
-    return NextResponse.json(products);
+    return NextResponse.json({ products });
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ 
@@ -50,4 +50,4 @@ export async function GET(request: NextRequest) {
       status: 500 
     });
   }
-} 
+}

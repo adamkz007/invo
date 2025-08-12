@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { InlineLoading } from '@/components/ui/loading';
 import { PhoneInput } from '@/components/ui/phone-input';
 import {
   Select,
@@ -569,7 +570,7 @@ export default function CustomerFormDialog({
             />
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating...' : 'Create Customer'}
+                {isSubmitting ? <InlineLoading text="Creating..." /> : 'Create Customer'}
               </Button>
             </DialogFooter>
           </form>

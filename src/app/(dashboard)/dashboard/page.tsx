@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Users, Package, ArrowUpRight, DollarSign, ClipboardList, TrendingUp, BarChart3, Download, Calendar } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
+import { DashboardLoading } from '@/components/ui/loading';
 import { useSettings } from '@/contexts/settings-context';
 import type { ComponentType } from 'react';
 import { format } from 'date-fns';
@@ -371,14 +372,7 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p>Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <DashboardLoading />;
   }
 
   return (
@@ -405,7 +399,7 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
             <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
-              <Users className="h-5 w-5 text-accent dark:text-accent-foreground" />
+              <Users className="h-5 w-5 text-primary dark:text-primary" />
             </div>
           </CardHeader>
           <CardContent>
@@ -419,8 +413,8 @@ export default function DashboardPage() {
         <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <div className="rounded-full p-2 bg-secondary/10 dark:bg-secondary/20 shadow-sm">
-              <Package className="h-5 w-5 text-secondary-foreground" />
+            <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
+              <Package className="h-5 w-5 text-primary dark:text-primary" />
             </div>
           </CardHeader>
           <CardContent>
@@ -447,14 +441,14 @@ export default function DashboardPage() {
         </Card>
       </div>
       
-      <Tabs defaultValue="overview" className="mt-8">
-          <TabsList className="grid w-full grid-cols-3 p-1 bg-muted rounded-xl shadow-sm">
-            <TabsTrigger value="overview" className="transition-all duration-300">Overview</TabsTrigger>
-<TabsTrigger value="charts" className="transition-all duration-300">Charts</TabsTrigger>
-<TabsTrigger value="recent" className="transition-all duration-300">Recent Invoices</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="charts">Charts</TabsTrigger>
+          <TabsTrigger value="recent">Recent Invoices</TabsTrigger>
+        </TabsList>
         
-        <TabsContent value="overview" className="space-y-6 animate-in fade-in duration-500">
+        <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -548,14 +542,14 @@ export default function DashboardPage() {
                   href="/customers/new" 
                   className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent/10 dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30 group"
                 >
-                  <Users className="mr-2 h-5 w-5 text-accent dark:text-accent/80 group-hover:scale-110 transition-transform duration-200" />
+                  <Users className="mr-2 h-5 w-5 text-primary dark:text-primary group-hover:scale-110 transition-transform duration-200" />
                   Add New Customer
                 </a>
                 <a 
                   href="/inventory/new" 
                   className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-secondary/10 dark:border-border/60 dark:hover:bg-secondary/20 dark:hover:border-secondary/30 group"
                 >
-                  <Package className="mr-2 h-5 w-5 text-secondary dark:text-secondary/80 group-hover:scale-110 transition-transform duration-200" />
+                  <Package className="mr-2 h-5 w-5 text-primary dark:text-primary group-hover:scale-110 transition-transform duration-200" />
                   Add New Product
                 </a>
               </CardContent>
@@ -769,7 +763,7 @@ export default function DashboardPage() {
           </div>
         </TabsContent>
         
-        <TabsContent value="recent">
+        <TabsContent value="recent" className="space-y-4">
           <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg transition-all duration-300">
             <CardHeader>
               <CardTitle>Recent Invoices</CardTitle>

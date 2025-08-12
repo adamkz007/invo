@@ -27,6 +27,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { ProductWithRelations } from '@/types';
 import { useSettings } from '@/contexts/settings-context';
+import { InlineLoading } from '@/components/ui/loading';
 
 // Form validation schema
 const quickEditSchema = z.object({
@@ -200,7 +201,7 @@ export function QuickEditDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
+                {isSubmitting ? <InlineLoading text="Saving..." /> : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>
@@ -208,4 +209,4 @@ export function QuickEditDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

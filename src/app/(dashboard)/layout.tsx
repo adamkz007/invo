@@ -15,7 +15,8 @@ import {
   Users,
   PlusCircle,
   LucideIcon,
-  Receipt
+  Receipt,
+  ShoppingCart
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ProfileNotification } from '@/components/ui/profile-notification';
+import { DashboardLoading } from '@/components/ui/loading';
 import { useTheme } from 'next-themes';
 import { useSettings } from '@/contexts/settings-context';
 
@@ -117,27 +119,29 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
     { name: 'Settings', href: '/settings', icon: Settings },
   ], []);
   
-  // Add Receipts menu item if enabled in settings - memoized
+  // Add optional modules (POS and Receipts) if enabled in settings - memoized
   const navigationItems = useMemo(() => {
-    return settings.enableReceiptsModule 
-      ? [
-          ...baseNavigationItems.slice(0, 2), 
-          { name: 'Receipts', href: '/receipts', icon: Receipt },
-          ...baseNavigationItems.slice(2)
-        ]
-      : baseNavigationItems;
-  }, [settings.enableReceiptsModule, baseNavigationItems]);
+    let items = [...baseNavigationItems];
+    
+    // Insert POS after Dashboard if enabled
+    if (settings.enablePosModule) {
+      items.splice(1, 0, { name: 'POS', href: '/pos', icon: ShoppingCart });
+    }
+    
+    // Insert Receipts after Invoices if enabled
+    if (settings.enableReceiptsModule) {
+      const invoicesIndex = items.findIndex(item => item.name === 'Invoices');
+      if (invoicesIndex !== -1) {
+        items.splice(invoicesIndex + 1, 0, { name: 'Receipts', href: '/receipts', icon: Receipt });
+      }
+    }
+    
+    return items;
+  }, [settings.enableReceiptsModule, settings.enablePosModule, baseNavigationItems]);
 
   // Show loading state or login redirect
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
+    return <DashboardLoading />;
   }
 
   return (

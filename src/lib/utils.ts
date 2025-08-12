@@ -16,6 +16,7 @@ export interface AppSettings {
     locale: string;
   };
   enableReceiptsModule: boolean;
+  enablePosModule: boolean;
 }
 
 // Default settings
@@ -24,7 +25,8 @@ export const defaultSettings: AppSettings = {
     code: 'MYR',
     locale: 'en-MY'
   },
-  enableReceiptsModule: false
+  enableReceiptsModule: false,
+  enablePosModule: false
 };
 
 // Format currency
