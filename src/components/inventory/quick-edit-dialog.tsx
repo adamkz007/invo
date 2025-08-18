@@ -60,9 +60,9 @@ export function QuickEditDialog({
   const form = useForm<QuickEditFormValues>({
     resolver: zodResolver(quickEditSchema),
     defaultValues: {
-      price: product.price,
-      quantity: product.quantity,
-      disableStockManagement: product.disableStockManagement,
+      price: product.price !== undefined && product.price !== null ? product.price : 0,
+      quantity: product.quantity !== undefined && product.quantity !== null ? product.quantity : 0,
+      disableStockManagement: product.disableStockManagement || false,
     },
   });
 

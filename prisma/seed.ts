@@ -38,7 +38,11 @@ async function main() {
         name: 'Acme Inc',
         email: 'contact@acme.com',
         phoneNumber: '123-456-7890',
-        address: '123 Main St, Anytown, USA',
+        street: '123 Main St',
+        city: 'Anytown',
+        state: 'CA',
+        postcode: '12345',
+        country: 'USA',
         notes: 'Important client',
         userId: user.id,
       },
@@ -48,7 +52,11 @@ async function main() {
         name: 'Globex Corp',
         email: 'info@globex.com',
         phoneNumber: '234-567-8901',
-        address: '456 Oak Ave, Business City, USA',
+        street: '456 Oak Ave',
+        city: 'Business City',
+        state: 'NY',
+        postcode: '67890',
+        country: 'USA',
         notes: '',
         userId: user.id,
       },
@@ -58,7 +66,11 @@ async function main() {
         name: 'Wayne Enterprises',
         email: 'business@wayne.com',
         phoneNumber: '345-678-9012',
-        address: '789 Gotham Rd',
+        street: '789 Gotham Rd',
+        city: 'Gotham',
+        state: 'NJ',
+        postcode: '54321',
+        country: 'USA',
         notes: '',
         userId: user.id,
       },
@@ -252,4 +264,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-  }); 
+  });

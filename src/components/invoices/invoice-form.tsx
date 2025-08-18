@@ -85,7 +85,10 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
           throw new Error('Failed to fetch customers');
         }
         const customersData = await customersResponse.json();
-        setCustomers(customersData);
+        // Check if the data is in the expected format (array or nested object)
+        const customersArray = Array.isArray(customersData) ? customersData : 
+                             (customersData.customers ? customersData.customers : []);
+        setCustomers(customersArray);
 
         // Fetch products
         const productsResponse = await fetch('/api/product');
@@ -93,7 +96,10 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
           throw new Error('Failed to fetch products');
         }
         const productsData = await productsResponse.json();
-        setProducts(productsData.products || []);
+        // Check if the data is in the expected format (array or nested object)
+        const productsArray = Array.isArray(productsData) ? productsData : 
+                             (productsData.products ? productsData.products : []);
+        setProducts(productsArray);
       } catch (error) {
         console.error('Error fetching data:', error);
         showToast({
@@ -181,13 +187,14 @@ export default function InvoiceForm({ defaultValues, isEditing = false }: Invoic
     if (product) {
       const currentItems = form.getValues('items');
       const updatedItems = [...currentItems];
+      const safePrice = product.price !== undefined && product.price !== null ? product.price : 0;
       updatedItems[index] = {
         ...updatedItems[index],
-        unitPrice: product.price,
+        unitPrice: safePrice,
         description: product.description || '',
         disableStockManagement: product.disableStockManagement || false,
       };
-      form.setValue(`items.${index}.unitPrice`, product.price);
+      form.setValue(`items.${index}.unitPrice`, safePrice);
       form.setValue(`items.${index}.description`, product.description || '');
       form.setValue(`items.${index}.disableStockManagement`, product.disableStockManagement || false);
     }

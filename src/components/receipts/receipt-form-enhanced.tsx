@@ -218,7 +218,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
   const handleProductChange = (productId: string, index: number) => {
     const product = products.find(p => p.id === productId);
     if (product) {
-      form.setValue(`items.${index}.unitPrice`, product.price);
+      form.setValue(`items.${index}.unitPrice`, product.price !== undefined && product.price !== null ? product.price : 0);
       form.setValue(`items.${index}.description`, product.description || '');
     }
   };

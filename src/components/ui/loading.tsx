@@ -69,8 +69,8 @@ export function ReceiptsLoading() {
 }
 
 // Minimal loading for inline use
-export function InlineLoading({ text }: { text?: string }) {
-  return <Loading text={text} variant="minimal" size="sm" />;
+export function InlineLoading({ text, className }: { text?: string, className?: string }) {
+  return <Loading text={text} variant="minimal" size="sm" className={className} />;
 }
 
 export function CustomerEditLoading() {

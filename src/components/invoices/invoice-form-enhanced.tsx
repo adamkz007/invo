@@ -133,7 +133,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
     return customers.map((customer) => ({
       value: customer.id,
       label: customer.name,
-      details: customer.phoneNumber || ''
+      details: customer.phoneNumber || '',
+      key: customer.id
     }));
   }, [customers]);
 
@@ -142,7 +143,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
     return products.map((product) => ({
       value: product.id,
       label: product.name,
-      details: `$${product.price.toFixed(2)}`
+      details: product.price !== undefined && product.price !== null ? `$${product.price.toFixed(2)}` : '$0.00',
+      key: product.id
     }));
   }, [products]);
 
@@ -204,8 +206,15 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
             productsRes.json()
           ]);
           
-          setCustomers(customersData);
-          setProducts(productsData);
+          // Check if the data is in the expected format
+          const customersArray = Array.isArray(customersData) ? customersData : 
+                                 (customersData.customers ? customersData.customers : []);
+          
+          const productsArray = Array.isArray(productsData) ? productsData : 
+                               (productsData.products ? productsData.products : []);
+          
+          setCustomers(customersArray);
+          setProducts(productsArray);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -382,7 +391,7 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
   const handleProductChange = useCallback((productId: string, index: number) => {
     const product = products.find(p => p.id === productId);
     if (product) {
-      form.setValue(`items.${index}.unitPrice`, product.price);
+      form.setValue(`items.${index}.unitPrice`, product.price !== undefined && product.price !== null ? product.price : 0);
       form.setValue(`items.${index}.description`, product.description || '');
       form.setValue(`items.${index}.disableStockManagement`, product.disableStockManagement || false);
       
@@ -434,7 +443,7 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
   }, [showToast]);
 
   if (isLoading) {
-    return <InlineLoading message="Loading form data..." />;
+    return <InlineLoading text="Loading form data..." />;
   }
 
   return (
@@ -668,7 +677,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                               options={products.map((product) => ({
                                 value: product.id,
                                 label: product.name,
-                                details: product.sku || product.description || ''
+                                details: product.sku || product.description || '',
+                                key: product.id
                               }))}
                               value={field.value}
                               onChange={(value) => {
