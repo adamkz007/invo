@@ -73,7 +73,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     const session = await auth();
     if (isProtectedRoute(request) && !session.userId) {
       // Redirect unauthenticated users trying to access protected routes
-      return NextResponse.redirect(new URL('/sign-in', request.url));
+      return NextResponse.redirect(new URL('/login', request.url));
     }
     if ((path === '/login' || path === '/sign-in' || path === '/signup' || path === '/sign-up' || path === '/') && session.userId) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -86,7 +86,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   const hasValidToken = token ? verifyTokenEdge(token) : false;
 
   if (isProtectedRoute(request) && !hasValidToken) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
+    return NextResponse.redirect(new URL('/login', request.url));
   }
   if ((path === '/login' || path === '/sign-in' || path === '/signup' || path === '/sign-up' || path === '/') && hasValidToken) {
     return NextResponse.redirect(new URL('/dashboard', request.url));

@@ -12,6 +12,7 @@ import { useTheme } from 'next-themes';
 import RequestTACForm from '@/components/auth/request-tac-form';
 import LoginVerificationForm from '@/components/auth/login-verification-form';
 import LoginPasswordForm from '@/components/auth/login-password-form';
+import { SignIn } from '@clerk/nextjs';
 
 // Create a client component that uses useSearchParams
 function LoginContent() {
@@ -33,12 +34,8 @@ function LoginContent() {
   
   useEffect(() => {
     console.log('LoginContent - Current state:', { step, phoneNumber, theme: isDarkMode ? 'dark' : 'light', clerkEnabled });
-    
-    // Redirect to the proper sign-in route if Clerk is enabled
-    if (clerkEnabled) {
-      router.push('/sign-in');
-    }
-  }, [step, phoneNumber, isDarkMode, clerkEnabled, router]);
+    // When Clerk is enabled, we render SignIn inline on /login, no redirects
+  }, [step, phoneNumber, isDarkMode, clerkEnabled]);
   
   useEffect(() => {
     // Check if redirected from successful signup or password reset
@@ -111,15 +108,16 @@ function LoginContent() {
         
         {clerkEnabled ? (
           <div className="flex justify-center">
-            <div className="text-center">
-              <p className="mb-4">Redirecting to sign-in page...</p>
-              <Button 
-                onClick={() => router.push('/sign-in')}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                Go to Sign In
-              </Button>
-            </div>
+            <SignIn
+              appearance={{
+                elements: {
+                  formButtonPrimary: 'bg-primary hover:bg-primary/90 text-primary-foreground',
+                  card: 'bg-background border-border',
+                },
+              }}
+              afterSignInUrl="/dashboard"
+              signUpUrl="/signup"
+            />
           </div>
         ) : (
           <Fragment>

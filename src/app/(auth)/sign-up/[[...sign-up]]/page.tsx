@@ -41,14 +41,14 @@ export default function SignUpPage() {
               },
             }}
             afterSignUpUrl="/dashboard"
-            signInUrl="/sign-in"
+            signInUrl="/login"
           />
         </div>
 
         <div className="mt-6 text-center text-sm">
           <p>
             Already have an account?{' '}
-            <Link href="/sign-in" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="font-medium text-primary hover:underline">
               Sign in
             </Link>
           </p>
