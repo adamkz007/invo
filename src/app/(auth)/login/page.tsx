@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,14 +22,23 @@ function LoginContent() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   // Add theme hook to detect dark mode
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   
+  // Determine if Clerk is enabled (public env key is inlined at build time)
+  const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
   useEffect(() => {
-    console.log('LoginContent - Current state:', { step, phoneNumber, theme: isDarkMode ? 'dark' : 'light' });
-  }, [step, phoneNumber, isDarkMode]);
+    console.log('LoginContent - Current state:', { step, phoneNumber, theme: isDarkMode ? 'dark' : 'light', clerkEnabled });
+    
+    // Redirect to the proper sign-in route if Clerk is enabled
+    if (clerkEnabled) {
+      router.push('/sign-in');
+    }
+  }, [step, phoneNumber, isDarkMode, clerkEnabled, router]);
   
   useEffect(() => {
     // Check if redirected from successful signup or password reset
@@ -100,58 +109,74 @@ function LoginContent() {
           </div>
         </div>
         
-        {showSuccessMessage && (
-          <div className="mb-4 p-3 rounded-md bg-green-50 text-green-800 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-            <p>{successMessage}</p>
+        {clerkEnabled ? (
+          <div className="flex justify-center">
+            <div className="text-center">
+              <p className="mb-4">Redirecting to sign-in page...</p>
+              <Button 
+                onClick={() => router.push('/sign-in')}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                Go to Sign In
+              </Button>
+            </div>
           </div>
-        )}
-
-        {step === 'request-tac' && (
+        ) : (
           <Fragment>
-            <RequestTACForm onSuccess={handleRequestTACSuccess} isLogin={true} initialPhoneNumber={phoneNumber} />
-            <div className="text-center mt-4">
-              <Button 
-                variant="link" 
-                onClick={handleSwitchToPassword} 
-                className="text-sm text-muted-foreground"
-              >
-                Login with password instead
-              </Button>
+            {showSuccessMessage && (
+              <div className="mb-4 p-3 rounded-md bg-green-50 text-green-800 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <p>{successMessage}</p>
+              </div>
+            )}
+
+            {step === 'request-tac' && (
+              <Fragment>
+                <RequestTACForm onSuccess={handleRequestTACSuccess} isLogin={true} initialPhoneNumber={phoneNumber} />
+                <div className="text-center mt-4">
+                  <Button 
+                    variant="link" 
+                    onClick={handleSwitchToPassword} 
+                    className="text-sm text-muted-foreground"
+                  >
+                    Login with password instead
+                  </Button>
+                </div>
+              </Fragment>
+            )}
+            
+            {step === 'verify' && (
+              <LoginVerificationForm 
+                phoneNumber={phoneNumber}
+                onBack={handleBackToRequest}
+              />
+            )}
+            
+            {step === 'password' && (
+              <Fragment>
+                <LoginPasswordForm initialPhoneNumber={phoneNumber} />
+                <div className="text-center mt-4">
+                  <Button 
+                    variant="link" 
+                    onClick={handleSwitchToTAC} 
+                    className="text-sm text-muted-foreground"
+                  >
+                    Login with verification code instead
+                  </Button>
+                </div>
+              </Fragment>
+            )}
+
+            <div className="mt-6 text-center text-sm">
+              <p>
+                Don&apos;t have an account?{' '}
+                <Link href="/signup" className="font-medium text-primary hover:underline">
+                  Sign up
+                </Link>
+              </p>
             </div>
           </Fragment>
         )}
-        
-        {step === 'verify' && (
-          <LoginVerificationForm 
-            phoneNumber={phoneNumber}
-            onBack={handleBackToRequest}
-          />
-        )}
-        
-        {step === 'password' && (
-          <Fragment>
-            <LoginPasswordForm initialPhoneNumber={phoneNumber} />
-            <div className="text-center mt-4">
-              <Button 
-                variant="link" 
-                onClick={handleSwitchToTAC} 
-                className="text-sm text-muted-foreground"
-              >
-                Login with verification code instead
-              </Button>
-            </div>
-          </Fragment>
-        )}
-
-        <div className="mt-6 text-center text-sm">
-          <p>
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

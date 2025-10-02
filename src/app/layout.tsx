@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/providers/toast-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SettingsProvider } from '@/contexts/settings-context';
 import { PWAProvider } from "@/components/providers/pwa-provider";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const dmSerifText = DM_Serif_Text({
   variable: "--font-dm-serif",
@@ -119,26 +120,35 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const AppTree = (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <SettingsProvider>
+        <PWAProvider>
+          <ToastProvider>
+            {children}
+            <div id="datepicker-portal" />
+          </ToastProvider>
+        </PWAProvider>
+      </SettingsProvider>
+    </ThemeProvider>
+  );
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${dmSerifText.variable} ${openSans.variable} font-sans antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SettingsProvider>
-            <PWAProvider>
-              <ToastProvider>
-                {children}
-                <div id="datepicker-portal" />
-              </ToastProvider>
-            </PWAProvider>
-          </SettingsProvider>
-        </ThemeProvider>
+        {clerkEnabled ? (
+          <ClerkProvider>{AppTree}</ClerkProvider>
+        ) : (
+          AppTree
+        )}
       </body>
     </html>
   );

@@ -313,10 +313,94 @@ export function parseAuthTokenFromCookie(cookieString: string): string | null {
   return cookies.auth_token || null;
 }
 
+// Helper: ensure a local user exists for a Clerk user, matching by email/phone; auto-provision if needed
+async function ensureLocalUserForClerkUser(clerkUser: any): Promise<{ id: string; email: string; name: string } | null> {
+  try {
+    const email = clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || null;
+    const phoneNumber = clerkUser?.primaryPhoneNumber?.phoneNumber || clerkUser?.phoneNumbers?.[0]?.phoneNumber || null;
+    const name =
+      [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') ||
+      clerkUser?.username ||
+      email ||
+      'User';
+
+    if (!email && !phoneNumber) {
+      return null;
+    }
+
+    // Try to find existing local user by email or phone
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          ...(email ? [{ email }] : []),
+          ...(phoneNumber ? [{ phoneNumber }] : []),
+        ],
+      },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Auto-provision a bare-minimum local user so APIs continue to work
+    const passwordHash = await hashPassword(Math.random().toString(36).slice(2));
+
+    const created = await prisma.user.create({
+      data: {
+        name,
+        email: email || `user_${Date.now()}@example.com`,
+        phoneNumber: phoneNumber || `+${Math.floor(100000000000 + Math.random() * 899999999999)}`,
+        passwordHash,
+      },
+      select: { id: true, email: true, name: true },
+    });
+
+    // Create a lightweight company record
+    try {
+      await prisma.company.create({
+        data: {
+          legalName: created.name || 'Company',
+          ownerName: created.name || 'Owner',
+          email: created.email,
+          phoneNumber: phoneNumber || '',
+          userId: created.id,
+        },
+      });
+    } catch (e) {
+      console.warn('Failed to create company for Clerk-provisioned user:', e);
+    }
+
+    return created;
+  } catch (e) {
+    console.error('Error ensuring local user for Clerk user:', e);
+    return null;
+  }
+}
+
 // Get the authenticated user from a request
 export async function getUserFromRequest(request: Request): Promise<{ id: string; email: string; name: string } | null> {
   try {
-    // Get the auth token from cookies
+    // If Clerk is enabled, prefer Clerk session
+    const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    if (clerkEnabled) {
+      try {
+        const { userId } = await auth();
+        if (userId) {
+          try {
+            const clerkUser = await clerkClient.users.getUser(userId);
+            const localUser = await ensureLocalUserForClerkUser(clerkUser);
+            if (localUser) return localUser;
+          } catch (e) {
+            console.error('Failed to fetch Clerk user or map to local user:', e);
+          }
+        }
+      } catch (e) {
+        console.warn('Clerk auth() failed, falling back to legacy token:', e);
+      }
+    }
+
+    // Legacy auth: Get the auth token from cookies and verify JWT
     const cookies = request.headers.get('cookie') || '';
     const token = parseAuthTokenFromCookie(cookies);
     

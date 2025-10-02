@@ -1,20 +1,15 @@
 'use client';
 
-import SignUpForm from '@/components/auth/signup-form';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { SignUp } from '@clerk/nextjs';
 
 export default function SignUpPage() {
   // Add theme hook to detect dark mode
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
-  const router = useRouter();
-
-  const clerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center p-4">
@@ -38,19 +33,17 @@ export default function SignUpPage() {
           </div>
         </div>
 
-        {clerkEnabled ? (
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <p className="text-center">Please use our new sign-up page</p>
-            <Button 
-              onClick={() => router.push('/sign-up')}
-              className="bg-primary hover:bg-primary/90"
-            >
-              Go to Sign-up
-            </Button>
-          </div>
-        ) : (
-          <SignUpForm />
-        )}
+        <div className="flex justify-center">
+          <SignUp
+            appearance={{
+              elements: {
+                formButtonPrimary: 'bg-primary hover:bg-primary/90',
+              },
+            }}
+            afterSignUpUrl="/dashboard"
+            signInUrl="/sign-in"
+          />
+        </div>
 
         <div className="mt-6 text-center text-sm">
           <p>

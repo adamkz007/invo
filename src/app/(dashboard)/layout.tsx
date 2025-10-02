@@ -16,7 +16,8 @@ import {
   PlusCircle,
   LucideIcon,
   Receipt,
-  ShoppingCart
+  ShoppingCart,
+  MoreHorizontal
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -252,24 +253,28 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
       {/* Mobile bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-10 border-t bg-background md:hidden">
         <div className="grid h-16 grid-cols-5 items-center">
-          {navigationItems.slice(0, 4).map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex flex-col items-center justify-center space-y-1 ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                <Icon className="h-6 w-6" />
-                <span className="text-xs">{item.name}</span>
-              </Link>
-            );
-          })}
+          {/* First two navigation items (excluding POS and Receipts) */}
+          {navigationItems
+            .slice(0, 2)
+            .filter(item => item.name !== 'POS' && item.name !== 'Receipts')
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex flex-col items-center justify-center space-y-1 ${
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  <Icon className="h-6 w-6" />
+                  <span className="text-xs">{item.name}</span>
+                </Link>
+              );
+            })}
           
-          {/* Create Invoice Button */}
+          {/* Create Invoice Button (Center) */}
           <Link
             href="/invoices/new"
             className="flex flex-col items-center justify-center space-y-1"
@@ -277,6 +282,76 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
             <PlusCircle className="h-6 w-6 text-blue-500" />
             <span className="text-xs font-medium">New</span>
           </Link>
+          
+          {/* Next two navigation items (excluding Inventory, POS, Receipts, and Settings) */}
+          {navigationItems
+            .slice(2, 6) // Expanded range to ensure we have enough items after filtering
+            .filter(item => item.name !== 'Inventory' && item.name !== 'POS' && item.name !== 'Receipts' && item.name !== 'Settings')
+            .slice(0, 2) // Take only the first two after filtering
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex flex-col items-center justify-center space-y-1 ${
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  <Icon className="h-6 w-6" />
+                  <span className="text-xs">{item.name}</span>
+                </Link>
+              );
+            })}
+          
+          {/* More menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex flex-col items-center justify-center h-full w-full p-0">
+                <MoreHorizontal className="h-6 w-6" />
+                <span className="text-xs">More</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {/* Include Inventory, POS, Receipts, Settings, and items after index 4 (excluding duplicates) */}
+              {navigationItems
+                .filter((item, index) => {
+                  // Check if this item is already shown in the main navigation
+                  const isInMainNav = navigationItems
+                    .slice(0, 2)
+                    .filter(navItem => navItem.name !== 'POS' && navItem.name !== 'Receipts')
+                    .some(navItem => navItem.name === item.name);
+                  
+                  const isInSecondaryNav = navigationItems
+                    .slice(2, 6)
+                    .filter(navItem => navItem.name !== 'Inventory' && navItem.name !== 'POS' && 
+                            navItem.name !== 'Receipts' && navItem.name !== 'Settings')
+                    .slice(0, 2)
+                    .some(navItem => navItem.name === item.name);
+                  
+                  // Only include in More dropdown if it's not already in main navigation
+                  return (!isInMainNav && !isInSecondaryNav) && (
+                    index >= 4 || 
+                    item.name === 'Inventory' || 
+                    item.name === 'POS' || 
+                    item.name === 'Receipts' ||
+                    item.name === 'Settings'
+                  );
+                })
+                .map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.name} asChild>
+                      <Link href={item.href} className="flex items-center">
+                        <Icon className="mr-2 h-5 w-5" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </nav>
 
