@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isNetlify = process.env.NETLIFY === 'true';
+
 const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
@@ -44,6 +46,9 @@ const nextConfig: NextConfig = {
   
   // Production optimizations
   swcMinify: true,
+  
+  // Deployment targeting
+  ...(isNetlify ? {} : { output: 'standalone' }),
   
   // Webpack optimizations
   webpack: (config, { dev, isServer }) => {
@@ -155,9 +160,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  
-  // Output optimization
-  output: 'standalone',
   
   // Reduce bundle size
   modularizeImports: {

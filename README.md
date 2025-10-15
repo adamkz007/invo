@@ -44,6 +44,10 @@ Invo uses Prisma for local development and Supabase in production. To keep the d
 
 When adding new POS tables or modifying existing ones, make sure to run the appropriate migration scripts.
 
+## Deployment
+
+- **Netlify**: The repository includes a `netlify.toml` that installs `@netlify/plugin-nextjs` and publishes the `.next` build output. Set the Netlify build command to `npm run build` (default) and ensure environment variables like `DATABASE_URL`, `JWT_SECRET`, and `NEXT_PUBLIC_APP_URL` are configured. The plugin handles routing so marketing and dashboard routes resolve correctly.
+
 ## License
 
 All rights reserved © Invo
