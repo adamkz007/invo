@@ -49,6 +49,7 @@ import { formatCurrency, format, formatRelativeDate, calculateDueDays } from '@/
 // Dynamic import for PDF generator to reduce bundle size
 // import { downloadInvoicePDF, downloadReceiptPDF } from '@/lib/pdf-generator';
 import { InvoiceWithDetails } from '@/types';
+import type { InvoiceStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { InvoicesLoading } from '@/components/ui/loading';
@@ -98,8 +99,22 @@ const getStatusBadge = (status: string, isCompact: boolean = false) => {
   }
 };
 
+interface InvoiceListItem {
+  id: string;
+  invoiceNumber: string;
+  customer: {
+    id: string | null;
+    name: string;
+  };
+  issueDate: string;
+  dueDate: string;
+  status: InvoiceStatus | string;
+  total: number;
+  paidAmount: number;
+}
+
 // Helper function to extract paid amount from notes
-const extractPaidAmount = (invoice: InvoiceWithDetails): number => {
+const extractPaidAmount = (invoice: { paidAmount?: number; notes?: string }): number => {
   // First check if paidAmount is directly available
   if (invoice?.paidAmount !== undefined) {
     return invoice.paidAmount;
@@ -131,7 +146,7 @@ export default function InvoicesPage() {
   const router = useRouter();
   const { settings } = useSettings();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceWithDetails | null>(null);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceListItem | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [userSubscription, setUserSubscription] = useState<string>('FREE');
   const [invoicesThisMonth, setInvoicesThisMonth] = useState<number>(0);
@@ -187,7 +202,7 @@ export default function InvoicesPage() {
     fetchUserSubscription();
   }, []);
 
-  const handleViewInvoice = (invoice: InvoiceWithDetails) => {
+const handleViewInvoice = (invoice: InvoiceListItem) => {
     // Ensure we fetch the complete invoice with items
     fetch(`/api/invoices/${invoice.id}`)
       .then(response => {
@@ -209,7 +224,7 @@ export default function InvoicesPage() {
       });
   };
 
-  const handleDownloadPDF = async (invoice: InvoiceWithDetails) => {
+const handleDownloadPDF = async (invoice: InvoiceListItem) => {
     try {
       // Dynamic import of PDF generator to reduce initial bundle size
       const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
@@ -229,13 +244,11 @@ export default function InvoicesPage() {
           variant: 'error',
           message: 'Could not generate PDF with complete data'
         });
-        // Fall back to using the original invoice data
-        const { downloadInvoicePDF: fallbackDownloadInvoicePDF } = await import('@/lib/pdf-generator');
-        fallbackDownloadInvoicePDF(invoice, companyDetails);
+        // Fallback not available without full invoice details
     }
   };
 
-  const handleGenerateReceipt = async (invoice: InvoiceWithDetails) => {
+  const handleGenerateReceipt = async (invoice: InvoiceListItem) => {
     try {
       // First, check if receipts module is enabled and if a receipt already exists for this paid invoice
       if (settings.enableReceiptsModule && invoice.status === 'PAID') {
@@ -281,13 +294,11 @@ export default function InvoicesPage() {
         variant: 'error',
         message: 'Could not generate receipt with complete data'
       });
-      // Fall back to using the original invoice data
-      const { downloadReceiptPDF: fallbackDownloadReceiptPDF } = await import('@/lib/pdf-generator');
-      fallbackDownloadReceiptPDF(invoice, companyDetails, settings);
+      // Fallback not available without full invoice details
     }
   };
 
-  const handleCancelInvoice = async (invoice: InvoiceWithDetails) => {
+  const handleCancelInvoice = async (invoice: InvoiceListItem) => {
     try {
       const response = await fetch(`/api/invoices/${invoice.id}`, {
         method: 'PATCH',
@@ -319,7 +330,7 @@ export default function InvoicesPage() {
     }
   };
 
-  const handleOpenPaymentDialog = (invoice: InvoiceWithDetails) => {
+  const handleOpenPaymentDialog = (invoice: InvoiceListItem) => {
     setSelectedInvoiceForPayment(invoice);
     setPaymentAmount(invoice.total.toString());
     setPaymentDialogOpen(true);
@@ -365,7 +376,7 @@ export default function InvoicesPage() {
     }
   };
 
-  const handleMarkAsSent = async (invoice: InvoiceWithDetails) => {
+  const handleMarkAsSent = async (invoice: InvoiceListItem) => {
     try {
       const response = await fetch(`/api/invoices/${invoice.id}`, {
         method: 'PATCH',
@@ -687,16 +698,16 @@ function InvoicesList({
   onCountInvoices
 }: { 
   searchTerm: string, 
-  onViewInvoice: (invoice: InvoiceWithDetails) => void,
-  onDownloadPDF: (invoice: InvoiceWithDetails) => void,
-  onCancelInvoice: (invoice: InvoiceWithDetails) => void,
-  onApplyPayment: (invoice: InvoiceWithDetails) => void,
-  onMarkAsSent: (invoice: InvoiceWithDetails) => void,
-  onGenerateReceipt: (invoice: InvoiceWithDetails) => void,
+  onViewInvoice: (invoice: InvoiceListItem) => void,
+  onDownloadPDF: (invoice: InvoiceListItem) => void,
+  onCancelInvoice: (invoice: InvoiceListItem) => void,
+  onApplyPayment: (invoice: InvoiceListItem) => void,
+  onMarkAsSent: (invoice: InvoiceListItem) => void,
+  onGenerateReceipt: (invoice: InvoiceListItem) => void,
   companyDetails: CompanyDetails | null,
   onCountInvoices: (count: number) => void
 }) {
-  const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
@@ -717,7 +728,23 @@ function InvoicesList({
         }
 
         const data = await response.json();
-        setInvoices(data);
+        const records = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+
+        const mappedInvoices: InvoiceListItem[] = records.map((invoice: any) => ({
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          status: invoice.status,
+          issueDate: invoice.issueDate ?? invoice.createdAt ?? new Date().toISOString(),
+          dueDate: invoice.dueDate ?? invoice.issueDate ?? new Date().toISOString(),
+          total: typeof invoice.total === 'number' ? invoice.total : Number(invoice.total ?? 0),
+          paidAmount: typeof invoice.paidAmount === 'number' ? invoice.paidAmount : Number(invoice.paidAmount ?? 0),
+          customer: {
+            id: invoice.customer?.id ?? null,
+            name: invoice.customer?.name ?? 'Unknown customer'
+          }
+        }));
+
+        setInvoices(mappedInvoices);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
       } finally {
@@ -730,17 +757,15 @@ function InvoicesList({
 
   // Track current month invoices and pass up to parent component
   useEffect(() => {
-    if (invoices.length > 0) {
-      const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      const thisMonthInvoices = invoices.filter(invoice => 
-        new Date(invoice.issueDate) >= firstDayOfMonth
-      ).length;
-      
-      // Use function from parent component to update count
-      onCountInvoices(thisMonthInvoices);
-    }
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const thisMonthInvoices = invoices.filter(invoice => {
+      const issueDate = new Date(invoice.issueDate);
+      return issueDate >= firstDayOfMonth;
+    }).length;
+
+    onCountInvoices(thisMonthInvoices);
   }, [invoices, onCountInvoices]);
 
   // Filter invoices based on search term

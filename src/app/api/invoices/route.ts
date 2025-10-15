@@ -1,261 +1,374 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
+import { Prisma, InvoiceStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { verifyToken, getUserFromRequest } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
-import { InvoiceFormValues, InvoiceItemFormValues } from '@/types';
-import { User } from '@prisma/client';
+import type { InvoiceFormValues } from '@/types';
+import { toDecimal, toNumber } from '@/lib/decimal';
 
-// Cache TTL in seconds (1 minute for invoices - shorter due to frequent updates)
-const CACHE_TTL = 60;
+const MAX_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 20;
+const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
+const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
 
-// In-memory cache for invoices
-const invoicesCache = new Map<string, { data: any; timestamp: number }>();
+type InvoiceListItem = {
+  id: string;
+  invoiceNumber: string;
+  status: InvoiceStatus;
+  issueDate: string;
+  dueDate: string;
+  total: number;
+  paidAmount: number;
+  customer: {
+    id: string;
+    name: string;
+  } | null;
+};
+
+type InvoiceListResponse = {
+  data: InvoiceListItem[];
+  nextCursor?: string;
+  totalCount: number;
+};
+
+type ParsedParams = {
+  cursor?: string;
+  size: number;
+  status?: InvoiceStatus;
+  search?: string;
+};
+
+function parseParams(req: NextRequest): ParsedParams {
+  const searchParams = req.nextUrl.searchParams;
+  const cursor = searchParams.get('cursor') ?? undefined;
+  const search = searchParams.get('search')?.trim() || undefined;
+
+  const limitParam = Number(searchParams.get('limit'));
+  const size =
+    Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(Math.floor(limitParam), MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
+
+  const statusParam = searchParams.get('status');
+  const status = statusParam && Object.values(InvoiceStatus).includes(statusParam as InvoiceStatus)
+    ? (statusParam as InvoiceStatus)
+    : undefined;
+
+  return { cursor, size, status, search };
+}
+
+function buildWhere(userId: string, params: ParsedParams): Prisma.InvoiceWhereInput {
+  const where: Prisma.InvoiceWhereInput = { userId };
+
+  if (params.status) {
+    where.status = params.status;
+  }
+
+  if (params.search) {
+    where.OR = [
+      { invoiceNumber: { contains: params.search, mode: 'insensitive' } },
+      { customer: { name: { contains: params.search, mode: 'insensitive' } } },
+    ];
+  }
+
+  return where;
+}
+
+function serialiseInvoice(invoice: {
+  id: string;
+  invoiceNumber: string;
+  status: InvoiceStatus;
+  issueDate: Date;
+  dueDate: Date;
+  total: Prisma.Decimal | number | string;
+  paidAmount: Prisma.Decimal | number | string;
+  customer: { id: string; name: string } | null;
+}): InvoiceListItem {
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    status: invoice.status,
+    issueDate: invoice.issueDate.toISOString(),
+    dueDate: invoice.dueDate.toISOString(),
+    total: toNumber(invoice.total),
+    paidAmount: toNumber(invoice.paidAmount),
+    customer: invoice.customer,
+  };
+}
+
+async function ensureUsageWithinLimits(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      subscriptionStatus: true,
+      trialEndDate: true,
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  const subscriptionStatus = user.subscriptionStatus || 'FREE';
+  const trialExpired = hasTrialExpired(user.trialEndDate);
+
+  if (trialExpired && subscriptionStatus === 'TRIAL') {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { subscriptionStatus: 'FREE' },
+    });
+  }
+
+  if (subscriptionStatus === 'ACTIVE') {
+    return null;
+  }
+
+  const firstDayOfMonth = new Date();
+  firstDayOfMonth.setDate(1);
+  firstDayOfMonth.setHours(0, 0, 0, 0);
+
+  const invoiceCount = await prisma.invoice.count({
+    where: {
+      userId,
+      createdAt: {
+        gte: firstDayOfMonth,
+      },
+    },
+  });
+
+  const reachedLimit = hasReachedLimit(
+    subscriptionStatus,
+    'invoicesPerMonth',
+    invoiceCount,
+  );
+
+  if (reachedLimit) {
+    return NextResponse.json(
+      {
+        error: 'You have reached your monthly invoice limit. Please upgrade to premium or wait until next month.',
+        limitReached: true,
+        currentCount: invoiceCount,
+        limit: PLAN_LIMITS.FREE.invoicesPerMonth,
+      },
+      { status: 403 },
+    );
+  }
+
+  return null;
+}
+
+async function generateInvoiceNumber(tx: Prisma.TransactionClient, userId: string) {
+  const latest = await tx.invoice.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    select: { invoiceNumber: true },
+  });
+
+  const timestamp = Date.now().toString().slice(-4);
+  if (!latest?.invoiceNumber) {
+    return `INV-0001-${timestamp}`;
+  }
+
+  const match = latest.invoiceNumber.match(/INV-(\d+)-/);
+  const sequential = match?.[1] ? parseInt(match[1], 10) + 1 : 1;
+  const padded = sequential.toString().padStart(4, '0');
+  return `INV-${padded}-${timestamp}`;
+}
 
 export async function GET(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const params = parseParams(req);
+  const where = buildWhere(user.id, params);
+
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const [records, totalCount] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        take: params.size + 1,
+        ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          status: true,
+          issueDate: true,
+          dueDate: true,
+          total: true,
+          paidAmount: true,
+          customer: {
+            select: { id: true, name: true },
+          },
+        },
+      }),
+      prisma.invoice.count({ where }),
+    ]);
+
+    let nextCursor: string | undefined;
+    if (records.length > params.size) {
+      const nextItem = records.pop();
+      nextCursor = nextItem?.id;
     }
 
-    // Check cache first
-    const cacheKey = `invoices_${user.id}`;
-    const cachedData = invoicesCache.get(cacheKey);
-    const now = Date.now();
-    
-    if (cachedData && (now - cachedData.timestamp) < CACHE_TTL * 1000) {
-      return NextResponse.json(cachedData.data, {
-        headers: {
-          'Cache-Control': 'public, max-age=30, s-maxage=60',
-          'X-Cache': 'HIT'
-        }
-      });
-    }
+    const payload: InvoiceListResponse = {
+      data: records.map(serialiseInvoice),
+      nextCursor,
+      totalCount,
+    };
 
-    const invoices = await prisma.invoice.findMany({
-      where: {
-        userId: user.id,
-      },
-      include: {
-        customer: true,
-        items: {
-          include: {
-            product: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    // Cache the result
-    invoicesCache.set(cacheKey, {
-      data: invoices,
-      timestamp: now
-    });
-
-    return NextResponse.json(invoices, {
+    return NextResponse.json(payload, {
       headers: {
-        'Cache-Control': 'public, max-age=30, s-maxage=60',
-        'X-Cache': 'MISS'
-      }
+        'Cache-Control': 'private, max-age=0, s-maxage=60',
+      },
     });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch invoices' }, { status: 500 });
+    console.error('Failed to load invoices', error);
+    return NextResponse.json({ error: 'Failed to load invoices' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const limitResponse = await ensureUsageWithinLimits(user.id);
+  if (limitResponse) {
+    return limitResponse;
+  }
+
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get the complete user from the database with subscription info
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.id }
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Cast the user to include subscription fields and use fallbacks
-    const fullUser = dbUser as User & { 
-      subscriptionStatus?: string | null;
-      trialEndDate?: Date | null;
+    const payload = (await req.json()) as InvoiceFormValues & {
+      items: Array<
+        InvoiceFormValues['items'][number] & {
+          disableStockManagement?: boolean;
+        }
+      >;
     };
 
-    // Check subscription status - using raw value with fallback
-    const subscriptionStatus = fullUser.subscriptionStatus || 'FREE';
-    const trialEndDate = fullUser.trialEndDate;
-    const isTrialExpired = hasTrialExpired(trialEndDate);
-    
-    // If trial has expired and user is still on trial, set to FREE using raw query
-    if (isTrialExpired && subscriptionStatus === 'TRIAL') {
-      await prisma.$executeRaw`
-        UPDATE User
-        SET subscriptionStatus = 'FREE'
-        WHERE id = ${user.id}
-      `;
+    if (!Array.isArray(payload.items) || payload.items.length === 0) {
+      return NextResponse.json({ error: 'Invoice must contain at least one item' }, { status: 400 });
     }
 
-    // Count invoices from current month
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const invoiceCount = await prisma.invoice.count({
-      where: { 
-        userId: user.id,
-        createdAt: {
-          gte: firstDayOfMonth
-        }
-      }
-    });
+    const createdInvoice = await prisma.$transaction(async (tx) => {
+      const invoiceNumber = await generateInvoiceNumber(tx, user.id);
 
-    // Check if user has reached limit (if not on trial and not premium)
-    if (subscriptionStatus !== 'ACTIVE' && (isTrialExpired || subscriptionStatus === 'FREE')) {
-      const hasReachedInvoiceLimit = hasReachedLimit(
-        subscriptionStatus,
-        'invoicesPerMonth',
-        invoiceCount
+      const itemsPayload = payload.items;
+      const subtotal = itemsPayload.reduce(
+        (sum, item) =>
+          sum.plus(toDecimal(item.unitPrice || 0).times(item.quantity || 0)),
+        new Prisma.Decimal(0),
       );
 
-      if (hasReachedInvoiceLimit) {
-        return NextResponse.json(
-          { 
-            error: 'You have reached your monthly invoice limit. Please upgrade to premium or wait until next month.',
-            limitReached: true,
-            currentCount: invoiceCount,
-            limit: PLAN_LIMITS.FREE.invoicesPerMonth
-          }, 
-          { status: 403 }
-        );
-      }
-    }
+      const taxRateDecimal = toDecimal(payload.taxRate ?? 0);
+      const discountRateDecimal = toDecimal(payload.discountRate ?? 0);
+      const taxAmount = subtotal.times(taxRateDecimal).dividedBy(100);
+      const discountAmount = subtotal.times(discountRateDecimal).dividedBy(100);
+      const total = subtotal.plus(taxAmount).minus(discountAmount);
+      const paidAmount = toDecimal(payload.paidAmount ?? 0);
 
-    // Proceed with creating invoice
-    const data = await req.json();
-    
-    // Get the highest invoice number and increment it
-    const highestInvoice = await prisma.invoice.findFirst({
-      orderBy: {
-        invoiceNumber: 'desc',
-      },
-    });
-    
-    // Generate a sequential invoice number
-    // Format: INV-XXXX-YYYY where XXXX is sequential and YYYY is timestamp
-    const timestamp = Date.now().toString().slice(-4);
-    let sequentialNumber = 1;
-    
-    if (highestInvoice && highestInvoice.invoiceNumber) {
-      // Extract the sequential part (after "INV-" and before the second "-")
-      const match = highestInvoice.invoiceNumber.match(/INV-(\d+)-/);
-      if (match && match[1]) {
-        sequentialNumber = parseInt(match[1]) + 1;
-      }
-    }
-    
-    // Ensure the sequential number is always 4 digits
-    const paddedNumber = sequentialNumber.toString().padStart(4, '0');
-    const invoiceNumber = `INV-${paddedNumber}-${timestamp}`;
-    
-    // Calculate required values for the invoice
-    const subtotal = data.items.reduce((sum: number, item: any) => 
-      sum + (item.quantity * item.unitPrice), 0);
-    
-    const taxAmount = (subtotal * (data.taxRate || 0)) / 100;
-    const discountAmount = (subtotal * (data.discountRate || 0)) / 100;
-    const total = subtotal + taxAmount - discountAmount;
-    
-    // Create the invoice with the new invoice number
-    const invoice = await prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        issueDate: data.issueDate || new Date(),
-        dueDate: data.dueDate,
-        status: data.status,
-        subtotal,
-        taxRate: data.taxRate || 0,
-        taxAmount,
-        discountRate: data.discountRate || 0,
-        discountAmount,
-        total,
-        paidAmount: data.paidAmount || 0,
-        notes: data.notes,
-        userId: user.id,
-        customerId: data.customerId,
-        items: {
-          create: data.items.map((item: any) => ({
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            amount: item.quantity * item.unitPrice,
-            description: item.description || '',
-            productId: item.productId
-          }))
+      const status =
+        payload.status && Object.values(InvoiceStatus).includes(payload.status as InvoiceStatus)
+          ? (payload.status as InvoiceStatus)
+          : InvoiceStatus.DRAFT;
+
+      const productIds = Array.from(new Set(itemsPayload.map((item) => item.productId)));
+      const products = await tx.product.findMany({
+        where: {
+          id: { in: productIds },
+          userId: user.id,
+        },
+        select: {
+          id: true,
+          quantity: true,
+          disableStockManagement: true,
+        },
+      });
+
+      const productMap = new Map(products.map((product) => [product.id, product]));
+
+      for (const item of itemsPayload) {
+        const product = productMap.get(item.productId);
+        if (!product) {
+          throw new Error(`Product ${item.productId} not found`);
         }
-      },
-      include: {
-        customer: true,
-        items: {
-          include: {
-            product: true,
+
+        if (!product.disableStockManagement) {
+          const remaining = product.quantity - item.quantity;
+          if (remaining < 0) {
+            throw new Error(`Insufficient stock for product ${item.productId}`);
+          }
+          product.quantity = remaining;
+        }
+      }
+
+      const invoice = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          issueDate: payload.issueDate ?? new Date(),
+          dueDate: payload.dueDate,
+          status,
+          subtotal,
+          taxRate: taxRateDecimal,
+          taxAmount,
+          discountRate: discountRateDecimal,
+          discountAmount,
+          total,
+          paidAmount,
+          notes: payload.notes,
+          userId: user.id,
+          customerId: payload.customerId,
+          items: {
+            create: itemsPayload.map((item) => ({
+              quantity: item.quantity,
+              unitPrice: toDecimal(item.unitPrice),
+              description: item.description ?? '',
+              productId: item.productId,
+            })),
           },
         },
-      },
-    });
-    
-    // Update product stock quantities if stock management is enabled
-    // Process each item in the invoice
-    for (const item of data.items) {
-      // Only update stock if stock management is not disabled for this product
-      if (!item.disableStockManagement) {
-        // Get the current product
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId }
-        });
-        
-        if (product && !product.disableStockManagement) {
-          // Calculate new quantity and ensure it doesn't go below 0
-          const newQuantity = Math.max(0, product.quantity - item.quantity);
-          
-          // Update the product quantity
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { quantity: newQuantity }
-          });
-        }
-      }
-    }
+        select: {
+          id: true,
+          invoiceNumber: true,
+          status: true,
+          issueDate: true,
+          dueDate: true,
+          total: true,
+          paidAmount: true,
+          customer: {
+            select: { id: true, name: true },
+          },
+        },
+      });
 
-    // Invalidate caches for this user
-    const invoicesCacheKey = `invoices_${user.id}`;
-    invoicesCache.delete(invoicesCacheKey);
-    
-    // Also invalidate products cache since stock quantities may have changed
-    // Note: We need to import the products cache or create a shared cache utility
-    // For now, we'll just invalidate the invoices cache
+      await Promise.all(
+        Array.from(productMap.values())
+          .filter((product) => !product.disableStockManagement)
+          .map((product) =>
+            tx.product.update({
+              where: { id: product.id },
+              data: { quantity: product.quantity },
+            }),
+          ),
+      );
 
-    return NextResponse.json(invoice);
-  } catch (error: any) {
-    console.error('Error creating invoice:', error);
-    // Log detailed error information
-    console.error('Error details:', {
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack,
-      code: error?.code,
+      return invoice;
     });
-    
-    // Provide a more specific error message if possible
-    let errorMessage = 'Failed to create invoice';
-    if (error instanceof Error) {
-      errorMessage = `${errorMessage}: ${error.message}`;
-    }
-    
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+
+    revalidateTag(INVOICE_TAG(user.id));
+    revalidateTag(DASHBOARD_TAG(user.id));
+
+    return NextResponse.json(serialiseInvoice(createdInvoice), { status: 201 });
+  } catch (error) {
+    console.error('Failed to create invoice', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to create invoice' },
+      { status: 500 },
+    );
   }
 }

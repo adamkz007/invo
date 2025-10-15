@@ -7,6 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+}
+
+enum PosOrderStatus {
+  KITCHEN
+  TO_PAY
+  COMPLETED
+  CANCELLED
+}
+
+enum PosOrderType {
+  DINE_IN
+  TAKEAWAY
+}
+
 model User {
   id                   String       @id @default(cuid())
   name                 String?
@@ -51,13 +72,15 @@ model Customer {
   userId                  String
   user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoices                Invoice[]
+
+  @@index([userId, createdAt])
 }
 
 model Product {
   id                     String         @id @default(cuid())
   name                   String
   description            String?
-  price                  Float
+  price                  Decimal        @db.Decimal(12, 2)
   quantity               Int            @default(0)
   sku                    String?
   disableStockManagement Boolean        @default(false)
@@ -68,6 +91,8 @@ model Product {
   user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   receiptItems           ReceiptItem[]
   posOrderItems          PosOrderItem[]
+
+  @@index([userId, createdAt])
 }
 
 model Invoice {
@@ -75,14 +100,14 @@ model Invoice {
   invoiceNumber  String        @unique
   issueDate      DateTime      @default(now())
   dueDate        DateTime
-  status         String        @default("DRAFT")
-  subtotal       Float
-  taxRate        Float         @default(0)
-  taxAmount      Float         @default(0)
-  discountRate   Float         @default(0)
-  discountAmount Float         @default(0)
-  total          Float
-  paidAmount     Float         @default(0)
+  status         InvoiceStatus @default(DRAFT)
+  subtotal       Decimal        @db.Decimal(12, 2)
+  taxRate        Decimal        @db.Decimal(5, 2)  @default(0.00)
+  taxAmount      Decimal        @db.Decimal(12, 2) @default(0.00)
+  discountRate   Decimal        @db.Decimal(5, 2)  @default(0.00)
+  discountAmount Decimal        @db.Decimal(12, 2) @default(0.00)
+  total          Decimal        @db.Decimal(12, 2)
+  paidAmount     Decimal        @db.Decimal(12, 2) @default(0.00)
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -91,13 +116,16 @@ model Invoice {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   items          InvoiceItem[]
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+  @@index([customerId])
 }
 
 model InvoiceItem {
   id          String   @id @default(cuid())
   quantity    Int
-  unitPrice   Float
-  amount      Float
+  unitPrice   Decimal  @db.Decimal(12, 2)
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -105,6 +133,8 @@ model InvoiceItem {
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
 
 model Company {
@@ -141,19 +171,21 @@ model Receipt {
   customerPhone String?
   receiptDate   DateTime      @default(now())
   paymentMethod String        @default("CASH")
-  total         Float
+  total         Decimal       @db.Decimal(12, 2)
   notes         String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   userId        String
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   items         ReceiptItem[]
+
+  @@index([userId, createdAt])
 }
 
 model ReceiptItem {
   id          String   @id @default(cuid())
   quantity    Int
-  unitPrice   Float
+  unitPrice   Decimal  @db.Decimal(12, 2)
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -161,6 +193,8 @@ model ReceiptItem {
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   receipt     Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
 
 // POS Models
@@ -169,12 +203,12 @@ model PosOrder {
   orderNumber  String         @unique
   tableNumber  String
   tableId      String?
-  status       String         @default("KITCHEN") // KITCHEN, TO_PAY, COMPLETED, CANCELLED
-  orderType    String         @default("DINE_IN") // DINE_IN, TAKEAWAY
-  subtotal     Float          @default(0)
-  taxRate      Float          @default(0)
-  taxAmount    Float          @default(0)
-  total        Float          @default(0)
+  status       PosOrderStatus @default(KITCHEN)
+  orderType    PosOrderType   @default(DINE_IN)
+  subtotal     Decimal        @db.Decimal(12, 2) @default(0.00)
+  taxRate      Decimal        @db.Decimal(5, 2)  @default(0.00)
+  taxAmount    Decimal        @db.Decimal(12, 2) @default(0.00)
+  total        Decimal        @db.Decimal(12, 2) @default(0.00)
   notes        String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -184,13 +218,14 @@ model PosOrder {
   items        PosOrderItem[]
 
   @@map("pos_orders")
+  @@index([userId, createdAt])
+  @@index([userId, status])
 }
 
 model PosOrderItem {
   id        String   @id @default(cuid())
   quantity  Int
-  unitPrice Float
-  amount    Float
+  unitPrice Decimal  @db.Decimal(12, 2)
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -200,6 +235,7 @@ model PosOrderItem {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("pos_order_items")
+  @@index([productId])
 }
 
 model PosTable {
@@ -224,8 +260,8 @@ model PosSettings {
   autoPrintEnabled     Boolean  @default(false)
   defaultPrinterAddress String?
   tableLayoutType      String   @default("LIST") // LIST, MAP
-  taxRate              Float    @default(0)
-  serviceChargeRate    Float    @default(0)
+  taxRate              Decimal  @db.Decimal(5, 2) @default(0.00)
+  serviceChargeRate    Decimal  @db.Decimal(5, 2) @default(0.00)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   userId               String   @unique

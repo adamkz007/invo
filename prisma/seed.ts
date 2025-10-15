@@ -159,7 +159,6 @@ async function main() {
             {
               quantity: 1,
               unitPrice: 1200,
-              amount: 1200,
               description: 'Website development for Acme Inc',
               productId: products[0].id,
             },
@@ -187,14 +186,12 @@ async function main() {
             {
               quantity: 1,
               unitPrice: 2500,
-              amount: 2500,
               description: 'Mobile app development for Globex Corp',
               productId: products[1].id,
             },
             {
               quantity: 1,
               unitPrice: 800,
-              amount: 800,
               description: 'UI/UX Design for mobile app',
               productId: products[2].id,
             },
@@ -223,14 +220,12 @@ async function main() {
             {
               quantity: 1,
               unitPrice: 800,
-              amount: 800,
               description: 'UI/UX Design for Wayne Enterprises',
               productId: products[2].id,
             },
             {
               quantity: 1,
               unitPrice: 500,
-              amount: 500,
               description: 'SEO Service for Wayne Enterprises',
               productId: products[3].id,
             },

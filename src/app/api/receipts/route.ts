@@ -1,181 +1,190 @@
-import { NextResponse } from 'next/server';
-import { nanoid } from 'nanoid';
-
-// Products will be fetched from the database in a real implementation
-
-// Function to get products - in a real app this would fetch from database
-async function getProducts() {
-  // In a real implementation, this would be:
-  // return await prisma.product.findMany();
-  return [];
-}
-
-// Import Prisma client for database operations
+import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { getUserFromRequest } from '@/lib/auth';
+import { toDecimal, toNumber } from '@/lib/decimal';
 
-// Function to get a valid user ID from the database
-async function getValidUserId() {
-  const users = await prisma.user.findMany({ take: 1 });
-  if (users.length === 0) {
-    throw new Error('No users found in the database');
+const RECEIPTS_TAG = (userId: string) => `receipts:${userId}`;
+const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
+
+type ReceiptItem = {
+  id: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  description: string | null;
+};
+
+type ReceiptListItem = {
+  id: string;
+  receiptNumber: string;
+  customerName: string;
+  receiptDate: string;
+  paymentMethod: string;
+  total: number;
+  notes: string | null;
+  items: ReceiptItem[];
+};
+
+type ReceiptListResponse = {
+  data: ReceiptListItem[];
+  nextCursor?: string;
+  totalCount: number;
+};
+
+const MAX_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 20;
+
+function parseParams(req: NextRequest) {
+  const searchParams = req.nextUrl.searchParams;
+  const cursor = searchParams.get('cursor') ?? undefined;
+  const limitParam = Number(searchParams.get('limit'));
+  const size =
+    Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(Math.floor(limitParam), MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
+  const invoiceId = searchParams.get('invoiceId') ?? undefined;
+
+  return { cursor, size, invoiceId };
+}
+
+function serialiseReceipt(receipt: {
+  id: string;
+  receiptNumber: string;
+  customerName: string;
+  receiptDate: Date;
+  paymentMethod: string;
+  total: Prisma.Decimal | number | string;
+  notes: string | null;
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    unitPrice: Prisma.Decimal | number | string;
+    description: string | null;
+  }>;
+}): ReceiptListItem {
+  return {
+    id: receipt.id,
+    receiptNumber: receipt.receiptNumber,
+    customerName: receipt.customerName,
+    receiptDate: receipt.receiptDate.toISOString(),
+    paymentMethod: receipt.paymentMethod,
+    total: toNumber(receipt.total),
+    notes: receipt.notes,
+    items: receipt.items.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: toNumber(item.unitPrice),
+      description: item.description,
+    })),
+  };
+}
+
+export async function GET(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  return users[0].id;
-}
 
-// For backward compatibility, we'll keep the in-memory storage
-// but primarily use the database for persistence
-declare global {
-  var _receipts: any[] | undefined;
-}
+  const params = parseParams(req);
 
-// Initialize global receipts array if it doesn't exist
-if (!global._receipts) {
-  global._receipts = [];
-}
+  const where: Prisma.ReceiptWhereInput = { userId: user.id };
 
-// Export the global receipts array for backward compatibility
-export const receipts = global._receipts;
-
-/**
- * GET /api/receipts
- * Get all receipts from the database
- */
-export async function GET(request: Request) {
-  // Since we can't access localStorage from the server,
-  // we need to rely on a different approach
-  
-  // Check for a custom header that the client can send to indicate module status
-  const headers = new Headers(request.headers);
-  const moduleEnabled = headers.get('x-receipts-module-enabled');
-  
-  // If the header explicitly says the module is disabled, return empty array
-  if (moduleEnabled === 'false') {
-    return NextResponse.json([]);
+  if (params.invoiceId) {
+    where.notes = {
+      contains: params.invoiceId,
+      mode: 'insensitive',
+    };
   }
-  
-  // Check for invoice ID query parameter
-  const url = new URL(request.url);
-  const invoiceId = url.searchParams.get('invoiceId');
-  
+
   try {
-    // Fetch receipts from the database with their items and related product information
-    const dbReceipts = await prisma.receipt.findMany({
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
+    const [records, totalCount] = await Promise.all([
+      prisma.receipt.findMany({
+        where,
+        take: params.size + 1,
+        ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
+        orderBy: { receiptDate: 'desc' },
+        include: {
+          items: true,
+        },
+      }),
+      prisma.receipt.count({ where }),
+    ]);
+
+    let nextCursor: string | undefined;
+    if (records.length > params.size) {
+      const nextItem = records.pop();
+      nextCursor = nextItem?.id;
+    }
+
+    const payload: ReceiptListResponse = {
+      data: records.map(serialiseReceipt),
+      nextCursor,
+      totalCount,
+    };
+
+    return NextResponse.json(payload, {
+      headers: {
+        'Cache-Control': 'private, max-age=0, s-maxage=120',
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
     });
-    
-    // Filter by invoice ID if provided (check notes field for invoice reference)
-    let filteredReceipts = dbReceipts;
-    if (invoiceId) {
-      filteredReceipts = dbReceipts.filter(receipt => 
-        receipt.notes?.includes(`Invoice ${invoiceId}`) || 
-        receipt.notes?.includes(`Payment for Invoice INV-${invoiceId}`)
-      );
-    }
-    
-    // For backward compatibility, update the in-memory array
-    global._receipts = dbReceipts;
-    
-    return NextResponse.json(filteredReceipts);
   } catch (error) {
-    console.error('Error fetching receipts from database:', error);
-    // Fallback to in-memory receipts if database query fails
-    return NextResponse.json(receipts);
+    console.error('Failed to load receipts', error);
+    return NextResponse.json({ error: 'Failed to load receipts' }, { status: 500 });
   }
 }
 
-/**
- * POST /api/receipts
- * Create a new receipt in the database
- */
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    // Check for module status header
-    const headers = new Headers(request.headers);
-    const moduleEnabled = headers.get('x-receipts-module-enabled');
-    
-    // If the header explicitly says the module is disabled, return error
-    if (moduleEnabled === 'false') {
-      return NextResponse.json(
-        { error: 'Receipts module is disabled' },
-        { status: 403 }
-      );
+    const payload = await req.json();
+
+    if (!Array.isArray(payload.items) || payload.items.length === 0) {
+      return NextResponse.json({ error: 'Receipt must contain at least one item' }, { status: 400 });
     }
-    
-    const data = await request.json();
-    
-    // Generate a receipt number with "RCT-" prefix and 6 random alphanumeric characters
-    const receiptNumber = `RCT-${nanoid(6).toUpperCase()}`;
-    
-    // Default to 'Walk-in Customer' if no customer name provided
-    const customerName = data.customerName || 'Walk-in Customer';
-    
-    // Create the receipt in the database using Prisma transaction
-    const newReceipt = await prisma.$transaction(async (tx) => {
-      // Create the receipt record
-      const receipt = await tx.receipt.create({
+
+    const receipt = await prisma.$transaction(async (tx) => {
+      const created = await tx.receipt.create({
         data: {
-          receiptNumber,
-          customerName,
-          customerPhone: data.customerPhone || null,
-          receiptDate: data.receiptDate ? new Date(data.receiptDate) : new Date(), // Default to current date if not provided
-          paymentMethod: data.paymentMethod,
-          notes: data.notes || '',
-          total: data.total,
-          userId: data.userId || await getValidUserId(), // Get a valid user ID from the database
-          // We don't store invoiceId and orderNumber in the database schema,
-          // but we'll include them in the response for backward compatibility
+          receiptNumber: payload.receiptNumber ?? `RCT-${randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+          customerName: payload.customerName || 'Walk-in Customer',
+          customerPhone: payload.customerPhone ?? null,
+          receiptDate: payload.receiptDate ? new Date(payload.receiptDate) : new Date(),
+          paymentMethod: payload.paymentMethod || 'CASH',
+          notes: payload.notes ?? null,
+          total: toDecimal(payload.total),
+          userId: user.id,
+          items: {
+            create: payload.items.map((item: any) => ({
+              quantity: item.quantity,
+              unitPrice: toDecimal(item.unitPrice),
+              description: item.description ?? '',
+              productId: item.productId,
+            })),
+          },
+        },
+        include: {
+          items: true,
         },
       });
-      
-      // Create receipt items
-      const items = await Promise.all(
-        data.items.map(async (item: any) => {
-          // Create the receipt item
-          const receiptItem = await tx.receiptItem.create({
-            data: {
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              description: item.description || '',
-              receiptId: receipt.id,
-              productId: item.productId,
-            },
-            include: {
-              product: true,
-            },
-          });
-          
-          return receiptItem;
-        })
-      );
-      
-      // Return the complete receipt with items
-      return {
-        ...receipt,
-        items,
-        // Add these fields for backward compatibility
-        invoiceId: data.invoiceId || null,
-        orderNumber: data.orderNumber || null,
-      };
+
+      return created;
     });
-    
-    // For backward compatibility, also add to in-memory array
-    receipts.unshift(newReceipt);
-    
-    return NextResponse.json(newReceipt);
+
+    revalidateTag(RECEIPTS_TAG(user.id));
+    revalidateTag(DASHBOARD_TAG(user.id));
+
+    return NextResponse.json(serialiseReceipt(receipt), { status: 201 });
   } catch (error) {
-    console.error('Failed to create receipt:', error);
-    return NextResponse.json(
-      { error: 'Failed to create receipt' },
-      { status: 500 }
-    );
+    console.error('Failed to create receipt', error);
+    return NextResponse.json({ error: 'Failed to create receipt' }, { status: 500 });
   }
 }

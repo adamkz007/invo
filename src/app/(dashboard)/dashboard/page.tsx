@@ -149,6 +149,88 @@ interface DashboardStats {
   };
 }
 
+interface DashboardApiResponse {
+  totals: {
+    invoices: number;
+    customers: number;
+    products: number;
+    inventoryValue: number;
+  };
+  invoiceStats: {
+    amount: number;
+    paid: number;
+    overdue: number;
+    pending: number;
+    outstanding: number;
+    recent: {
+      id: string;
+      number: string;
+      customerName: string;
+      amount: number;
+      status: string;
+      issuedOn: string;
+    }[];
+  };
+  charts: {
+    monthlyRevenue: MonthlyDataPoint[];
+    topProducts: TopProduct[];
+  };
+  growth?: {
+    currentMonth: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+    previousMonth: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+  };
+}
+
+function mapDashboardResponse(data: DashboardApiResponse): DashboardStats {
+  return {
+    totalInvoices: data.totals.invoices ?? 0,
+    totalCustomers: data.totals.customers ?? 0,
+    totalProducts: data.totals.products ?? 0,
+    inventoryValue: data.totals.inventoryValue ?? 0,
+    invoiceStats: {
+      totalAmount: data.invoiceStats.amount ?? 0,
+      paidAmount: data.invoiceStats.paid ?? 0,
+      overdueAmount: data.invoiceStats.overdue ?? 0,
+      pendingAmount: data.invoiceStats.pending ?? 0,
+      outstandingAmount: data.invoiceStats.outstanding ?? 0,
+      recentInvoices: (data.invoiceStats.recent ?? []).map((invoice) => ({
+        id: invoice.id,
+        invoiceNumber: invoice.number,
+        customerName: invoice.customerName,
+        amount: invoice.amount,
+        status: invoice.status,
+        date: invoice.issuedOn,
+      })),
+    },
+    charts: {
+      monthlyRevenue: data.charts.monthlyRevenue ?? [],
+      topProducts: data.charts.topProducts ?? [],
+    },
+    growth: data.growth
+      ? {
+          lastMonthInvoices: data.growth.previousMonth.invoices ?? 0,
+          lastMonthCustomers: data.growth.previousMonth.customers ?? 0,
+          lastMonthProducts: data.growth.previousMonth.products ?? 0,
+          lastMonthRevenue: data.growth.previousMonth.revenue ?? 0,
+          currentMonthInvoices: data.growth.currentMonth.invoices ?? 0,
+          currentMonthCustomers: data.growth.currentMonth.customers ?? 0,
+          currentMonthProducts: data.growth.currentMonth.products ?? 0,
+          currentMonthRevenue: data.growth.currentMonth.revenue ?? 0,
+        }
+      : undefined,
+  };
+}
+
 // Helper function to get status badge styling
 const getStatusBadge = (status: string, isCompact: boolean = false) => {
   const baseClasses = isCompact 
@@ -199,8 +281,8 @@ export default function DashboardPage() {
         throw new Error('Failed to fetch dashboard data');
       }
       
-      const data = await response.json();
-      setStats(data);
+      const data = (await response.json()) as DashboardApiResponse;
+      setStats(mapDashboardResponse(data));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       showToast({

@@ -1,439 +1,299 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
+import { randomUUID } from 'crypto';
+import { InvoiceStatus, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { verifyToken, parseAuthTokenFromCookie } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
+import { toDecimal, toNumber } from '@/lib/decimal';
 
-// Define InvoiceStatus enum locally
-enum InvoiceStatus {
-  DRAFT = 'DRAFT',
-  SENT = 'SENT',
-  PAID = 'PAID',
-  PARTIAL = 'PARTIAL',
-  OVERDUE = 'OVERDUE',
-  CANCELLED = 'CANCELLED'
+const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
+const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
+const RECEIPTS_TAG = (userId: string) => `receipts:${userId}`;
+
+type InvoiceWithItems = Awaited<ReturnType<typeof fetchInvoice>>;
+
+function serialiseInvoice(invoice: InvoiceWithItems) {
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    status: invoice.status,
+    issueDate: invoice.issueDate.toISOString(),
+    dueDate: invoice.dueDate.toISOString(),
+    subtotal: toNumber(invoice.subtotal),
+    taxRate: toNumber(invoice.taxRate, 4),
+    taxAmount: toNumber(invoice.taxAmount),
+    discountRate: toNumber(invoice.discountRate, 4),
+    discountAmount: toNumber(invoice.discountAmount),
+    total: toNumber(invoice.total),
+    paidAmount: toNumber(invoice.paidAmount),
+    notes: invoice.notes,
+    customer: invoice.customer,
+    items: invoice.items.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: toNumber(item.unitPrice),
+      amount: toNumber(item.unitPrice) * item.quantity,
+      description: item.description,
+      product: item.product
+        ? {
+            id: item.product.id,
+            name: item.product.name,
+            price: toNumber(item.product.price),
+            disableStockManagement: item.product.disableStockManagement,
+          }
+        : null,
+    })),
+    createdAt: invoice.createdAt.toISOString(),
+    updatedAt: invoice.updatedAt.toISOString(),
+  };
 }
 
-// GET a specific invoice
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const id = await Promise.resolve(params.id);
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
-    }
-    
-    // Fetch the invoice with customer details
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: userId
+async function fetchInvoice(userId: string, invoiceId: string, tx?: Prisma.TransactionClient) {
+  const client = tx ?? prisma;
+  const invoice = await client.invoice.findFirst({
+    where: {
+      id: invoiceId,
+      userId,
+    },
+    include: {
+      customer: true,
+      items: {
+        include: {
+          product: true,
+        },
       },
-      include: {
-        customer: true,
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
-    });
-    
-    if (!invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    },
+  });
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  return invoice;
+}
+
+async function adjustStock(
+  tx: Prisma.TransactionClient,
+  items: InvoiceWithItems['items'],
+  direction: 'increment' | 'decrement',
+) {
+  for (const item of items) {
+    if (!item.product || item.product.disableStockManagement) {
+      continue;
     }
-    
-    return NextResponse.json(invoice);
-  } catch (error) {
-    console.error('Error fetching invoice:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch invoice' 
-    }, { 
-      status: 500 
+
+    await tx.product.update({
+      where: { id: item.productId },
+      data: {
+        quantity: {
+          [direction]: item.quantity,
+        },
+      },
     });
   }
 }
 
-// PATCH to update invoice status (cancel or apply payment)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const id = await Promise.resolve(params.id);
-    const data = await request.json();
-    const { action, paymentAmount } = data;
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
-    }
-    
-    // Fetch the invoice to ensure it exists and belongs to the user
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: userId
-      }
-    });
-    
-    if (!invoice) {
+    const invoice = await fetchInvoice(user.id, params.id);
+    return NextResponse.json(serialiseInvoice(invoice));
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invoice not found') {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
-    
-    let updatedInvoice;
-    
-    if (action === 'cancel') {
-      // First, get the invoice with its items and products to know what quantities to restore
-      const invoiceWithItems = await prisma.invoice.findFirst({
-        where: { id: id },
-        include: {
-          items: {
-            include: {
-              product: true
-            }
-          }
-        }
-      });
-      
-      if (!invoiceWithItems) {
-        return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-      }
-      
-      // Restore product quantities for inventory management if the invoice was PAID or PARTIAL
-      if (invoiceWithItems.status === InvoiceStatus.PAID || invoiceWithItems.status === InvoiceStatus.PARTIAL || invoiceWithItems.status === InvoiceStatus.SENT) {
-        for (const item of invoiceWithItems.items) {
-          if (!item.product.disableStockManagement) {
-            await prisma.product.update({
-              where: { id: item.product.id },
-              data: {
-                quantity: {
-                  increment: item.quantity
-                }
-              }
-            });
-          }
-        }
-      }
+    console.error('Failed to fetch invoice', error);
+    return NextResponse.json({ error: 'Failed to fetch invoice' }, { status: 500 });
+  }
+}
 
-      // Update invoice status to CANCELLED
-      updatedInvoice = await prisma.invoice.update({
-        where: { id: id },
-        data: {
-          status: InvoiceStatus.CANCELLED
-        },
-        include: {
-          customer: true,
-          items: {
-            include: {
-              product: true
-            }
-          }
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { action, paymentAmount } = await req.json();
+
+  try {
+    const { updatedInvoice, receiptPayload } = await prisma.$transaction(async (tx) => {
+      const invoice = await fetchInvoice(user.id, params.id, tx);
+      let nextInvoice: InvoiceWithItems = invoice;
+      let receiptData: Record<string, unknown> | null = null;
+
+      if (action === 'cancel') {
+        if (
+          invoice.status === InvoiceStatus.PAID ||
+          invoice.status === InvoiceStatus.PARTIAL ||
+          invoice.status === InvoiceStatus.SENT
+        ) {
+          await adjustStock(tx, invoice.items, 'increment');
         }
-      });
-    } else if (action === 'mark_sent') {
-      // Get the current invoice status
-      const currentInvoice = await prisma.invoice.findUnique({
-        where: { id: id },
-        include: {
-          items: {
-            include: {
-              product: true
-            }
-          }
+
+        nextInvoice = await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            status: InvoiceStatus.CANCELLED,
+          },
+          include: {
+            customer: true,
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        }) as InvoiceWithItems;
+      } else if (action === 'mark_sent') {
+        if (invoice.status === InvoiceStatus.DRAFT) {
+          await adjustStock(tx, invoice.items, 'decrement');
         }
-      });
-      
-      if (!currentInvoice) {
-        return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-      }
-      
-      // If the invoice is being transitioned from DRAFT to SENT, 
-      // we need to reduce the product quantities
-      if (currentInvoice.status === InvoiceStatus.DRAFT) {
-        for (const item of currentInvoice.items) {
-          if (!item.product.disableStockManagement) {
-            await prisma.product.update({
-              where: { id: item.product.id },
-              data: {
-                quantity: {
-                  decrement: item.quantity
-                }
-              }
-            });
-          }
+
+        nextInvoice = await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            status: InvoiceStatus.SENT,
+          },
+          include: {
+            customer: true,
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        }) as InvoiceWithItems;
+      } else if (action === 'payment') {
+        const parsedPayment = Number(paymentAmount);
+        if (!paymentAmount || Number.isNaN(parsedPayment) || parsedPayment <= 0) {
+          throw new Error('Invalid payment amount');
         }
-      }
-      
-      // Update invoice status to SENT
-      updatedInvoice = await prisma.invoice.update({
-        where: { id: id },
-        data: {
-          status: InvoiceStatus.SENT
-        },
-        include: {
-          customer: true,
-          items: {
-            include: {
-              product: true
-            }
-          }
+
+        if (invoice.status === InvoiceStatus.DRAFT) {
+          await adjustStock(tx, invoice.items, 'decrement');
         }
-      });
-    } else if (action === 'payment') {
-      // Apply payment to the invoice
-      const amountPaid = parseFloat(paymentAmount);
-      
-      if (isNaN(amountPaid) || amountPaid <= 0) {
-        return NextResponse.json({ 
-          error: 'Invalid payment amount' 
-        }, { 
-          status: 400 
-        });
-      }
-      
-      // Get the current invoice with items and products
-      const currentInvoice = await prisma.invoice.findUnique({
-        where: { id: id },
-        include: {
-          items: {
-            include: {
-              product: true
-            }
-          }
-        }
-      });
-      
-      if (!currentInvoice) {
-        return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-      }
-      
-      // Determine the new status based on the payment amount
-      let newStatus: InvoiceStatus;
-      let newPaidAmount = amountPaid;
-      
-      // If there's an existing paidAmount, add to it
-      if (currentInvoice.paidAmount) {
-        newPaidAmount += currentInvoice.paidAmount;
-      }
-      
-      if (newPaidAmount >= currentInvoice.total) {
-        // Full payment
-        newStatus = InvoiceStatus.PAID;
-      } else {
-        // Partial payment
-        newStatus = InvoiceStatus.PARTIAL;
-      }
-      
-      // If the invoice is being transitioned from DRAFT to PAID or PARTIAL, 
-      // we need to reduce the product quantities
-      if (currentInvoice.status === InvoiceStatus.DRAFT) {
-        for (const item of currentInvoice.items) {
-          if (!item.product.disableStockManagement) {
-            await prisma.product.update({
-              where: { id: item.product.id },
-              data: {
-                quantity: {
-                  decrement: item.quantity
-                }
-              }
-            });
-          }
-        }
-      }
-      
-      // Update the invoice with the new status and paid amount
-      updatedInvoice = await prisma.invoice.update({
-        where: { id: id },
-        data: {
-          status: newStatus,
-          paidAmount: newPaidAmount
-        },
-        include: {
-          customer: true,
-          items: {
-            include: {
-              product: true
-            }
-          }
-        }
-      });
-      
-      // Create a receipt record when invoice is fully paid
-      if (newStatus === InvoiceStatus.PAID) {
-        try {
-          // Import nanoid for receipt number generation
-          const { nanoid } = await import('nanoid');
-          
-          // Generate a receipt number
-          const receiptNumber = `RCT-${nanoid(6).toUpperCase()}`;
-          
-          // Create receipt data to send to receipts API
-          const receiptData = {
-            receiptNumber,
-            customerName: updatedInvoice.customer.name,
-            customerPhone: updatedInvoice.customer.phoneNumber,
+
+        const paymentDecimal = toDecimal(parsedPayment);
+        const currentPaidDecimal = toDecimal(invoice.paidAmount ?? 0);
+        const newPaidAmountDecimal = currentPaidDecimal.plus(paymentDecimal);
+        const totalDecimal = toDecimal(invoice.total);
+        const nextStatus =
+          toNumber(newPaidAmountDecimal) >= toNumber(totalDecimal)
+            ? InvoiceStatus.PAID
+            : InvoiceStatus.PARTIAL;
+
+        nextInvoice = await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            status: nextStatus,
+            paidAmount: newPaidAmountDecimal,
+          },
+          include: {
+            customer: true,
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        }) as InvoiceWithItems;
+
+        if (nextStatus === InvoiceStatus.PAID) {
+          receiptData = {
+            receiptNumber: `RCT-${randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+            customerName: nextInvoice.customer?.name ?? 'Walk-in Customer',
+            customerPhone: nextInvoice.customer?.phoneNumber ?? null,
             receiptDate: new Date().toISOString(),
             paymentMethod: 'INVOICE_PAYMENT',
-            total: updatedInvoice.total,
-            notes: `Payment for Invoice ${updatedInvoice.invoiceNumber}`,
-            items: updatedInvoice.items.map(item => ({
+            total: toNumber(nextInvoice.total),
+            notes: `Payment for Invoice ${nextInvoice.invoiceNumber}`,
+            items: nextInvoice.items.map((item) => ({
               productId: item.productId,
               quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              description: item.description || ''
+              unitPrice: toNumber(item.unitPrice),
+              description: item.description ?? '',
             })),
-            invoiceId: updatedInvoice.id,
-            orderNumber: updatedInvoice.invoiceNumber
+            invoiceId: nextInvoice.id,
+            orderNumber: nextInvoice.invoiceNumber,
           };
-          
-          // Call the receipts API to create the receipt
-          const receiptsResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/receipts`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-receipts-module-enabled': 'true'
-            },
-            body: JSON.stringify(receiptData)
-          });
-          
-          if (!receiptsResponse.ok) {
-            console.error('Failed to create receipt for paid invoice:', await receiptsResponse.text());
-          }
-        } catch (receiptError) {
-          console.error('Error creating receipt for paid invoice:', receiptError);
-          // Don't fail the invoice update if receipt creation fails
         }
+      } else {
+        throw new Error('Invalid action');
       }
-    } else {
-      return NextResponse.json({ 
-        error: 'Invalid action' 
-      }, { 
-        status: 400 
-      });
-    }
-    
-    return NextResponse.json(updatedInvoice);
-  } catch (error) {
-    console.error('Error updating invoice:', error);
-    return NextResponse.json({ 
-      error: 'Failed to update invoice' 
-    }, { 
-      status: 500 
+
+      return { updatedInvoice: nextInvoice, receiptPayload: receiptData };
     });
+
+    revalidateTag(INVOICE_TAG(user.id));
+    revalidateTag(DASHBOARD_TAG(user.id));
+
+    if (receiptPayload) {
+      try {
+        await fetch(`${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/receipts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-receipts-module-enabled': 'true',
+          },
+          body: JSON.stringify(receiptPayload),
+        });
+        revalidateTag(RECEIPTS_TAG(user.id));
+      } catch (error) {
+        console.error('Failed to create receipt for paid invoice', error);
+      }
+    }
+
+    return NextResponse.json(serialiseInvoice(updatedInvoice));
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invoice not found') {
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+
+    if (error instanceof Error && error.message === 'Invalid payment amount') {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    console.error('Failed to update invoice', error);
+    return NextResponse.json({ error: 'Failed to update invoice' }, { status: 500 });
   }
 }
 
-// DELETE an invoice
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getUserFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const id = await Promise.resolve(params.id);
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
+    await prisma.$transaction(async (tx) => {
+      const invoice = await fetchInvoice(user.id, params.id, tx);
+
+      if (
+        invoice.status === InvoiceStatus.PAID ||
+        invoice.status === InvoiceStatus.PARTIAL ||
+        invoice.status === InvoiceStatus.SENT
+      ) {
+        await adjustStock(tx, invoice.items, 'increment');
       }
-    }
-    
-    // Fetch the invoice with its items and products to know what quantities to restore
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: id,
-        userId: userId
-      },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
+
+      await tx.invoiceItem.deleteMany({ where: { invoiceId: invoice.id } });
+      await tx.invoice.delete({ where: { id: invoice.id } });
     });
-    
-    if (!invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
-    
-    // If the invoice status is PAID, PARTIAL, or SENT, restore product quantities
-    if (invoice.status === 'PAID' || invoice.status === 'PARTIAL' || invoice.status === 'SENT') {
-      for (const item of invoice.items) {
-        if (!item.product.disableStockManagement) {
-          await prisma.product.update({
-            where: { id: item.product.id },
-            data: {
-              quantity: {
-                increment: item.quantity
-              }
-            }
-          });
-        }
-      }
-    }
-    
-    // Delete the invoice items first
-    await prisma.invoiceItem.deleteMany({
-      where: {
-        invoiceId: id
-      }
-    });
-    
-    // Then delete the invoice
-    await prisma.invoice.delete({
-      where: {
-        id: id
-      }
-    });
-    
+
+    revalidateTag(INVOICE_TAG(user.id));
+    revalidateTag(DASHBOARD_TAG(user.id));
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting invoice:', error);
-    return NextResponse.json({ 
-      error: 'Failed to delete invoice' 
-    }, { 
-      status: 500 
-    });
+    if (error instanceof Error && error.message === 'Invoice not found') {
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+    console.error('Failed to delete invoice', error);
+    return NextResponse.json({ error: 'Failed to delete invoice' }, { status: 500 });
   }
 }
