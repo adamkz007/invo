@@ -798,37 +798,86 @@ export async function downloadInvoicePDF(
     doc.text('Payment Information', paymentInfoX, paymentInfoY - 5);
 
     if (companyDetails.paymentMethod === 'bank') {
-      // Display bank transfer details in a smaller, tighter table format
-      const tableWidth = 70; // Reduced width
-      const rowHeight = 7;   // Reduced row height
+      // Display bank transfer details with wrapped text to avoid overflow
+      const tableWidth = 70;
       const tableX = paymentInfoX;
       const tableY = paymentInfoY;
-      const fontSize = 8;    // Smaller font size
+      const fontSize = 8;
+      const labelColumnRatio = 0.4;
+      const labelColumnWidth = tableWidth * labelColumnRatio;
+      const valueColumnWidth = tableWidth - labelColumnWidth;
+      const horizontalPadding = 1.8;
+      const verticalPadding = 1.5;
+      const lineHeight = 4;
 
-      // Draw white background for the entire table
-      doc.setFillColor(255, 255, 255);
-      doc.rect(tableX, tableY, tableWidth, rowHeight * 3, 'F');
+      const bankRows = [
+        { label: 'Bank Name', value: companyDetails.bankName || '' },
+        { label: 'Account Name', value: companyDetails.bankAccountName || '' },
+        { label: 'Account Number', value: companyDetails.bankAccountNumber || '' }
+      ];
 
-      // Draw table borders
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.3); // Thinner border
-      doc.rect(tableX, tableY, tableWidth, rowHeight * 3, 'S'); // Outer border
-      doc.line(tableX, tableY + rowHeight, tableX + tableWidth, tableY + rowHeight); // Row 1 divider
-      doc.line(tableX, tableY + rowHeight * 2, tableX + tableWidth, tableY + rowHeight * 2); // Row 2 divider
-      const colDivider = tableX + tableWidth * 0.4;
-      doc.line(colDivider, tableY, colDivider, tableY + rowHeight * 3); // Column divider
-
-      // Add table content with smaller font and tighter padding
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
       doc.setFontSize(fontSize);
-      doc.text('Bank Name', tableX + 1.5, tableY + rowHeight * 0.6);
-      doc.text('Account Name', tableX + 1.5, tableY + rowHeight * 1.6);
-      doc.text('Account Number', tableX + 1.5, tableY + rowHeight * 2.6);
-      doc.setFont('helvetica', 'normal');
-      doc.text(companyDetails.bankName || '', colDivider + 1.5, tableY + rowHeight * 0.6);
-      doc.text(companyDetails.bankAccountName || '', colDivider + 1.5, tableY + rowHeight * 1.6);
-      doc.text(companyDetails.bankAccountNumber || '', colDivider + 1.5, tableY + rowHeight * 2.6);
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.3);
+      doc.setTextColor(0, 0, 0);
+
+      const processedRows = bankRows.map(row => {
+        const labelLines = doc.splitTextToSize(
+          row.label,
+          Math.max(labelColumnWidth - horizontalPadding * 2, 10)
+        );
+        const rawValue = row.value && row.value.trim().length > 0 ? row.value : '-';
+        const valueLinesRaw = doc.splitTextToSize(
+          rawValue,
+          Math.max(valueColumnWidth - horizontalPadding * 2, 10)
+        );
+        const valueLines = valueLinesRaw.length > 0 ? valueLinesRaw : ['-'];
+        const maxLines = Math.max(labelLines.length, valueLines.length);
+        const computedHeight = (maxLines * lineHeight) + (verticalPadding * 2);
+        return {
+          labelLines,
+          valueLines,
+          height: Math.max(computedHeight, 7)
+        };
+      });
+
+      const tableHeight = processedRows.reduce((total, row) => total + row.height, 0);
+      const columnDividerX = tableX + labelColumnWidth;
+
+      // Draw table background and borders
+      doc.setFillColor(255, 255, 255);
+      doc.rect(tableX, tableY, tableWidth, tableHeight, 'F');
+      doc.rect(tableX, tableY, tableWidth, tableHeight, 'S');
+      doc.line(columnDividerX, tableY, columnDividerX, tableY + tableHeight);
+
+      // Draw rows with wrapped text
+      let currentRowY = tableY;
+      processedRows.forEach((row, index) => {
+        const baselineOffset = verticalPadding + (fontSize * 0.35);
+        const labelStartX = tableX + horizontalPadding;
+        const valueStartX = columnDividerX + horizontalPadding;
+        const labelBaselineY = currentRowY + baselineOffset;
+        const valueBaselineY = currentRowY + baselineOffset;
+
+        doc.setFont('helvetica', 'bold');
+        row.labelLines.forEach((line, lineIdx) => {
+          const textY = labelBaselineY + (lineIdx * lineHeight);
+          doc.text(line, labelStartX, textY);
+        });
+
+        doc.setFont('helvetica', 'normal');
+        row.valueLines.forEach((line, lineIdx) => {
+          const textY = valueBaselineY + (lineIdx * lineHeight);
+          doc.text(line, valueStartX, textY);
+        });
+
+        currentRowY += row.height;
+
+        // Draw row divider unless it's the last row
+        if (index < processedRows.length - 1) {
+          doc.line(tableX, currentRowY, tableX + tableWidth, currentRowY);
+        }
+      });
     } else if (companyDetails.paymentMethod === 'qr' && companyDetails.qrImageUrl) {
       // Display QR code image with white background
       try {

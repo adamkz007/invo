@@ -25,7 +25,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/components/ui/toast';
-import { ProductWithRelations } from '@/types';
+import { ProductSummary } from '@/types';
 import { useSettings } from '@/contexts/settings-context';
 import { InlineLoading } from '@/components/ui/loading';
 
@@ -41,8 +41,8 @@ type QuickEditFormValues = z.infer<typeof quickEditSchema>;
 interface QuickEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: ProductWithRelations;
-  onSave: (updatedProduct: Partial<ProductWithRelations>) => Promise<void>;
+  product: ProductSummary;
+  onSave: (updatedProduct: Partial<ProductSummary>) => Promise<void>;
 }
 
 export function QuickEditDialog({ 

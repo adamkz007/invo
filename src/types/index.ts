@@ -26,6 +26,16 @@ export type ProductWithRelations = Product & {
   disableStockManagement: boolean;
 };
 
+export interface ProductSummary {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  quantity: number;
+  sku?: string | null;
+  disableStockManagement: boolean;
+}
+
 export type InvoiceWithRelations = Invoice & {
   customer: Customer;
   items: InvoiceItemWithRelations[];

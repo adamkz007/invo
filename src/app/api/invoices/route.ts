@@ -6,46 +6,26 @@ import { getUserFromRequest } from '@/lib/auth';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
 import type { InvoiceFormValues } from '@/types';
 import { toDecimal, toNumber } from '@/lib/decimal';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  countInvoicesCreatedThisMonth,
+  listInvoices,
+  type InvoiceListItem,
+  type InvoiceListOptions,
+  type InvoiceListResponse,
+} from '@/lib/data/invoices';
 
-const MAX_PAGE_SIZE = 50;
-const DEFAULT_PAGE_SIZE = 20;
 const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
 const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
 
-type InvoiceListItem = {
-  id: string;
-  invoiceNumber: string;
-  status: InvoiceStatus;
-  issueDate: string;
-  dueDate: string;
-  total: number;
-  paidAmount: number;
-  customer: {
-    id: string;
-    name: string;
-  } | null;
-};
-
-type InvoiceListResponse = {
-  data: InvoiceListItem[];
-  nextCursor?: string;
-  totalCount: number;
-};
-
-type ParsedParams = {
-  cursor?: string;
-  size: number;
-  status?: InvoiceStatus;
-  search?: string;
-};
-
-function parseParams(req: NextRequest): ParsedParams {
+function parseParams(req: NextRequest): InvoiceListOptions {
   const searchParams = req.nextUrl.searchParams;
   const cursor = searchParams.get('cursor') ?? undefined;
   const search = searchParams.get('search')?.trim() || undefined;
 
   const limitParam = Number(searchParams.get('limit'));
-  const size =
+  const limit =
     Number.isFinite(limitParam) && limitParam > 0
       ? Math.min(Math.floor(limitParam), MAX_PAGE_SIZE)
       : DEFAULT_PAGE_SIZE;
@@ -55,27 +35,10 @@ function parseParams(req: NextRequest): ParsedParams {
     ? (statusParam as InvoiceStatus)
     : undefined;
 
-  return { cursor, size, status, search };
+  return { cursor, limit, status, search };
 }
 
-function buildWhere(userId: string, params: ParsedParams): Prisma.InvoiceWhereInput {
-  const where: Prisma.InvoiceWhereInput = { userId };
-
-  if (params.status) {
-    where.status = params.status;
-  }
-
-  if (params.search) {
-    where.OR = [
-      { invoiceNumber: { contains: params.search, mode: 'insensitive' } },
-      { customer: { name: { contains: params.search, mode: 'insensitive' } } },
-    ];
-  }
-
-  return where;
-}
-
-function serialiseInvoice(invoice: {
+function toInvoiceListItem(invoice: {
   id: string;
   invoiceNumber: string;
   status: InvoiceStatus;
@@ -124,18 +87,7 @@ async function ensureUsageWithinLimits(userId: string) {
     return null;
   }
 
-  const firstDayOfMonth = new Date();
-  firstDayOfMonth.setDate(1);
-  firstDayOfMonth.setHours(0, 0, 0, 0);
-
-  const invoiceCount = await prisma.invoice.count({
-    where: {
-      userId,
-      createdAt: {
-        gte: firstDayOfMonth,
-      },
-    },
-  });
+  const invoiceCount = await countInvoicesCreatedThisMonth(userId);
 
   const reachedLimit = hasReachedLimit(
     subscriptionStatus,
@@ -183,42 +135,9 @@ export async function GET(req: NextRequest) {
   }
 
   const params = parseParams(req);
-  const where = buildWhere(user.id, params);
 
   try {
-    const [records, totalCount] = await Promise.all([
-      prisma.invoice.findMany({
-        where,
-        take: params.size + 1,
-        ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          invoiceNumber: true,
-          status: true,
-          issueDate: true,
-          dueDate: true,
-          total: true,
-          paidAmount: true,
-          customer: {
-            select: { id: true, name: true },
-          },
-        },
-      }),
-      prisma.invoice.count({ where }),
-    ]);
-
-    let nextCursor: string | undefined;
-    if (records.length > params.size) {
-      const nextItem = records.pop();
-      nextCursor = nextItem?.id;
-    }
-
-    const payload: InvoiceListResponse = {
-      data: records.map(serialiseInvoice),
-      nextCursor,
-      totalCount,
-    };
+    const payload = await listInvoices(user.id, params);
 
     return NextResponse.json(payload, {
       headers: {
@@ -361,9 +280,9 @@ export async function POST(req: NextRequest) {
     });
 
     revalidateTag(INVOICE_TAG(user.id));
-    revalidateTag(DASHBOARD_TAG(user.id));
+   revalidateTag(DASHBOARD_TAG(user.id));
 
-    return NextResponse.json(serialiseInvoice(createdInvoice), { status: 201 });
+    return NextResponse.json(toInvoiceListItem(createdInvoice), { status: 201 });
   } catch (error) {
     console.error('Failed to create invoice', error);
     return NextResponse.json(
