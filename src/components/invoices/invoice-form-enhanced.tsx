@@ -34,6 +34,7 @@ export enum InvoiceStatus {
   CANCELLED = 'CANCELLED'
 }
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
+import { toNumber } from '@/lib/decimal';
 import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues } from '@/types';
 // Dynamic imports for form dialogs to reduce bundle size
 // import CustomerFormDialog from '@/components/customers/customer-form-dialog';
@@ -140,12 +141,16 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
 
   // Memoize product options to prevent recreation on every render
   const productOptions = useMemo(() => {
-    return products.map((product) => ({
-      value: product.id,
-      label: product.name,
-      details: product.price !== undefined && product.price !== null ? `$${product.price.toFixed(2)}` : '$0.00',
-      key: product.id
-    }));
+    return products.map((product) => {
+      const numPrice = toNumber(product.price);
+      const safePrice = Number.isFinite(numPrice) ? numPrice : 0;
+      return {
+        value: product.id,
+        label: product.name,
+        details: `$${safePrice.toFixed(2)}`,
+        key: product.id
+      };
+    });
   }, [products]);
 
   // Update minDueDate when issue date changes
@@ -391,7 +396,9 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
   const handleProductChange = useCallback((productId: string, index: number) => {
     const product = products.find(p => p.id === productId);
     if (product) {
-      form.setValue(`items.${index}.unitPrice`, product.price !== undefined && product.price !== null ? product.price : 0);
+      const numPrice = toNumber(product.price);
+      const safePrice = Number.isFinite(numPrice) ? numPrice : 0;
+      form.setValue(`items.${index}.unitPrice`, safePrice);
       form.setValue(`items.${index}.description`, product.description || '');
       form.setValue(`items.${index}.disableStockManagement`, product.disableStockManagement || false);
       
