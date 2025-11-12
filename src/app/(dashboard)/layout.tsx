@@ -16,7 +16,8 @@ import {
   PlusCircle,
   LucideIcon,
   Receipt,
-  ShoppingCart
+  ShoppingCart,
+  Calculator
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -114,6 +115,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const baseNavigationItems = useMemo(() => [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Invoices', href: '/invoices', icon: FileText },
+    { name: 'Accounting', href: '/accounting', icon: Calculator },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Settings', href: '/settings', icon: Settings },

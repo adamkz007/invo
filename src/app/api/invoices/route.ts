@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { Prisma, InvoiceStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { postInvoiceIssued } from '@/lib/accounting/posting';
 import { getUserFromRequest } from '@/lib/auth';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
 import type { InvoiceFormValues } from '@/types';
@@ -275,6 +276,23 @@ export async function POST(req: NextRequest) {
             }),
           ),
       );
+
+      // Post accounting journal entry (AR/Revenue/Tax)
+      try {
+        await postInvoiceIssued({
+          userId: user.id,
+          invoiceId: invoice.id,
+          total: total,
+          taxAmount: taxAmount,
+          accounts: {
+            arCode: '1100',
+            revenueCode: '4000',
+            taxLiabilityCode: toNumber(taxAmount) > 0 ? '2100' : undefined,
+          },
+        });
+      } catch (e) {
+        console.warn('Accounting post (invoice issued) failed:', e);
+      }
 
       return invoice;
     });

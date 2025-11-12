@@ -96,7 +96,8 @@ export function middleware(request: NextRequest) {
                            path.startsWith('/invoices') || 
                            path.startsWith('/customers') ||
                            path.startsWith('/inventory') ||
-                           path.startsWith('/pos');
+                           path.startsWith('/pos') ||
+                           path.startsWith('/accounting');
   
   // Special case for the landing page routes
   if (path === '/landing' || path === '/home') {

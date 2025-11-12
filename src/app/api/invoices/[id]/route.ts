@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { randomUUID } from 'crypto';
 import { InvoiceStatus, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { postInvoicePayment } from '@/lib/accounting/posting';
 import { getUserFromRequest } from '@/lib/auth';
 import { toDecimal, toNumber } from '@/lib/decimal';
 
@@ -202,6 +203,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             },
           },
         }) as InvoiceWithItems;
+
+        // Post accounting journal entry for payment (Cash/AR)
+        try {
+          await postInvoicePayment({
+            userId: user.id,
+            invoiceId: invoice.id,
+            amount: paymentDecimal,
+            accounts: {
+              arCode: '1100',
+              cashCode: '1000',
+              revenueCode: '4000',
+            },
+          });
+        } catch (e) {
+          console.warn('Accounting post (invoice payment) failed:', e);
+        }
 
         if (nextStatus === InvoiceStatus.PAID) {
           receiptData = {
