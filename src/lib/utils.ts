@@ -17,6 +17,7 @@ export interface AppSettings {
   };
   enableReceiptsModule: boolean;
   enablePosModule: boolean;
+  enableAccountingModule: boolean;
 }
 
 // Default settings
@@ -26,7 +27,8 @@ export const defaultSettings: AppSettings = {
     locale: 'en-MY'
   },
   enableReceiptsModule: false,
-  enablePosModule: false
+  enablePosModule: false,
+  enableAccountingModule: false
 };
 
 // Format currency

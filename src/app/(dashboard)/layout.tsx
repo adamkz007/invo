@@ -124,6 +124,9 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   // Add optional modules (POS and Receipts) if enabled in settings - memoized
   const navigationItems = useMemo(() => {
     let items = [...baseNavigationItems];
+    if (!settings.enableAccountingModule) {
+      items = items.filter(item => item.name !== 'Accounting');
+    }
     
     // Insert POS after Dashboard if enabled
     if (settings.enablePosModule) {
@@ -139,7 +142,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
     }
     
     return items;
-  }, [settings.enableReceiptsModule, settings.enablePosModule, baseNavigationItems]);
+  }, [settings.enableReceiptsModule, settings.enablePosModule, settings.enableAccountingModule, baseNavigationItems]);
 
   // Show loading state or login redirect
   if (loading) {

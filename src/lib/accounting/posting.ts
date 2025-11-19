@@ -6,6 +6,8 @@ type PostingAccounts = {
   revenueCode: string; // Revenue
   taxLiabilityCode?: string; // Tax Liability
   cashCode?: string; // Cash/Bank
+  apCode?: string; // Accounts Payable
+  expenseCode?: string; // Expense
 };
 
 async function findAccountId(userId: string, code: string) {
@@ -90,3 +92,52 @@ export async function postInvoicePayment({
   });
 }
 
+export async function postExpense({
+  userId,
+  expenseId,
+  total,
+  taxAmount,
+  method,
+  accounts,
+}: {
+  userId: string;
+  expenseId: string;
+  total: Prisma.Decimal | number;
+  taxAmount: Prisma.Decimal | number;
+  method: 'CASH' | 'AP';
+  accounts: PostingAccounts;
+}) {
+  const expenseIdAcc = await findAccountId(userId, accounts.expenseCode || '5000');
+  const taxLiabId = accounts.taxLiabilityCode ? await findAccountId(userId, accounts.taxLiabilityCode) : null;
+  const totalNum = Number(total);
+  const taxNum = Number(taxAmount || 0);
+  const netExpense = totalNum - taxNum;
+
+  let creditAccountId: string | null = null;
+  if (method === 'CASH') {
+    if (!accounts.cashCode) throw new Error('cashCode required for cash expense');
+    creditAccountId = await findAccountId(userId, accounts.cashCode);
+  } else {
+    const apCode = accounts.apCode || '2000';
+    creditAccountId = await findAccountId(userId, apCode);
+  }
+
+  return prisma.journalEntry.create({
+    data: {
+      userId,
+      date: new Date(),
+      memo: `Expense ${expenseId} recorded`,
+      source: 'expense',
+      referenceId: expenseId,
+      status: 'POSTED',
+      postedAt: new Date(),
+      lines: {
+        create: [
+          { accountId: expenseIdAcc, debit: new Prisma.Decimal(netExpense), credit: new Prisma.Decimal(0) },
+          ...(taxLiabId ? [{ accountId: taxLiabId, debit: new Prisma.Decimal(taxNum), credit: new Prisma.Decimal(0) }] : []),
+          { accountId: creditAccountId!, debit: new Prisma.Decimal(0), credit: new Prisma.Decimal(totalNum) },
+        ],
+      },
+    },
+  });
+}

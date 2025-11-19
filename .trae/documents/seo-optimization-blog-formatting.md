@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     locale: 'en_MY',
     url: 'https://invo.my',
     siteName: 'Invo',
-    title: 'Invo - Smart Invoicing for Malaysian SMEs',
+    title: 'Invo',
     description: 'Practical invoicing solution designed for small and medium enterprises in Malaysia.',
     images: [
       {

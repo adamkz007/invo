@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Invo - Smart Invoicing for Malaysian SMEs',
+    title: 'Invo',
     description: 'Practical invoicing solution designed for small and medium enterprises in Malaysia.',
     images: ['/twitter-image.jpg'],
     creator: '@invo_my',

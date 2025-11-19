@@ -19,6 +19,49 @@ if (typeof process !== 'undefined') {
   process.setMaxListeners(20);
 }
 
+const auditableModels = new Set([
+  'Account', 'JournalEntry', 'JournalLine', 'Expense', 'TaxRate', 'BankAccount', 'BankTransaction', 'Invoice'
+]);
+
+prisma.$use(async (params, next) => {
+  const isAuditable = params.model && auditableModels.has(params.model);
+  const action = params.action;
+  let before: any = null;
+
+  if (isAuditable && (action === 'update' || action === 'delete')) {
+    try {
+      if (params.args?.where?.id) {
+        before = await (prisma as any)[params.model].findUnique({ where: { id: params.args.where.id } });
+      }
+    } catch {}
+  }
+
+  const result = await next(params);
+
+  if (isAuditable && (action === 'create' || action === 'update' || action === 'delete')) {
+    let after: any = null;
+    if (action === 'create' || action === 'update') after = result;
+    const entityId = (after && after.id) || (before && before.id) || '';
+    const userId = (after && after.userId) || (before && before.userId);
+    if (userId && entityId) {
+      try {
+        await prisma.auditLog.create({
+          data: {
+            entity: params.model!,
+            entityId: entityId,
+            action: action,
+            userId: userId,
+            before: before ? JSON.stringify(before) : null,
+            after: after ? JSON.stringify(after) : null,
+          },
+        });
+      } catch {}
+    }
+  }
+
+  return result;
+});
+
 // Add a connection test function
 export async function testConnection() {
   try {

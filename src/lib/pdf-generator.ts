@@ -1458,3 +1458,218 @@ export async function downloadReceiptPDF(
     (invoice.invoiceNumber ? `RCT-${invoice.invoiceNumber.replace(/^INV-/, '')}` : 'RCT-UNKNOWN');
   doc.save(`${pdfReceiptNumber}.pdf`);
 }
+export async function downloadTrialBalancePDF(
+  items: { code: string; name: string; type: string; debit: number; credit: number; balance: number }[],
+  periodLabel: string
+): Promise<void> {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 15;
+  doc.setFillColor(2, 33, 142);
+  doc.rect(0, 0, pageWidth, 25, 'F');
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Trial Balance', margin, 16);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Period: ${periodLabel}`, pageWidth - margin, 16, { align: 'right' });
+  doc.setTextColor(50, 50, 50);
+  const startY = 35;
+  let y = startY;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Code', margin, y);
+  doc.text('Name', margin + 30, y);
+  doc.text('Debit', pageWidth - margin - 50, y, { align: 'right' });
+  doc.text('Credit', pageWidth - margin, y, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  y += 6;
+  let totalDebit = 0;
+  let totalCredit = 0;
+  for (const i of items) {
+    totalDebit += i.debit;
+    totalCredit += i.credit;
+    doc.text(i.code, margin, y);
+    const name = i.name.length > 40 ? i.name.slice(0, 37) + '…' : i.name;
+    doc.text(name, margin + 30, y);
+    doc.text(i.debit.toFixed(2), pageWidth - margin - 50, y, { align: 'right' });
+    doc.text(i.credit.toFixed(2), pageWidth - margin, y, { align: 'right' });
+    y += 6;
+    if (y > doc.internal.pageSize.height - 20) {
+      doc.addPage();
+      y = startY;
+    }
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.text('Totals', margin, y + 4);
+  doc.text(totalDebit.toFixed(2), pageWidth - margin - 50, y + 4, { align: 'right' });
+  doc.text(totalCredit.toFixed(2), pageWidth - margin, y + 4, { align: 'right' });
+  doc.save('trial-balance.pdf');
+}
+
+export async function downloadProfitLossPDF(
+  revenues: { code: string; name: string; amount: number }[],
+  expenses: { code: string; name: string; amount: number }[],
+  totals: { revenue: number; expense: number; netIncome: number },
+  periodLabel: string
+): Promise<void> {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 15;
+  doc.setFillColor(2, 33, 142);
+  doc.rect(0, 0, pageWidth, 25, 'F');
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Profit & Loss', margin, 16);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Period: ${periodLabel}`, pageWidth - margin, 16, { align: 'right' });
+  doc.setTextColor(50, 50, 50);
+  let y = 35;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Revenue', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  revenues.forEach(r => {
+    doc.text(r.code, margin, y);
+    const name = r.name.length > 40 ? r.name.slice(0, 37) + '…' : r.name;
+    doc.text(name, margin + 30, y);
+    doc.text(r.amount.toFixed(2), pageWidth - margin, y, { align: 'right' });
+    y += 6;
+  });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total Revenue', margin, y);
+  doc.text(totals.revenue.toFixed(2), pageWidth - margin, y, { align: 'right' });
+  y += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Expenses', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  expenses.forEach(e => {
+    doc.text(e.code, margin, y);
+    const name = e.name.length > 40 ? e.name.slice(0, 37) + '…' : e.name;
+    doc.text(name, margin + 30, y);
+    doc.text(e.amount.toFixed(2), pageWidth - margin, y, { align: 'right' });
+    y += 6;
+  });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total Expense', margin, y);
+  doc.text(totals.expense.toFixed(2), pageWidth - margin, y, { align: 'right' });
+  y += 10;
+  doc.text('Net Income', margin, y);
+  doc.text(totals.netIncome.toFixed(2), pageWidth - margin, y, { align: 'right' });
+  doc.save('profit-loss.pdf');
+}
+
+export async function downloadBalanceSheetPDF(
+  assets: { code: string; name: string; balance: number }[],
+  liabilities: { code: string; name: string; balance: number }[],
+  equity: { code: string; name: string; balance: number }[],
+  dateLabel: string
+): Promise<void> {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 15;
+  doc.setFillColor(2, 33, 142);
+  doc.rect(0, 0, pageWidth, 25, 'F');
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Balance Sheet', margin, 16);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dateLabel, pageWidth - margin, 16, { align: 'right' });
+  doc.setTextColor(50, 50, 50);
+  let y = 35;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Assets', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  let totalAssets = 0;
+  assets.forEach(a => {
+    totalAssets += a.balance;
+    doc.text(a.code, margin, y);
+    const name = a.name.length > 40 ? a.name.slice(0, 37) + '…' : a.name;
+    doc.text(name, margin + 30, y);
+    doc.text(a.balance.toFixed(2), pageWidth - margin, y, { align: 'right' });
+    y += 6;
+  });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total Assets', margin, y);
+  doc.text(totalAssets.toFixed(2), pageWidth - margin, y, { align: 'right' });
+  y += 10;
+  doc.text('Liabilities', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  let totalLiabilities = 0;
+  liabilities.forEach(l => {
+    totalLiabilities += l.balance;
+    doc.text(l.code, margin, y);
+    const name = l.name.length > 40 ? l.name.slice(0, 37) + '…' : l.name;
+    doc.text(name, margin + 30, y);
+    doc.text(l.balance.toFixed(2), pageWidth - margin, y, { align: 'right' });
+    y += 6;
+  });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total Liabilities', margin, y);
+  doc.text(totalLiabilities.toFixed(2), pageWidth - margin, y, { align: 'right' });
+  y += 10;
+  doc.text('Equity', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  let totalEquity = 0;
+  equity.forEach(e => {
+    totalEquity += e.balance;
+    doc.text(e.code, margin, y);
+    const name = e.name.length > 40 ? e.name.slice(0, 37) + '…' : e.name;
+    doc.text(name, margin + 30, y);
+    doc.text(e.balance.toFixed(2), pageWidth - margin, y, { align: 'right' });
+    y += 6;
+  });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total Equity', margin, y);
+  doc.text(totalEquity.toFixed(2), pageWidth - margin, y, { align: 'right' });
+  y += 8;
+  doc.text('Liabilities + Equity', margin, y);
+  doc.text((totalLiabilities + totalEquity).toFixed(2), pageWidth - margin, y, { align: 'right' });
+  doc.save('balance-sheet.pdf');
+}
+
+export async function downloadCashFlowPDF(
+  items: { code: string; name: string; delta: number }[],
+  total: number,
+  periodLabel: string
+): Promise<void> {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 15;
+  doc.setFillColor(2, 33, 142);
+  doc.rect(0, 0, pageWidth, 25, 'F');
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Cash Flow', margin, 16);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Period: ${periodLabel}`, pageWidth - margin, 16, { align: 'right' });
+  doc.setTextColor(50, 50, 50);
+  let y = 35;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Net Change in Cash', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  items.forEach(i => {
+    doc.text(i.code, margin, y);
+    const name = i.name.length > 40 ? i.name.slice(0, 37) + '…' : i.name;
+    doc.text(name, margin + 30, y);
+    doc.text(i.delta.toFixed(2), pageWidth - margin, y, { align: 'right' });
+    y += 6;
+  });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total', margin, y);
+  doc.text(total.toFixed(2), pageWidth - margin, y, { align: 'right' });
+  doc.save('cash-flow.pdf');
+}

@@ -317,7 +317,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
     }
   };
   
-  const updateAppSettings = async (newSettings: Partial<{currency: {code: string, locale: string}, enableReceiptsModule: boolean, enablePosModule: boolean}>) => {
+  const updateAppSettings = async (newSettings: Partial<{currency: {code: string, locale: string}, enableReceiptsModule: boolean, enablePosModule: boolean, enableAccountingModule: boolean}>) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
       updateSettings(updatedSettings);
@@ -864,6 +864,35 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                       size="sm"
                       onClick={() => {
                         updateAppSettings({ enableReceiptsModule: false });
+                      }}
+                    >
+                      Disable
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-sm font-medium">Accounting Module</label>
+                    <p className="text-sm text-muted-foreground">
+                      Show accounting features like journals and reports
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant={settings.enableAccountingModule ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        updateAppSettings({ enableAccountingModule: true });
+                      }}
+                    >
+                      Enable
+                    </Button>
+                    <Button 
+                      variant={!settings.enableAccountingModule ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        updateAppSettings({ enableAccountingModule: false });
                       }}
                     >
                       Disable

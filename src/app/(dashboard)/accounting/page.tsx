@@ -65,10 +65,10 @@ export default async function AccountingPage() {
       {/* Shortcuts */}
       <div className="grid grid-cols-1 gap-2">
         <Link href="/accounting/ledger" className="text-sm text-primary">View Ledger</Link>
-        <Link href="/accounting/reports" className="text-sm text-primary">Reports</Link>
+        <Link href="/accounting/expenses" className="text-sm text-primary">View Expenses</Link>
+        <Link href="/accounting/reports/trial-balance" className="text-sm text-primary">Reports</Link>
         <Link href="/accounting/accounts" className="text-sm text-primary">Chart of Accounts</Link>
       </div>
     </div>
   );
 }
-

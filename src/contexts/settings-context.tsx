@@ -50,7 +50,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     try {
       const savedSettings = localStorage.getItem('appSettings');
       if (savedSettings) {
-        setSettings(JSON.parse(savedSettings));
+        setSettings({ ...defaultSettings, ...JSON.parse(savedSettings) });
       }
     } catch (error) {
       console.error('Error loading settings from localStorage:', error);
