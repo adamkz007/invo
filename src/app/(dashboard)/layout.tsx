@@ -218,9 +218,9 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 h-[calc(100vh-4rem)]">
         {/* Sidebar navigation (desktop) */}
-        <aside className="hidden border-r bg-muted/40 md:block md:w-64">
+        <aside className="hidden md:sticky md:top-16 md:h-[calc(100vh-4rem)] border-r bg-muted/40 md:block md:w-64 overflow-y-auto">
           <nav className="grid gap-1 p-4">
             {navigationItems.map((item) => {
               const Icon = item.icon;

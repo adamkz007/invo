@@ -1,6 +1,9 @@
+import { unstable_cache } from 'next/cache';
 import { Prisma, InvoiceStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { toNumber } from '@/lib/decimal';
+
+export const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
 
 export interface DashboardOverview {
   totals: {
@@ -63,7 +66,7 @@ function coerceDecimal(value: Prisma.Decimal | number | string | null | undefine
   return toNumber(value ?? 0);
 }
 
-export async function getDashboardOverview(userId: string): Promise<DashboardOverview> {
+async function computeDashboardOverview(userId: string): Promise<DashboardOverview> {
   const [totals, products, invoiceTotals, invoiceGroups, recentInvoices] = await Promise.all([
     Promise.all([
       prisma.invoice.count({ where: { userId } }),
@@ -294,4 +297,18 @@ export async function getDashboardOverview(userId: string): Promise<DashboardOve
       },
     },
   };
+}
+
+const cachedDashboardOverview = (userId: string) =>
+  unstable_cache(
+    () => computeDashboardOverview(userId),
+    ['dashboard-overview', userId],
+    {
+      revalidate: 300,
+      tags: [DASHBOARD_TAG(userId)],
+    },
+  );
+
+export function getDashboardOverview(userId: string): Promise<DashboardOverview> {
+  return cachedDashboardOverview(userId)();
 }

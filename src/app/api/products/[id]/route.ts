@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+
+const PRODUCT_TAG = (userId: string) => `products:${userId}`;
 
 export async function GET(
   request: NextRequest,
@@ -99,6 +102,7 @@ export async function PUT(
       }
     });
     
+    revalidateTag(PRODUCT_TAG(userId));
     return NextResponse.json({ product: updatedProduct });
   } catch (error) {
     console.error('Error updating product:', error);
@@ -164,6 +168,7 @@ export async function DELETE(
       }
     });
     
+    revalidateTag(PRODUCT_TAG(userId));
     return NextResponse.json({ message: 'Product deleted successfully', product: deletedProduct });
   } catch (error) {
     console.error('Error deleting product:', error);

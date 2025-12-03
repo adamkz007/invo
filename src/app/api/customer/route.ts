@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, testConnection, batchTransactions } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 // Maximum number of database connection retries
@@ -21,12 +21,6 @@ async function retryDatabaseOperation<T>(operation: () => Promise<T>, retries = 
 
 export async function GET(request: NextRequest) {
   try {
-    // Test database connection first
-    const isConnected = await testConnection().catch(() => false);
-    if (!isConnected) {
-      return NextResponse.json({ error: 'Database connection failed' }, { status: 503 });
-    }
-    
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
     
@@ -70,12 +64,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Test database connection first
-    const isConnected = await testConnection().catch(() => false);
-    if (!isConnected) {
-      return NextResponse.json({ error: 'Database connection failed' }, { status: 503 });
-    }
-    
     const customerData = await request.json();
     
     // Get auth token from cookies

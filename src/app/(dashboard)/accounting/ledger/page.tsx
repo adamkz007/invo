@@ -8,7 +8,7 @@ type Entry = {
   date: string;
   memo: string | null;
   source: string;
-  lines: { id: string; accountId: string; debit: string; credit: string }[];
+  lines: { id: string; accountId: string; debit: string; credit: string; account: { code: string; name: string } }[];
 };
 
 export default function LedgerPage() {
@@ -48,8 +48,8 @@ export default function LedgerPage() {
             <div className="mt-2 grid grid-cols-1 gap-1">
               {e.lines.map((l) => (
                 <div key={l.id} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{l.accountId}</span>
-                  <span className="font-mono">{Number(l.debit) > 0 ? `Dr ${l.debit}` : `Cr ${l.credit}`}</span>
+                  <span className="text-muted-foreground">{l.account.code} · {l.account.name}</span>
+                  <span className="font-mono">{Number(l.debit) > 0 ? `Dr ${Number(l.debit).toFixed(2)}` : `Cr ${Number(l.credit).toFixed(2)}`}</span>
                 </div>
               ))}
             </div>

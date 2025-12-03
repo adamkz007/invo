@@ -77,21 +77,35 @@ async function fetchInvoice(userId: string, invoiceId: string, tx?: Prisma.Trans
 async function adjustStock(
   tx: Prisma.TransactionClient,
   items: InvoiceWithItems['items'],
+  userId: string,
   direction: 'increment' | 'decrement',
 ) {
+  const adjustments = new Map<string, number>();
+
   for (const item of items) {
     if (!item.product || item.product.disableStockManagement) {
       continue;
     }
 
-    await tx.product.update({
-      where: { id: item.productId },
-      data: {
-        quantity: {
-          [direction]: item.quantity,
-        },
-      },
-    });
+    adjustments.set(item.productId, (adjustments.get(item.productId) || 0) + item.quantity);
+  }
+
+  for (const [productId, quantity] of adjustments.entries()) {
+    if (direction === 'decrement') {
+      const result = await tx.product.updateMany({
+        where: { id: productId, userId, quantity: { gte: quantity } },
+        data: { quantity: { decrement: quantity } },
+      });
+
+      if (result.count === 0) {
+        throw new Error(`Insufficient stock for product ${productId}`);
+      }
+    } else {
+      await tx.product.updateMany({
+        where: { id: productId, userId },
+        data: { quantity: { increment: quantity } },
+      });
+    }
   }
 }
 
@@ -133,7 +147,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           invoice.status === InvoiceStatus.PARTIAL ||
           invoice.status === InvoiceStatus.SENT
         ) {
-          await adjustStock(tx, invoice.items, 'increment');
+          await adjustStock(tx, invoice.items, user.id, 'increment');
         }
 
         nextInvoice = await tx.invoice.update({
@@ -152,7 +166,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         }) as InvoiceWithItems;
       } else if (action === 'mark_sent') {
         if (invoice.status === InvoiceStatus.DRAFT) {
-          await adjustStock(tx, invoice.items, 'decrement');
+          await adjustStock(tx, invoice.items, user.id, 'decrement');
         }
 
         nextInvoice = await tx.invoice.update({
@@ -176,7 +190,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         }
 
         if (invoice.status === InvoiceStatus.DRAFT) {
-          await adjustStock(tx, invoice.items, 'decrement');
+          await adjustStock(tx, invoice.items, user.id, 'decrement');
         }
 
         const paymentDecimal = toDecimal(parsedPayment);
@@ -295,7 +309,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         invoice.status === InvoiceStatus.PARTIAL ||
         invoice.status === InvoiceStatus.SENT
       ) {
-        await adjustStock(tx, invoice.items, 'increment');
+        await adjustStock(tx, invoice.items, user.id, 'increment');
       }
 
       await tx.invoiceItem.deleteMany({ where: { invoiceId: invoice.id } });

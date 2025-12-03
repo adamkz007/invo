@@ -12,5 +12,5 @@ export default async function InventoryPage() {
 
   const products = await getProductsForUser(user.id);
 
-  return <InventoryClient initialProducts={products} />;
+  return <InventoryClient initialPage={products} />;
 }

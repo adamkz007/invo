@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, testConnection } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 // In-memory storage for invoices during development
@@ -101,9 +101,6 @@ async function retryDatabaseOperation<T>(operation: () => Promise<T>, retries = 
 
 export async function GET(request: NextRequest) {
   try {
-    // Test database connection first
-    const isConnected = await testConnection().catch(() => false);
-    
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
     
@@ -122,35 +119,30 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // If database is connected, try to use it first
-    if (isConnected) {
-      try {
-        // Fetch invoices for this user with retry logic
-        const invoices = await retryDatabaseOperation(() => 
-          prisma.invoice.findMany({
-            where: {
-              userId: userId
-            },
-            include: {
-              customer: {
-                select: {
-                  name: true
-                }
+    try {
+      // Fetch invoices for this user with retry logic
+      const invoices = await retryDatabaseOperation(() =>
+        prisma.invoice.findMany({
+          where: {
+            userId: userId,
+          },
+          include: {
+            customer: {
+              select: {
+                name: true,
               },
-              items: true
             },
-            orderBy: {
-              createdAt: 'desc'
-            }
-          })
-        );
-        
-        return NextResponse.json(invoices);
-      } catch (dbError) {
-        console.error('Database error, falling back to mock storage:', dbError);
-      }
-    } else {
-      console.log('Database not connected, using mock storage');
+            items: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        }),
+      );
+
+      return NextResponse.json(invoices);
+    } catch (dbError) {
+      console.error('Database error, falling back to mock storage:', dbError);
     }
     
     // Fall back to mock storage

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,12 @@ import { PLAN_LIMITS } from '@/lib/stripe';
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerWithRelations[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingPage, setIsFetchingPage] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -71,23 +76,32 @@ export default function CustomersPage() {
     fetchUserSubscription();
   }, []);
   
-  // Fetch customers from API
-  useEffect(() => {
-    async function fetchCustomers() {
+  const loadCustomers = useCallback(
+    async (targetPage = page, search = searchQuery, signal?: AbortSignal) => {
       try {
-        setIsLoading(true);
-        const response = await fetch('/api/customers', {
-          cache: 'no-store',
-          next: { revalidate: 0 }
+        if (!hasInitialized) {
+          setIsLoading(true);
+        }
+        setIsFetchingPage(true);
+        const params = new URLSearchParams({
+          page: targetPage.toString(),
+          search,
         });
-        
+        const response = await fetch(`/api/customers?${params.toString()}`, {
+          cache: 'no-store',
+          signal,
+        });
+
         if (!response.ok) {
           throw new Error('Failed to fetch customers');
         }
-        
+
         const data = await response.json();
-        setCustomers(data);
+        setCustomers(data.data);
+        setTotalPages(data.totalPages || 1);
+        setTotalCount(data.totalCount || data.data?.length || 0);
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         console.error('Error fetching customers:', err);
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
         showToast({
@@ -96,11 +110,19 @@ export default function CustomersPage() {
         });
       } finally {
         setIsLoading(false);
+        setIsFetchingPage(false);
+        setHasInitialized(true);
       }
-    }
-    
-    fetchCustomers();
-  }, [showToast]);
+    },
+    [hasInitialized, page, searchQuery, showToast],
+  );
+
+  // Fetch customers from API with pagination/search
+  useEffect(() => {
+    const controller = new AbortController();
+    loadCustomers(page, searchQuery, controller.signal);
+    return () => controller.abort();
+  }, [loadCustomers, page, searchQuery]);
 
   // Handle customer deletion
   const handleDeleteCustomer = async (customerId: string) => {
@@ -117,8 +139,9 @@ export default function CustomersPage() {
         throw new Error('Failed to delete customer');
       }
       
-      // Remove the deleted customer from the state
+      // Remove the deleted customer from the state and refresh the page
       setCustomers(customers.filter(customer => customer.id !== customerId));
+      loadCustomers(page, searchQuery);
       
       showToast({
         message: 'Customer deleted successfully',
@@ -138,14 +161,6 @@ export default function CustomersPage() {
     setSelectedCustomerId(customerId);
     setIsDetailDialogOpen(true);
   };
-
-  // Filter customers based on search query
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (customer.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (customer.phoneNumber || '').includes(searchQuery)
-  );
 
   if (isLoading) {
     return <CustomersLoading />;
@@ -193,129 +208,144 @@ export default function CustomersPage() {
         </Button>
       </div>
       
-      <Card className="hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
-        <CardHeader className="border-b">
-          <TooltipCardTitle tooltip="View and manage all your customer details in one place">
-            Manage Customers
-          </TooltipCardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex items-center gap-2 animate-in fade-in duration-500">
-            <div className="relative flex-grow">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search customers..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" size="icon" className="hover:bg-muted/80 transition-colors duration-200">
-              <Filter className="h-4 w-4" />
-            </Button>
+      <div className="space-y-4">
+        <div className="mb-4 flex items-center gap-2 animate-in fade-in duration-500">
+          <div className="relative flex-grow">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search customers..."
+              className="pl-8 w-full"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+            />
           </div>
-          
-          <div className="rounded-md border shadow-sm">
-            <Table>
-              <TableHeader>
+        </div>
+        
+        <div className="rounded-md border shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Added</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {customers.length === 0 ? (
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Added</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No customers found
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No customers found
+              ) : (
+                customers?.map((customer) => (
+                  <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors duration-200 group" onClick={() => handleCustomerSelect(customer.id)}>
+                    <TableCell className="font-medium group-hover:text-primary transition-colors duration-200">{customer.name}</TableCell>
+                    <TableCell>{customer.email}</TableCell>
+                    <TableCell>{customer.phoneNumber}</TableCell>
+                    <TableCell>{formatRelativeDate(customer.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="hover:bg-muted/80 transition-colors duration-200">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="animate-in fade-in-50 zoom-in-95 duration-100">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/invoices/new?customerId=${customer.id}`);
+                            }}
+                            className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                          >
+                            <FileText className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
+                            Create Invoice
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = `mailto:${customer.email}`;
+                            }}
+                            className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                          >
+                            <Mail className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
+                            Send Email
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = `tel:${customer.phoneNumber}`;
+                            }}
+                            className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                          >
+                            <Phone className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
+                            Call
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/customers/${customer.id}/edit`);
+                            }}
+                            className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
+                          >
+                            <Edit className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors duration-200 cursor-pointer group" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCustomer(customer.id);
+                            }}
+                          >
+                            <Trash className="mr-2 h-4 w-4 group-hover:text-red-600 transition-transform duration-200 group-hover:scale-110" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredCustomers?.map((customer) => (
-                    <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors duration-200 group" onClick={() => handleCustomerSelect(customer.id)}>
-                      <TableCell className="font-medium group-hover:text-primary transition-colors duration-200">{customer.name}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phoneNumber}</TableCell>
-                      <TableCell>{formatRelativeDate(customer.createdAt)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="hover:bg-muted/80 transition-colors duration-200">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="animate-in fade-in-50 zoom-in-95 duration-100">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/invoices/new?customerId=${customer.id}`);
-                              }}
-                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
-                            >
-                              <FileText className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
-                              Create Invoice
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.location.href = `mailto:${customer.email}`;
-                              }}
-                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
-                            >
-                              <Mail className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
-                              Send Email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.location.href = `tel:${customer.phoneNumber}`;
-                              }}
-                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
-                            >
-                              <Phone className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
-                              Call
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/customers/${customer.id}/edit`);
-                              }}
-                              className="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-200 cursor-pointer group"
-                            >
-                              <Edit className="mr-2 h-4 w-4 group-hover:text-primary transition-transform duration-200 group-hover:scale-110" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors duration-200 cursor-pointer group" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteCustomer(customer.id);
-                              }}
-                            >
-                              <Trash className="mr-2 h-4 w-4 group-hover:text-red-600 transition-transform duration-200 group-hover:scale-110" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-sm text-muted-foreground">
-            Showing {filteredCustomers.length} of {customers.length} customers
+            Showing {customers.length} of {totalCount} customers
           </div>
-        </CardFooter>
-      </Card>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || isFetchingPage}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || isFetchingPage}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
       
       {/* Customer Detail Dialog */}
       {selectedCustomerId && (

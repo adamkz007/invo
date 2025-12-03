@@ -88,7 +88,7 @@ export function WhatsAppInvoiceButton({
       {...props}
     >
       <MessageCircle className="h-4 w-4 text-current" />
-      <span className="ml-2">Send Invoice</span>
+      <span className="ml-2">WhatsApp Invoice</span>
     </WhatsAppButton>
   );
 }

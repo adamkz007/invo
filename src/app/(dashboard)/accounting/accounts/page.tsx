@@ -1,15 +1,18 @@
 "use client"
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Account = { id: string; code: string; name: string; type: string; parentId: string | null; isActive: boolean };
+type TBItem = { accountId: string; code: string; name: string; type: string; debit: number; credit: number; balance: number };
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [form, setForm] = useState({ code: '', name: '', type: 'ASSET' });
+  const [tbItems, setTbItems] = useState<TBItem[]>([]);
+  const [loadingTB, setLoadingTB] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -17,6 +20,31 @@ export default function AccountsPage() {
       if (res.ok) setAccounts(await res.json());
     })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      setLoadingTB(true);
+      const res = await fetch('/api/accounting/reports/trial-balance', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setTbItems(data.items);
+      }
+      setLoadingTB(false);
+    })();
+  }, []);
+
+  const grouped = useMemo(() => {
+    const groups: Record<string, { total: number; items: TBItem[] }> = {};
+    for (const i of tbItems) {
+      const t = i.type;
+      const amount = t === 'ASSET' ? i.balance : (t === 'LIABILITY' || t === 'EQUITY' ? -i.balance : (t === 'REVENUE' ? i.credit - i.debit : i.debit - i.credit));
+      const g = groups[t] || { total: 0, items: [] };
+      g.total += amount;
+      g.items.push({ ...i, balance: amount });
+      groups[t] = g;
+    }
+    return groups;
+  }, [tbItems]);
 
   async function createAccount() {
     if (!form.code || !form.name) return;
@@ -35,6 +63,33 @@ export default function AccountsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Chart of Accounts</h1>
+
+      <Card className="rounded-xl">
+        <CardHeader className="p-4">
+          <CardTitle className="text-sm">Aggregated Balances</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {(['ASSET','LIABILITY','EQUITY','REVENUE','EXPENSE'] as const).map((t) => (
+              <div key={t}>
+                <div className="flex items-center justify-between p-3 text-sm">
+                  <div className="font-medium">{t}</div>
+                  <div className="font-mono">{(grouped[t]?.total || 0).toFixed(2)}</div>
+                </div>
+                <div className="divide-y">
+                  {(grouped[t]?.items || []).map((i) => (
+                    <div key={i.accountId} className="grid grid-cols-2 sm:grid-cols-3 items-center p-3 text-xs">
+                      <div className="font-medium">{i.code}</div>
+                      <div className="text-muted-foreground">{i.name}</div>
+                      <div className="font-mono">{i.balance.toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="rounded-xl">
         <CardHeader className="p-4">

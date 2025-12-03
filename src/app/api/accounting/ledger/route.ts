@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       include: {
         lines: {
           where: accountId ? { accountId } : {},
-          select: { id: true, accountId: true, debit: true, credit: true },
+          select: { id: true, accountId: true, debit: true, credit: true, account: { select: { code: true, name: true } } },
         },
       },
     });
@@ -32,4 +32,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to load ledger' }, { status: 500 });
   }
 }
-

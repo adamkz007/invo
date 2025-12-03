@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -48,6 +48,7 @@ import Link from 'next/link';
 import { formatCurrency, format, formatRelativeDate, calculateDueDays } from '@/lib/utils';
 // Dynamic import for PDF generator to reduce bundle size
 // import { downloadInvoicePDF, downloadReceiptPDF } from '@/lib/pdf-generator';
+import { formatPhoneNumber } from '@/lib/whatsapp';
 import { InvoiceWithDetails } from '@/types';
 import type { InvoiceStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
@@ -120,6 +121,7 @@ export function InvoicesClient({
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceListItem | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [invoicesThisMonth, setInvoicesThisMonth] = useState<number>(initialInvoicesThisMonth);
+  const invoiceDetailsRef = useRef<Record<string, InvoiceWithDetails>>({});
   const companyDetails = initialCompany;
   const userSubscription = initialSubscription;
   const { showToast } = useToast();
@@ -144,26 +146,54 @@ export function InvoicesClient({
     parsedPaymentAmount > 0 &&
     parsedPaymentAmount <= remainingBalanceForPayment + 0.00001;
 
-const handleViewInvoice = (invoice: InvoiceListItem) => {
-    // Ensure we fetch the complete invoice with items
-    fetch(`/api/invoices/${invoice.id}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch complete invoice details');
-        }
-        return response.json();
-      })
-      .then(data => {
-        // Update the selected invoice with complete data
-        setSelectedInvoice(data);
-      })
-      .catch(error => {
-        console.error('Error fetching complete invoice:', error);
-        showToast({
-          variant: 'error',
-          message: 'Could not load invoice details'
-        });
+  const selectedInvoiceWhatsAppDetails = useMemo(() => {
+    if (!selectedInvoice) return null;
+
+    const phoneNumber = formatPhoneNumber(selectedInvoice.customer.phoneNumber || '');
+    if (!phoneNumber) return null;
+
+    const formattedTotal = formatCurrency(selectedInvoice.total, settings);
+    const businessName = companyDetails?.legalName || 'your business';
+    const message = `Hello ${selectedInvoice.customer.name}! Here's your invoice totalling ${formattedTotal} from ${businessName}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+
+    return { phoneNumber, whatsappUrl };
+  }, [companyDetails?.legalName, selectedInvoice, settings]);
+
+  const invalidateInvoiceDetails = useCallback((invoiceId: string) => {
+    delete invoiceDetailsRef.current[invoiceId];
+  }, []);
+
+  const fetchInvoiceDetails = useCallback(
+    async (invoiceId: string) => {
+      const cached = invoiceDetailsRef.current[invoiceId];
+      if (cached) {
+        return cached;
+      }
+
+      const response = await fetch(`/api/invoices/${invoiceId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch complete invoice details');
+      }
+
+      const data: InvoiceWithDetails = await response.json();
+      invoiceDetailsRef.current[invoiceId] = data;
+      return data;
+    },
+    [],
+  );
+
+  const handleViewInvoice = async (invoice: InvoiceListItem) => {
+    try {
+      const data = await fetchInvoiceDetails(invoice.id);
+      setSelectedInvoice(data);
+    } catch (error) {
+      console.error('Error fetching complete invoice:', error);
+      showToast({
+        variant: 'error',
+        message: 'Could not load invoice details',
       });
+    }
   };
 
 const handleDownloadPDF = async (invoice: InvoiceListItem) => {
@@ -171,13 +201,7 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
       // Dynamic import of PDF generator to reduce initial bundle size
       const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
       
-      // Fetch full invoice details with items before generating PDF
-      const response = await fetch(`/api/invoices/${invoice.id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch complete invoice details for PDF');
-      }
-      
-      const completeInvoice = await response.json();
+      const completeInvoice = await fetchInvoiceDetails(invoice.id);
       // Pass complete invoice data with items to the PDF generator
       downloadInvoicePDF(completeInvoice, companyDetails);
     } catch (error) {
@@ -221,13 +245,7 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
       // Dynamic import of PDF generator to reduce initial bundle size
       const { downloadReceiptPDF } = await import('@/lib/pdf-generator');
       
-      // Fetch full invoice details with items before generating receipt
-      const response = await fetch(`/api/invoices/${invoice.id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch complete invoice details for receipt');
-      }
-      
-      const completeInvoice = await response.json();
+      const completeInvoice = await fetchInvoiceDetails(invoice.id);
       // Pass complete invoice data with items to the receipt generator
       downloadReceiptPDF(completeInvoice, companyDetails, settings);
     } catch (error) {
@@ -256,6 +274,7 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
         throw new Error('Failed to cancel invoice');
       }
 
+      invalidateInvoiceDetails(invoice.id);
       // Refresh the page to show updated data
       router.refresh();
       
@@ -337,6 +356,7 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
       
       // Refresh the page to show updated data
       router.refresh();
+      invalidateInvoiceDetails(selectedInvoiceForPayment.id);
       
       showToast({
         variant: 'success',
@@ -367,6 +387,7 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
         throw new Error('Failed to mark invoice as sent');
       }
 
+      invalidateInvoiceDetails(invoice.id);
       // Refresh the page to show updated data
       router.refresh();
       
@@ -596,10 +617,10 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
                 Download PDF
               </Button>
               
-              {selectedInvoice.customer.phoneNumber && (
+              {selectedInvoiceWhatsAppDetails && (
                 <WhatsAppInvoiceButton
-                  invoice={selectedInvoice}
-                  companyName={companyDetails?.legalName || 'Your Company'}
+                  phoneNumber={selectedInvoiceWhatsAppDetails.phoneNumber}
+                  whatsappUrl={selectedInvoiceWhatsAppDetails.whatsappUrl}
                   className="flex items-center gap-2"
                 />
               )}
@@ -917,8 +938,8 @@ function InvoicesList({
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead className="w-[180px]">Dates</TableHead>
                 <TableHead>Total</TableHead>
+                <TableHead className="w-[180px]">Dates</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -933,6 +954,16 @@ function InvoicesList({
                     <div className="space-y-1">
                       <div className="text-xs text-muted-foreground">{invoice.invoiceNumber}</div>
                       <div className="text-base font-medium">{invoice.customer.name}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <span className="font-bold">{formatCurrency(invoice.total, settings)}</span>
+                      {(invoice.status as string) === 'PARTIAL' && (
+                        <div className="text-xs text-green-600">
+                          Paid: {formatCurrency(extractPaidAmount(invoice), settings)}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -953,16 +984,6 @@ function InvoicesList({
                           }
                         })()}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <span className="font-bold">{formatCurrency(invoice.total, settings)}</span>
-                      {(invoice.status as string) === 'PARTIAL' && (
-                        <div className="text-xs text-green-600">
-                          Paid: {formatCurrency(extractPaidAmount(invoice), settings)}
-                        </div>
-                      )}
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(invoice.status, true)}</TableCell>

@@ -129,68 +129,45 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
 
   // Memoize growth percentages to prevent recalculation on each render
   const growthData = useMemo(() => {
-    // Helper function to calculate percentage increase
-    const calculatePercentageIncrease = (current: number, previous: number): string => {
-      try {
-        if (previous === 0) {
-          return current > 0 ? "+100%" : "N/A";
-        }
-        
-        const percentageChange = ((current - previous) / previous) * 100;
-        
-        if (isNaN(percentageChange) || !isFinite(percentageChange)) {
-          return "N/A";
-        }
-        
-        const sign = percentageChange >= 0 ? "+" : "";
-        return `${sign}${percentageChange.toFixed(1)}%`;
-      } catch (error) {
-        return "N/A";
+    const formatGrowth = (currentTotal: number, currentMonthDelta: number): string => {
+      const previousTotal = Math.max(0, currentTotal - currentMonthDelta);
+      if (previousTotal === 0) {
+        if (currentTotal === 0) return "0%";
+        return "+100%";
       }
+
+      const percentage = (currentMonthDelta / previousTotal) * 100;
+      if (!isFinite(percentage)) return "N/A";
+      const sign = percentage >= 0 ? "+" : "";
+      return `${sign}${percentage.toFixed(1)}%`;
     };
-    
-    // If we have growth data from the API, use it to calculate percentages
+
     if (stats?.growth) {
-      const { 
-        lastMonthInvoices, lastMonthCustomers, lastMonthProducts, lastMonthRevenue,
-        currentMonthInvoices, currentMonthCustomers, currentMonthProducts, currentMonthRevenue
-      } = stats.growth;
-      
-      // Use total invoices/customers/products for calculating percentage if data is available
-      const totalInvoicesIncrease = calculatePercentageIncrease(
-        (stats?.totalInvoices || 0) - lastMonthInvoices,
-        lastMonthInvoices
-      );
-      
-      const totalCustomersIncrease = calculatePercentageIncrease(
-        (stats?.totalCustomers || 0) - lastMonthCustomers,
-        lastMonthCustomers
-      );
-      
-      const totalProductsIncrease = calculatePercentageIncrease(
-        (stats?.totalProducts || 0) - lastMonthProducts,
-        lastMonthProducts
-      );
-      
-      const revenueIncrease = calculatePercentageIncrease(
+      const {
+        currentMonthInvoices,
+        currentMonthCustomers,
+        currentMonthProducts,
         currentMonthRevenue,
-        lastMonthRevenue
-      );
-      
+      } = stats.growth;
+
+      const invoiceGrowth = formatGrowth(stats.totalInvoices || 0, currentMonthInvoices);
+      const customerGrowth = formatGrowth(stats.totalCustomers || 0, currentMonthCustomers);
+      const productGrowth = formatGrowth(stats.totalProducts || 0, currentMonthProducts);
+      const revenueGrowth = formatGrowth(stats.invoiceStats.totalAmount || 0, currentMonthRevenue);
+
       return {
-        invoiceGrowth: totalInvoicesIncrease,
-        customerGrowth: totalCustomersIncrease,
-        productGrowth: totalProductsIncrease,
-        revenueGrowth: revenueIncrease
+        invoiceGrowth,
+        customerGrowth,
+        productGrowth,
+        revenueGrowth,
       };
     }
-    
-    // Fallback to default values if growth data is not available
+
     return {
       invoiceGrowth: "N/A",
       customerGrowth: "N/A",
       productGrowth: "N/A",
-      revenueGrowth: "N/A"
+      revenueGrowth: "N/A",
     };
   }, [stats]);
 
@@ -271,7 +248,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
       <h1 className="text-3xl font-bold">Dashboard</h1>
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in duration-500">
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+        <Card className="bg-blue-50/80 dark:bg-blue-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-blue-100/80 dark:border-blue-900/40">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
             <div className="rounded-full p-2 bg-primary/10 dark:bg-primary/20 shadow-sm">
@@ -286,7 +263,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
           </CardContent>
         </Card>
         
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+        <Card className="bg-orange-50/80 dark:bg-orange-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-orange-100/80 dark:border-orange-900/40">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
             <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
@@ -301,7 +278,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
           </CardContent>
         </Card>
         
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+        <Card className="bg-white dark:bg-amber-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-amber-100/80 dark:border-amber-900/40">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
             <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
@@ -316,7 +293,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
           </CardContent>
         </Card>
         
-        <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+        <Card className="bg-green-50/80 dark:bg-green-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-green-100/80 dark:border-green-900/40">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <div className="rounded-full p-2 bg-green-500/10 dark:bg-green-500/20 shadow-sm">
@@ -670,19 +647,19 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
                   </div>
                 ) : (
                   stats.invoiceStats.recentInvoices.map((invoice) => (
-                    <div 
-                      key={invoice.id} 
+                    <div
+                      key={invoice.id}
                       className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 dark:border-border/60 dark:hover:bg-accent/10 transition-all duration-200 hover:shadow-sm hover:scale-[1.01]"
                       onClick={() => handleViewInvoice(invoice.id)}
                     >
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground/80">{invoice.invoiceNumber}</p>
                         <p className="text-base font-bold dark:text-foreground/90">{invoice.customerName}</p>
                         <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">Date: {invoice.date}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
                         <p className="text-sm font-medium dark:text-foreground/90">{formatCurrency(invoice.amount, settings)}</p>
-                        <div className="mt-1 transition-transform duration-200 group-hover:scale-105">
+                        <div className="mt-1 inline-flex transition-transform duration-200 group-hover:scale-105 max-w-full">
                           {getStatusBadge(invoice.status, true)}
                         </div>
                       </div>

@@ -111,8 +111,8 @@ export default function PrivacyPage() {
                 If you have any questions about this Privacy Policy, please contact us at:
               </p>
               <p>
-                <strong>Email:</strong> privacy@invoinvoice.com<br />
-                <strong>Address:</strong> Level 10, Menara XYZ, Jalan Sultan Ismail, 50250 Kuala Lumpur, Malaysia
+                <strong>Email:</strong> hello@invo.my<br />
+                <strong>Address:</strong> Kuala Lumpur, Malaysia
               </p>
             </div>
           </div>

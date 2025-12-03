@@ -35,16 +35,9 @@ export default function NewInvoicePage() {
         </Link>
         <h1 className="text-3xl font-bold">Create New Invoice</h1>
       </div>
-      
-      <Card>
-        <CardHeader>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<InlineLoading text="Loading form..." />}>
-            <InvoiceFormEnhanced preSelectedCustomerId={customerId} />
-          </Suspense>
-        </CardContent>
-      </Card>
+      <Suspense fallback={<InlineLoading text="Loading form..." />}>
+        <InvoiceFormEnhanced preSelectedCustomerId={customerId} />
+      </Suspense>
     </div>
   );
 }

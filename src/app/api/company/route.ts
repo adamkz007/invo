@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, testConnection } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 // In-memory storage for company details during development
@@ -54,9 +54,6 @@ async function retryDatabaseOperation<T>(operation: () => Promise<T>, retries = 
 
 export async function GET(request: NextRequest) {
   try {
-    // Test database connection first
-    const isConnected = await testConnection().catch(() => false);
-    
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
     
@@ -75,38 +72,33 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // If database is connected, try to use it first
-    if (isConnected) {
-      try {
-        // Fetch company details for this user with retry logic
-        const company = await retryDatabaseOperation(() => 
-          prisma.company.findUnique({
-            where: {
-              userId: userId
-            }
-          })
-        );
-        
-        // If no company details exist yet, return an empty response
-        if (!company) {
-          // Check if we have mock data
-          if (mockCompanyStorage[userId]) {
-            // Ensure mock data has address fields parsed
-            const parsedMockCompany = parseAddress(mockCompanyStorage[userId]);
-            return NextResponse.json(parsedMockCompany);
-          }
-          return NextResponse.json(null);
+    try {
+      // Fetch company details for this user with retry logic
+      const company = await retryDatabaseOperation(() =>
+        prisma.company.findUnique({
+          where: {
+            userId: userId,
+          },
+        }),
+      );
+      
+      // If no company details exist yet, return an empty response
+      if (!company) {
+        // Check if we have mock data
+        if (mockCompanyStorage[userId]) {
+          // Ensure mock data has address fields parsed
+          const parsedMockCompany = parseAddress(mockCompanyStorage[userId]);
+          return NextResponse.json(parsedMockCompany);
         }
-        
-        // Parse address into separate fields if they don't exist
-        const parsedCompany = parseAddress(company);
-        
-        return NextResponse.json(parsedCompany);
-      } catch (dbError) {
-        console.error('Database error, falling back to mock storage:', dbError);
+        return NextResponse.json(null);
       }
-    } else {
-      console.log('Database not connected, using mock storage');
+      
+      // Parse address into separate fields if they don't exist
+      const parsedCompany = parseAddress(company);
+      
+      return NextResponse.json(parsedCompany);
+    } catch (dbError) {
+      console.error('Database error, falling back to mock storage:', dbError);
     }
     
     // Fall back to mock storage
@@ -131,9 +123,6 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     
-    // Test database connection first
-    const isConnected = await testConnection().catch(() => false);
-    
     // Get auth token from cookies
     const token = request.cookies.get('auth_token')?.value;
     
@@ -155,111 +144,106 @@ export async function POST(request: NextRequest) {
     // Format address from separate fields if they exist
     const combinedAddress = formatAddress(data);
     
-    // If database is connected, try to use it first
-    if (isConnected) {
-      try {
-        // Check if company details already exist for this user
-        const existingCompany = await retryDatabaseOperation(() => 
-          prisma.company.findUnique({
-            where: {
-              userId: userId
-            }
-          })
-        );
-        
-        let company;
-        
-        if (existingCompany) {
-          // Update existing company details
-          company = await retryDatabaseOperation(() => 
-            prisma.company.update({
-              where: {
-                userId: userId
-              },
-              data: {
-                legalName: data.legalName,
-                ownerName: data.ownerName,
-                registrationNumber: data.registrationNumber,
-                taxIdentificationNumber: data.taxIdentificationNumber,
-                email: data.email,
-                phoneNumber: data.phoneNumber,
-                address: combinedAddress,
-                street: data.addressLine1 || data.street,
-                city: data.city,
-                postcode: data.postcode,
-                state: data.state,
-                country: data.country || 'Malaysia',
-                termsAndConditions: data.termsAndConditions,
-                paymentMethod: data.paymentMethod,
-                bankAccountName: data.bankAccountName,
-                bankName: data.bankName,
-                bankAccountNumber: data.bankAccountNumber,
-                qrImageUrl: data.qrImageUrl,
-                msicCode: data.msicCode,
-              }
-            })
-          );
-        } else {
-          // Create new company details
-          company = await retryDatabaseOperation(() => 
-            prisma.company.create({
-              data: {
-                legalName: data.legalName,
-                ownerName: data.ownerName,
-                registrationNumber: data.registrationNumber,
-                taxIdentificationNumber: data.taxIdentificationNumber,
-                email: data.email,
-                phoneNumber: data.phoneNumber,
-                address: combinedAddress,
-                street: data.addressLine1 || data.street,
-                city: data.city,
-                postcode: data.postcode,
-                state: data.state,
-                country: data.country || 'Malaysia',
-                termsAndConditions: data.termsAndConditions,
-                paymentMethod: data.paymentMethod,
-                bankAccountName: data.bankAccountName,
-                bankName: data.bankName,
-                bankAccountNumber: data.bankAccountNumber,
-                qrImageUrl: data.qrImageUrl,
-                msicCode: data.msicCode,
-                user: {
-                  connect: { id: userId }
-                }
-              }
-            })
-          );
-        }
-        
-        // Return the company data with both formats (single address and separate fields)
-        const responseCompany = {
-          ...company,
-          addressLine1: data.addressLine1 || '',
-          postcode: data.postcode || '',
-          city: data.city || '',
-          country: data.country || 'Malaysia',
-        };
-        
-        // Log data for debugging
-        console.log('Responding with company details:', {
-          addressFields: {
-            addressLine1: data.addressLine1,
-            postcode: data.postcode,
-            city: data.city
+    try {
+      // Check if company details already exist for this user
+      const existingCompany = await retryDatabaseOperation(() =>
+        prisma.company.findUnique({
+          where: {
+            userId: userId,
           },
-          response: {
-            addressLine1: responseCompany.addressLine1,
-            postcode: responseCompany.postcode,
-            city: responseCompany.city
-          }
-        });
-        
-        return NextResponse.json(responseCompany);
-      } catch (dbError) {
-        console.error('Database error, using mock storage instead:', dbError);
+        }),
+      );
+      
+      let company;
+      
+      if (existingCompany) {
+        // Update existing company details
+        company = await retryDatabaseOperation(() =>
+          prisma.company.update({
+            where: {
+              userId: userId,
+            },
+            data: {
+              legalName: data.legalName,
+              ownerName: data.ownerName,
+              registrationNumber: data.registrationNumber,
+              taxIdentificationNumber: data.taxIdentificationNumber,
+              email: data.email,
+              phoneNumber: data.phoneNumber,
+              address: combinedAddress,
+              street: data.addressLine1 || data.street,
+              city: data.city,
+              postcode: data.postcode,
+              state: data.state,
+              country: data.country || 'Malaysia',
+              termsAndConditions: data.termsAndConditions,
+              paymentMethod: data.paymentMethod,
+              bankAccountName: data.bankAccountName,
+              bankName: data.bankName,
+              bankAccountNumber: data.bankAccountNumber,
+              qrImageUrl: data.qrImageUrl,
+              msicCode: data.msicCode,
+            },
+          }),
+        );
+      } else {
+        // Create new company details
+        company = await retryDatabaseOperation(() =>
+          prisma.company.create({
+            data: {
+              legalName: data.legalName,
+              ownerName: data.ownerName,
+              registrationNumber: data.registrationNumber,
+              taxIdentificationNumber: data.taxIdentificationNumber,
+              email: data.email,
+              phoneNumber: data.phoneNumber,
+              address: combinedAddress,
+              street: data.addressLine1 || data.street,
+              city: data.city,
+              postcode: data.postcode,
+              state: data.state,
+              country: data.country || 'Malaysia',
+              termsAndConditions: data.termsAndConditions,
+              paymentMethod: data.paymentMethod,
+              bankAccountName: data.bankAccountName,
+              bankName: data.bankName,
+              bankAccountNumber: data.bankAccountNumber,
+              qrImageUrl: data.qrImageUrl,
+              msicCode: data.msicCode,
+              user: {
+                connect: { id: userId },
+              },
+            },
+          }),
+        );
       }
-    } else {
-      console.log('Database not connected, using mock storage');
+      
+      // Return the company data with both formats (single address and separate fields)
+      const responseCompany = {
+        ...company,
+        addressLine1: data.addressLine1 || '',
+        postcode: data.postcode || '',
+        city: data.city || '',
+        country: data.country || 'Malaysia',
+      };
+      
+      // Log data for debugging
+      console.log('Responding with company details:', {
+        addressFields: {
+          addressLine1: data.addressLine1,
+          postcode: data.postcode,
+          city: data.city,
+        },
+        response: {
+          addressLine1: responseCompany.addressLine1,
+          postcode: responseCompany.postcode,
+          city: responseCompany.city,
+        },
+      });
+      
+      return NextResponse.json(responseCompany);
+    } catch (dbError) {
+      console.error('Database error, using mock storage instead:', dbError);
     }
     
     // Fall back to mock storage

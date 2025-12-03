@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 import { Prisma, InvoiceStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { postInvoiceIssued } from '@/lib/accounting/posting';
@@ -19,6 +19,16 @@ import {
 
 const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
 const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
+
+const invoiceListCache = (userId: string) =>
+  unstable_cache(
+    (options: InvoiceListOptions) => listInvoices(userId, options),
+    ['invoices-list', userId],
+    {
+      revalidate: 120,
+      tags: [INVOICE_TAG(userId)],
+    },
+  );
 
 function parseParams(req: NextRequest): InvoiceListOptions {
   const searchParams = req.nextUrl.searchParams;
@@ -138,7 +148,7 @@ export async function GET(req: NextRequest) {
   const params = parseParams(req);
 
   try {
-    const payload = await listInvoices(user.id, params);
+    const payload = await invoiceListCache(user.id)(params);
 
     return NextResponse.json(payload, {
       headers: {

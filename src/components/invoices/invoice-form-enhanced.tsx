@@ -109,7 +109,6 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [minDueDate, setMinDueDate] = useState<Date>(form.getValues('issueDate'));
-  const [activeSection, setActiveSection] = useState('customer');
   
   // Dynamic component states
   const [CustomerFormDialog, setCustomerFormDialog] = useState<React.ComponentType<any> | null>(null);
@@ -211,12 +210,18 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
             productsRes.json()
           ]);
           
-          // Check if the data is in the expected format
-          const customersArray = Array.isArray(customersData) ? customersData : 
-                                 (customersData.customers ? customersData.customers : []);
+          // Normalize response shapes from API (supports both raw arrays and paginated objects)
+          const customersArray = Array.isArray(customersData)
+            ? customersData
+            : customersData?.customers
+              ? customersData.customers
+              : customersData?.data || [];
           
-          const productsArray = Array.isArray(productsData) ? productsData : 
-                               (productsData.products ? productsData.products : []);
+          const productsArray = Array.isArray(productsData)
+            ? productsData
+            : productsData?.products
+              ? productsData.products
+              : productsData?.data || [];
           
           setCustomers(customersArray);
           setProducts(productsArray);
@@ -244,40 +249,6 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
     });
   }, []);
   
-  // Handle scroll to update active section
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 100; // Offset for the fixed header
-      
-      // Get positions of each section
-      const sections: Array<{ id: string; ref: React.RefObject<HTMLDivElement | null> }> = [
-        { id: 'customer', ref: customerRef },
-        { id: 'dates', ref: datesRef },
-        { id: 'items', ref: itemsRef },
-        { id: 'taxDiscount', ref: taxDiscountRef },
-        { id: 'notes', ref: notesRef },
-        { id: 'summary', ref: summaryRef },
-      ];
-      
-      // Find the current section in view
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sections[i];
-        if (section.ref.current && section.ref.current.offsetTop <= scrollPosition) {
-          setActiveSection(section.id);
-          break;
-        }
-      }
-    };
-    
-    // Add scroll event listener
-    window.addEventListener('scroll', handleScroll);
-    
-    // Call once to set initial active section
-    handleScroll();
-    
-    // Clean up
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Handle form submission - memoized to prevent recreation
   const onSubmit = useCallback(async (values: InvoiceFormValues) => {
@@ -409,26 +380,6 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
     }
   }, [products, form]);
   
-  // Smooth scroll to section - memoized to prevent recreation
-  const scrollToSection = useCallback((sectionId: string) => {
-    const sectionMap: Record<string, React.RefObject<HTMLDivElement | null>> = {
-      customer: customerRef,
-      dates: datesRef,
-      items: itemsRef,
-      taxDiscount: taxDiscountRef,
-      notes: notesRef,
-      summary: summaryRef,
-    };
-    
-    const ref = sectionMap[sectionId];
-    if (ref?.current) {
-      window.scrollTo({
-        top: ref.current.offsetTop - 80, // Offset for fixed header
-        behavior: 'smooth',
-      });
-      setActiveSection(sectionId);
-    }
-  }, [setActiveSection]);
   
   // Handle new customer creation - memoized to prevent recreation
   const handleCustomerCreated = useCallback((newCustomer: CustomerWithRelations) => {
@@ -450,66 +401,18 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
   }, [showToast]);
 
   if (isLoading) {
-    return <InlineLoading text="Loading form data..." />;
+    return <InlineLoading text="Loading..." />;
   }
 
   return (
     <Form {...form}>
-      {/* Fixed-position section tabs - positioned below the header */}
-      <div className="sticky top-[72px] z-40 bg-white border-b shadow-sm py-1 mb-6 max-w-full">
-        <div className="w-full px-0 sm:px-4">
-          <div className="flex space-x-2 overflow-x-auto hide-scrollbar px-1">
-            <button
-              type="button"
-              onClick={() => scrollToSection('customer')}
-              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'customer' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-            >
-              Customer & Billing
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('dates')}
-              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'dates' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-            >
-              Dates
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('items')}
-              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'items' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-            >
-              Invoice Items
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('taxDiscount')}
-              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'taxDiscount' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-            >
-              Tax & Discount
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('notes')}
-              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'notes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-            >
-              Notes
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('summary')}
-              className={`px-2 py-1 text-xs sm:text-sm font-medium rounded-md whitespace-nowrap transition-colors ${activeSection === 'summary' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-            >
-              Summary
-            </button>
-          </div>
-        </div>
-      </div>
       
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-2 sm:space-y-6 sm:px-4">
+      
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 px-1.5 sm:space-y-5 sm:px-4">
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2" ref={customerRef}>
           {/* Customer Selection */}
-          <Card className="p-3 sm:p-6">
-              <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+          <Card className="p-2.5 sm:p-5 shadow-sm">
+              <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
               <FormLabel className="text-sm sm:text-base">Customer</FormLabel>
               <FormField
                 control={form.control}
@@ -611,8 +514,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
           </Card>
 
           {/* Dates */}
-          <Card className="p-3 sm:p-6" ref={datesRef}>
-            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+          <Card className="p-2.5 sm:p-5 shadow-sm" ref={datesRef}>
+            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
               <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
                 {/* Issue Date */}
                 <ShadcnDatePickerComponent
@@ -643,8 +546,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
         </div>
 
         {/* Invoice Items */}
-        <Card className="p-3 sm:p-6" ref={itemsRef}>
-            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+        <Card className="p-2.5 sm:p-5 shadow-sm" ref={itemsRef}>
+            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
             <div className="flex items-center justify-between mb-2 sm:mb-4">
               <h3 className="text-base sm:text-lg font-medium">Invoice Items</h3>
               {ProductFormDialog && (
@@ -814,8 +717,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
         </Card>
 
         {/* Tax and Discount */}
-        <Card className="p-3 sm:p-6" ref={taxDiscountRef}>
-            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+        <Card className="p-2.5 sm:p-5 shadow-sm" ref={taxDiscountRef}>
+            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
             <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
               {/* Tax Rate */}
               <FormField
@@ -867,8 +770,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
         </Card>
 
         {/* Notes */}
-        <Card className="p-3 sm:p-6" ref={notesRef}>
-            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+        <Card className="p-2.5 sm:p-5 shadow-sm" ref={notesRef}>
+            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
             <FormField
               control={form.control}
               name="notes"
@@ -892,8 +795,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
         </Card>
 
         {/* Invoice Summary */}
-        <Card className="p-3 sm:p-6" ref={summaryRef}>
-            <CardContent className="pt-4 sm:pt-6 px-0 sm:px-0">
+        <Card className="p-2.5 sm:p-5 shadow-sm" ref={summaryRef}>
+            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
             <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Invoice Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between text-sm sm:text-base">

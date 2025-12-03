@@ -1,14 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag, unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
 import { User } from '@prisma/client';
 
-// Cache TTL in seconds (2 minutes for customers)
-const CACHE_TTL = 120;
+const CUSTOMERS_TAG = (userId: string) => `customers:${userId}`;
 
-// In-memory cache for customers
-const customersCache = new Map<string, { data: any; timestamp: number }>();
+type CustomerListOptions = {
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+function parseQuery(req: NextRequest): CustomerListOptions {
+  const searchParams = req.nextUrl.searchParams;
+  const page = Math.max(1, Number(searchParams.get('page')) || 1);
+  const limitParam = Number(searchParams.get('limit'));
+  const limit =
+    Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(Math.floor(limitParam), MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
+  const search = searchParams.get('search')?.trim() || undefined;
+  return { page, limit, search };
+}
+
+const getCustomers = (userId: string) =>
+  unstable_cache(
+    async (options: CustomerListOptions) => {
+      const page = options.page ?? 1;
+      const limit = options.limit ?? DEFAULT_PAGE_SIZE;
+      const skip = (page - 1) * limit;
+      const where = {
+        userId,
+        ...(options.search
+          ? {
+              OR: [
+                { name: { contains: options.search, mode: 'insensitive' } },
+                { email: { contains: options.search, mode: 'insensitive' } },
+                { phoneNumber: { contains: options.search } },
+              ],
+            }
+          : {}),
+      };
+
+      const [customers, totalCount] = await Promise.all([
+        prisma.customer.findMany({
+          where,
+          orderBy: {
+            createdAt: 'desc',
+          },
+          skip,
+          take: limit,
+        }),
+        prisma.customer.count({ where }),
+      ]);
+
+      const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+
+      return { data: customers, totalCount, totalPages, page, pageSize: limit };
+    },
+    ['customers', userId],
+    {
+      revalidate: 120,
+      tags: [CUSTOMERS_TAG(userId)],
+    },
+  );
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,39 +77,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check cache first
-    const cacheKey = `customers_${user.id}`;
-    const cachedData = customersCache.get(cacheKey);
-    const now = Date.now();
-    
-    if (cachedData && (now - cachedData.timestamp) < CACHE_TTL * 1000) {
-      return NextResponse.json(cachedData.data, {
-        headers: {
-          'Cache-Control': 'public, max-age=60, s-maxage=120',
-          'X-Cache': 'HIT'
-        }
-      });
-    }
-
-    const customers = await prisma.customer.findMany({
-      where: {
-        userId: user.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    // Cache the result
-    customersCache.set(cacheKey, {
-      data: customers,
-      timestamp: now
-    });
+    const options = parseQuery(req);
+    const customers = await getCustomers(user.id)(options);
 
     return NextResponse.json(customers, {
       headers: {
-        'Cache-Control': 'public, max-age=60, s-maxage=120',
-        'X-Cache': 'MISS'
+        'Cache-Control': 'private, max-age=0, s-maxage=120',
       }
     });
   } catch (error) {
@@ -148,8 +181,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Invalidate cache for this user
-    const cacheKey = `customers_${user.id}`;
-    customersCache.delete(cacheKey);
+    revalidateTag(CUSTOMERS_TAG(user.id));
 
     return NextResponse.json(customer);
   } catch (error) {

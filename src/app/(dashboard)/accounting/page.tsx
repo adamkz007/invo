@@ -1,19 +1,13 @@
-import { Suspense } from 'react';
+"use client"
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { FileText, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 
-async function fetchMetrics() {
-  try {
-    const res = await fetch('/api/accounting/dashboard', { cache: 'no-store' });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
+type Metrics = { accountsReceivableTotal: number; revenueMonth: number; cashBalance: number; expensesMonth: number } | null;
 
 function MetricCard({ title, value, hint, icon: Icon }: { title: string; value: string; hint?: string; icon: any }) {
   return (
@@ -30,8 +24,57 @@ function MetricCard({ title, value, hint, icon: Icon }: { title: string; value: 
   );
 }
 
-export default async function AccountingPage() {
-  const metrics = await fetchMetrics();
+export default function AccountingPage() {
+  const [metrics, setMetrics] = useState<Metrics>(null);
+  const [period, setPeriod] = useState<string>('MTD');
+  const [loading, setLoading] = useState(false);
+
+  const { start, end } = useMemo(() => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    if (period === 'MTD') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start, end };
+    }
+    if (period === 'QTD') {
+      const quarter = Math.floor(now.getMonth() / 3);
+      const startMonth = quarter * 3;
+      const start = new Date(now.getFullYear(), startMonth, 1);
+      return { start, end };
+    }
+    if (period === 'YTD') {
+      const start = new Date(now.getFullYear(), 0, 1);
+      return { start, end };
+    }
+    if (period === 'Last 30 Days') {
+      const start = new Date(now);
+      start.setDate(start.getDate() - 29);
+      start.setHours(0, 0, 0, 0);
+      return { start, end };
+    }
+    return { start: undefined, end: undefined } as { start?: Date; end?: Date };
+  }, [period]);
+
+  async function loadMetrics() {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (start) params.set('start', start.toISOString());
+    if (end) params.set('end', end.toISOString());
+    try {
+      const res = await fetch(`/api/accounting/dashboard${params.toString() ? `?${params.toString()}` : ''}`, { cache: 'no-store' });
+      if (res.ok) {
+        setMetrics(await res.json());
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
+
   const ar = metrics?.accountsReceivableTotal ?? 0;
   const cash = metrics?.cashBalance ?? 0;
   const expenses = metrics?.expensesMonth ?? 0;
@@ -41,15 +84,22 @@ export default async function AccountingPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Accounting</h1>
-        <Badge className="text-xs">Mobile-first</Badge>
+        <Select value={period} onValueChange={setPeriod}>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Timeframe" /></SelectTrigger>
+          <SelectContent>
+            {['MTD','QTD','YTD','Last 30 Days','All Time'].map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* KPI Cards (mobile-first grid) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <MetricCard title="Accounts Receivable" value={`$${ar.toFixed(2)}`} hint="Open invoices" icon={FileText} />
         <MetricCard title="Cash" value={`$${cash.toFixed(2)}`} hint="Bank & cash" icon={Wallet} />
-        <MetricCard title="Revenue (MTD)" value={`$${revenue.toFixed(2)}`} icon={TrendingUp} />
-        <MetricCard title="Expenses (MTD)" value={`$${expenses.toFixed(2)}`} icon={TrendingDown} />
+        <MetricCard title={`Revenue${period === 'All Time' ? '' : ` (${period})`}`} value={`$${revenue.toFixed(2)}`} icon={TrendingUp} />
+        <MetricCard title={`Expenses${period === 'All Time' ? '' : ` (${period})`}`} value={`$${expenses.toFixed(2)}`} icon={TrendingDown} />
       </div>
 
       {/* Quick actions (thumb-friendly) */}

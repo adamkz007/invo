@@ -36,6 +36,7 @@ import { SubscriptionSettings } from '@/components/subscription/SubscriptionSett
 import { PhoneInput } from '@/components/ui/phone-input';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MSICCodeSearch } from '@/components/ui/msic-code-search';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 // Form validation schema
 const companyFormSchema = z.object({
@@ -342,24 +343,33 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
         <p className="text-muted-foreground">Manage your account settings and business preferences.</p>
       </div>
 
-      {console.log('Rendering with userData:', userData)}
-      {userData && (
-        <SubscriptionSettings user={userData} onSubscriptionChange={refreshUserData} />
-      )}
+      <Tabs defaultValue="subscription" className="space-y-6">
+        <TabsList className="w-full overflow-x-auto flex-nowrap">
+          <TabsTrigger value="subscription" className="flex-none px-4">Subscription</TabsTrigger>
+          <TabsTrigger value="business" className="flex-none px-4">Business Details</TabsTrigger>
+          <TabsTrigger value="payment" className="flex-none px-4">Payment Information</TabsTrigger>
+          <TabsTrigger value="modules" className="flex-none px-4">Module Settings</TabsTrigger>
+          <TabsTrigger value="security" className="flex-none px-4">Security</TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-8">
-        <div className="space-y-6 w-full">
-          <Card>
-            <CardHeader>
-              <TooltipCardTitle tooltip="Information about your business that will appear on your invoices">
-                Business Details
-              </TooltipCardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <SettingsLoading />
-              ) : (
-                <Form {...form}>
+        <TabsContent value="subscription" className="space-y-6">
+          {userData && (
+            <SubscriptionSettings user={userData} onSubscriptionChange={refreshUserData} />
+          )}
+        </TabsContent>
+
+        <Form {...form}>
+          <TabsContent value="business" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <TooltipCardTitle tooltip="Information about your business that will appear on your invoices">
+                  Business Details
+                </TooltipCardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <SettingsLoading />
+                ) : (
                   <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-2">
                       <FormField
@@ -369,16 +379,12 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                           <FormItem>
                             <FormLabel>Legal Business Name</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                disabled={isSaving} 
-                              />
+                              <Input {...field} disabled={isSaving} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={form.control}
                         name="ownerName"
@@ -393,7 +399,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         )}
                       />
                     </div>
-                    
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <FormField
                         control={form.control}
@@ -402,16 +408,12 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                           <FormItem>
                             <FormLabel>Business Registration Number</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                disabled={isSaving}
-                              />
+                              <Input {...field} disabled={isSaving} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={form.control}
                         name="taxIdentificationNumber"
@@ -426,7 +428,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         )}
                       />
                     </div>
-                    
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <FormField
                         control={form.control}
@@ -441,7 +443,6 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={form.control}
                         name="phoneNumber"
@@ -461,11 +462,11 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         )}
                       />
                     </div>
-                    
+
                     <div className="mb-4">
                       <TooltipCardTitle tooltip="This information will be displayed on your invoices">
-                Business Address
-              </TooltipCardTitle>
+                        Business Address
+                      </TooltipCardTitle>
                       <br></br>
                       <div className="grid gap-4">
                         <FormField
@@ -475,17 +476,12 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                             <FormItem>
                               <FormLabel>Address</FormLabel>
                               <FormControl>
-                                <Input 
-                                  {...field} 
-                                  disabled={isSaving}
-                                  placeholder="Street address"
-                                />
+                                <Input {...field} disabled={isSaving} placeholder="Street address" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
@@ -494,17 +490,12 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                               <FormItem>
                                 <FormLabel>Postcode</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    disabled={isSaving}
-                                    placeholder="Postcode"
-                                  />
+                                  <Input {...field} disabled={isSaving} placeholder="Postcode" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                          
                           <FormField
                             control={form.control}
                             name="city"
@@ -512,18 +503,13 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                               <FormItem>
                                 <FormLabel>City</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    disabled={isSaving}
-                                    placeholder="City"
-                                  />
+                                  <Input {...field} disabled={isSaving} placeholder="City" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
                         </div>
-                        
                         <FormField
                           control={form.control}
                           name="state"
@@ -531,17 +517,12 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                             <FormItem>
                               <FormLabel>State</FormLabel>
                               <FormControl>
-                                <Input 
-                                  {...field} 
-                                  disabled={isSaving}
-                                  placeholder="State"
-                                />
+                                <Input {...field} disabled={isSaving} placeholder="State" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
                         <FormField
                           control={form.control}
                           name="country"
@@ -549,11 +530,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                             <FormItem>
                               <FormLabel>Country</FormLabel>
                               <FormControl>
-                                <Select
-                                  defaultValue={field.value || 'Malaysia'}
-                                  onValueChange={field.onChange}
-                                  disabled={isSaving}
-                                >
+                                <Select defaultValue={field.value || 'Malaysia'} onValueChange={field.onChange} disabled={isSaving}>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select country" />
                                   </SelectTrigger>
@@ -574,7 +551,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         />
                       </div>
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="termsAndConditions"
@@ -582,11 +559,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         <FormItem>
                           <FormLabel>Terms and Conditions</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              {...field} 
-                              disabled={isSaving}
-                              className="min-h-[100px]"
-                            />
+                            <Textarea {...field} disabled={isSaving} className="min-h-[100px]" />
                           </FormControl>
                           <FormDescription>
                             These terms will appear at the bottom of your invoices
@@ -595,133 +568,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         </FormItem>
                       )}
                     />
-                    
-                    <div className="mb-4">
-              <TooltipCardTitle tooltip="This information will be displayed on your invoices to let your customers know how to pay you">
-                Payment Information
-              </TooltipCardTitle>
-                      <br></br>
-                      <FormField
-                        control={form.control}
-                        name="paymentMethod"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Payment Method</FormLabel>
-                            <FormControl>
-                              <Select
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                disabled={isSaving}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select payment method" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="bank">Bank Transfer</SelectItem>
-                                  <SelectItem value="qr">QR Code</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {form.watch('paymentMethod') === 'bank' && (
-                        <div className="mt-4 space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="bankAccountName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Full Account Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} disabled={isSaving} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="bankName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Bank Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} disabled={isSaving} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="bankAccountNumber"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Bank Account Number</FormLabel>
-                                <FormControl>
-                                  <Input {...field} disabled={isSaving} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      )}
-                      
-                      {form.watch('paymentMethod') === 'qr' && (
-                        <div className="mt-4">
-                          <FormField
-                            control={form.control}
-                            name="qrImageUrl"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>QR Code Image</FormLabel>
-                                <FormControl>
-                                  <div className="space-y-4">
-                                    {field.value && (
-                                      <div className="border p-4 rounded-md w-48 h-48 flex items-center justify-center">
-                                        <Image 
-                                          src={field.value} 
-                                          alt="Payment QR Code" 
-                                          width={192}
-                                          height={192}
-                                          className="max-w-full max-h-full object-contain"
-                                        />
-                                      </div>
-                                    )}
-                                    <Input 
-                                      type="file" 
-                                      accept="image/*"
-                                      disabled={isSaving}
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          const reader = new FileReader();
-                                          reader.onload = (event) => {
-                                            field.onChange(event.target?.result as string);
-                                          };
-                                          reader.readAsDataURL(file);
-                                        }
-                                      }}
-                                    />
-                                  </div>
-                                </FormControl>
-                                <FormDescription>
-                                  Upload an image of your payment QR code
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    
+
                     <Card className="bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900">
                       <CardHeader>
                         <TooltipCardTitle tooltip="Information required for Malaysia's e-invoicing compliance">
@@ -736,11 +583,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                             <FormItem>
                               <FormLabel>MSIC Code</FormLabel>
                               <FormControl>
-                                <MSICCodeSearch
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  disabled={isSaving}
-                                />
+                                <MSICCodeSearch value={field.value} onChange={field.onChange} disabled={isSaving} />
                               </FormControl>
                               <FormDescription>
                                 Malaysian Standard Industrial Classification code for your business
@@ -751,163 +594,220 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                         />
                       </CardContent>
                     </Card>
-                    
-                    <Button 
-                      type="submit" 
-                      disabled={isSaving || !formIsDirty}
-                      className="w-full"
-                    >
+
+                    <Button type="submit" disabled={isSaving || !formIsDirty} className="w-full">
                       {isSaving ? <InlineLoading text="Saving..." /> : 'Save Changes'}
                     </Button>
                   </form>
-                </Form>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <TooltipCardTitle tooltip="Set your default payment method & currency">
-                Payments & Currency
-              </TooltipCardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Default Currency</label>
-                  <Select
-                    defaultValue={settings.currency?.code || 'MYR'}
-                    onValueChange={(value) => {
-                      const currency = currencies.find(c => c.code === value);
-                      if (currency) {
-                        updateAppSettings({ 
-                          currency: { 
-                            code: currency.code,
-                            locale: currency.locale
-                          } 
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {currencies.map((currency) => (
-                        <SelectItem key={currency.code} value={currency.code}>
-                          {currency.code} - {currency.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <TooltipCardTitle tooltip="Enable or disable optional modules">
-                Module Settings
-              </TooltipCardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="block text-sm font-medium">POS Module</label>
-                    <p className="text-sm text-muted-foreground">
-                      Enable Point of Sale system for in-person transactions
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant={settings.enablePosModule ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        updateAppSettings({ enablePosModule: true });
-                      }}
-                    >
-                      Enable
-                    </Button>
-                    <Button 
-                      variant={!settings.enablePosModule ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        updateAppSettings({ enablePosModule: false });
-                      }}
-                    >
-                      Disable
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="block text-sm font-medium">Receipts Module</label>
-                    <p className="text-sm text-muted-foreground">
-                      Enable quick receipt generation for walk-in customers
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant={settings.enableReceiptsModule ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        updateAppSettings({ enableReceiptsModule: true });
-                      }}
-                    >
-                      Enable
-                    </Button>
-                    <Button 
-                      variant={!settings.enableReceiptsModule ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        updateAppSettings({ enableReceiptsModule: false });
-                      }}
-                    >
-                      Disable
-                    </Button>
-                  </div>
-                </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <div className="flex items-center justify-between">
+          <TabsContent value="payment" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <TooltipCardTitle tooltip="This information will be displayed on your invoices to let your customers know how to pay you">
+                  Payment Information
+                </TooltipCardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Method</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange} disabled={isSaving}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select payment method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="bank">Bank Transfer</SelectItem>
+                              <SelectItem value="qr">QR Code</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('paymentMethod') === 'bank' && (
+                    <div className="mt-4 space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="bankAccountName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Account Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled={isSaving} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="bankName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bank Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled={isSaving} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="bankAccountNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bank Account Number</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled={isSaving} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {form.watch('paymentMethod') === 'qr' && (
+                    <div className="mt-4">
+                      <FormField
+                        control={form.control}
+                        name="qrImageUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>QR Code Image</FormLabel>
+                            <FormControl>
+                              <div className="space-y-4">
+                                {field.value && (
+                                  <div className="border p-4 rounded-md w-48 h-48 flex items-center justify-center">
+                                    <Image src={field.value} alt="Payment QR Code" width={192} height={192} className="max-w-full max-h-full object-contain" />
+                                  </div>
+                                )}
+                                <Input type="file" accept="image/*" disabled={isSaving} onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      field.onChange(event.target?.result as string);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }} />
+                              </div>
+                            </FormControl>
+                            <FormDescription>
+                              Upload an image of your payment QR code
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  <Button type="submit" disabled={isSaving || !formIsDirty} className="w-full">
+                    {isSaving ? <InlineLoading text="Saving..." /> : 'Save Changes'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <TooltipCardTitle tooltip="Set your default payment method & currency">
+                  Payments & Currency
+                </TooltipCardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium">Accounting Module</label>
-                    <p className="text-sm text-muted-foreground">
-                      Show accounting features like journals and reports
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant={settings.enableAccountingModule ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        updateAppSettings({ enableAccountingModule: true });
+                    <label className="block text-sm font-medium mb-1">Default Currency</label>
+                    <Select
+                      defaultValue={settings.currency?.code || 'MYR'}
+                      onValueChange={(value) => {
+                        const currency = currencies.find(c => c.code === value);
+                        if (currency) {
+                          updateAppSettings({ currency: { code: currency.code, locale: currency.locale } });
+                        }
                       }}
                     >
-                      Enable
-                    </Button>
-                    <Button 
-                      variant={!settings.enableAccountingModule ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        updateAppSettings({ enableAccountingModule: false });
-                      }}
-                    >
-                      Disable
-                    </Button>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currencies.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.code} - {currency.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <div className="space-y-6 w-full">
-          <PasswordResetForm />
-        </div>
-      </div>
+          <TabsContent value="modules" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <TooltipCardTitle tooltip="Enable or disable optional modules">
+                  Module Settings
+                </TooltipCardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium">POS Module</label>
+                      <p className="text-sm text-muted-foreground">Enable Point of Sale system for in-person transactions</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant={settings.enablePosModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enablePosModule: true }); }}>Enable</Button>
+                      <Button variant={!settings.enablePosModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enablePosModule: false }); }}>Disable</Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium">Receipts Module</label>
+                      <p className="text-sm text-muted-foreground">Enable quick receipt generation for walk-in customers</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant={settings.enableReceiptsModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableReceiptsModule: true }); }}>Enable</Button>
+                      <Button variant={!settings.enableReceiptsModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableReceiptsModule: false }); }}>Disable</Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium">Accounting Module</label>
+                      <p className="text-sm text-muted-foreground">Show accounting features like journals and reports</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant={settings.enableAccountingModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableAccountingModule: true }); }}>Enable</Button>
+                      <Button variant={!settings.enableAccountingModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableAccountingModule: false }); }}>Disable</Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-6">
+            <PasswordResetForm />
+          </TabsContent>
+        </Form>
+      </Tabs>
     </div>
   );
 }

@@ -87,8 +87,6 @@ export default function ContactPage() {
                     <MapPin className="h-5 w-5 text-primary mt-1 mr-3" />
                     <div>
                       <h3 className="font-medium">Visit Us</h3>
-                      <p className="text-muted-foreground">Level 10, Menara XYZ</p>
-                      <p className="text-muted-foreground">Jalan Sultan Ismail</p>
                       <p className="text-muted-foreground">50250 Kuala Lumpur, Malaysia</p>
                     </div>
                   </div>

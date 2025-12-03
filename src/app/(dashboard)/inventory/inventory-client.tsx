@@ -34,25 +34,71 @@ import { useSettings } from '@/contexts/settings-context';
 import { QuickEditDialog } from '@/components/inventory/quick-edit-dialog';
 import { Badge } from '@/components/ui/badge';
 
-// Constants for pagination
-const ITEMS_PER_PAGE = 10;
-
-interface InventoryClientProps {
-  initialProducts: ProductSummary[];
+interface InventoryPageData {
+  data: ProductSummary[];
+  totalCount: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
 }
 
-export function InventoryClient({ initialProducts }: InventoryClientProps) {
-  const [products, setProducts] = useState<ProductSummary[]>(initialProducts);
+interface InventoryClientProps {
+  initialPage: InventoryPageData;
+}
+
+export function InventoryClient({ initialPage }: InventoryClientProps) {
+  const [products, setProducts] = useState<ProductSummary[]>(initialPage.data);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage.page);
+  const [totalPages, setTotalPages] = useState(initialPage.totalPages);
+  const [totalCount, setTotalCount] = useState(initialPage.totalCount);
+  const [isLoading, setIsLoading] = useState(false);
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
   const { showToast } = useToast();
   const { settings } = useSettings();
 
   useEffect(() => {
-    setProducts(initialProducts);
-  }, [initialProducts]);
+    setProducts(initialPage.data);
+    setCurrentPage(initialPage.page);
+    setTotalPages(initialPage.totalPages);
+    setTotalCount(initialPage.totalCount);
+  }, [initialPage]);
+
+  const fetchPage = useCallback(
+    async (page: number, search?: string) => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          search: search ?? '',
+          limit: initialPage.pageSize.toString(),
+        });
+        const response = await fetch(`/api/products?${params.toString()}`, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
+        }
+        const data: InventoryPageData = await response.json();
+        setProducts(
+          data.data.map((product) => ({
+            ...product,
+          })),
+        );
+        setCurrentPage(data.page);
+        setTotalPages(data.totalPages);
+        setTotalCount(data.totalCount);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        showToast({
+          message: 'Failed to load products. Please try again.',
+          variant: 'error',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [initialPage.pageSize, showToast],
+  );
 
   // Handle product deletion
   const handleDeleteProduct = useCallback(async (productId: string) => {
@@ -75,6 +121,7 @@ export function InventoryClient({ initialProducts }: InventoryClientProps) {
       });
       
       setProducts((prev) => prev.filter((product) => product.id !== productId));
+      fetchPage(currentPage, searchQuery);
     } catch (err) {
       console.error('Error deleting product:', err);
       showToast({
@@ -82,7 +129,7 @@ export function InventoryClient({ initialProducts }: InventoryClientProps) {
         variant: 'error',
       });
     }
-  }, [showToast]);
+  }, [currentPage, fetchPage, searchQuery, showToast]);
   
   // Handle quick edit
   const handleQuickEdit = useCallback((product: ProductSummary) => {
@@ -140,6 +187,7 @@ export function InventoryClient({ initialProducts }: InventoryClientProps) {
           : prev,
       );
       setIsQuickEditOpen(false);
+      fetchPage(currentPage, searchQuery);
     } catch (err) {
       console.error('Error updating product:', err);
       showToast({
@@ -147,7 +195,7 @@ export function InventoryClient({ initialProducts }: InventoryClientProps) {
         variant: 'error',
       });
     }
-  }, [selectedProduct, showToast]);
+  }, [fetchPage, currentPage, searchQuery, selectedProduct, showToast]);
 
   const totalInventoryValue = useMemo(
     () =>
@@ -174,27 +222,24 @@ export function InventoryClient({ initialProducts }: InventoryClientProps) {
   );
   
   // Filter products based on search query
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (product.sku && product.sku.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [products, searchQuery]);
-  
-  // Calculate pagination
-  const totalPages = useMemo(() => Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), [filteredProducts]);
-  
-  // Get current page items
-  const currentProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredProducts, currentPage]);
-  
+  const currentProducts = products;
+
   // Handle page change
-  const handlePageChange = useCallback((page: number) => {
-    setCurrentPage(page);
-  }, []);
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setCurrentPage(page);
+      fetchPage(page, searchQuery);
+    },
+    [fetchPage, searchQuery],
+  );
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchPage(1, searchQuery);
+      setCurrentPage(1);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [fetchPage, searchQuery]);
   
   return (
     <div className="space-y-6">
@@ -207,163 +252,182 @@ export function InventoryClient({ initialProducts }: InventoryClientProps) {
           </Button>
         </Link>
       </div>
-      
-      <Card>
-        <CardHeader>
-          <TooltipCardTitle tooltip="Manage your products and inventory">
-            Products
-          </TooltipCardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex items-center justify-between">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              className="pl-8 w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {currentProducts.length === 0 ? (
+          <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed">
+            <div className="text-center">
+              <Package className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-2 text-lg font-medium">No products found</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {products.length === 0
+                  ? "You haven&apos;t added any products yet."
+                  : "No products match your search criteria."}
+              </p>
+              {products.length === 0 && (
+                <Link href="/inventory/new">
+                  <Button className="mt-4" size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add your first product
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
-          
-          {currentProducts.length === 0 ? (
-            <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed">
-              <div className="text-center">
-                <Package className="mx-auto h-10 w-10 text-muted-foreground" />
-                <h3 className="mt-2 text-lg font-medium">No products found</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {products.length === 0
-                    ? "You haven&apos;t added any products yet."
-                    : "No products match your search criteria."}
-                </p>
-                {products.length === 0 && (
-                  <Link href="/inventory/new">
-                    <Button className="mt-4" size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add your first product
-                    </Button>
-                  </Link>
-                )}
+        ) : (
+          <>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>
+                        {product.disableStockManagement ? (
+                          <Badge variant="secondary">Service</Badge>
+                        ) : (
+                          <Badge variant="outline">Product</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{formatCurrency(product.price, settings)}</TableCell>
+                      <TableCell>
+                        {product.disableStockManagement ? (
+                          <span className="text-muted-foreground">N/A</span>
+                        ) : (
+                          product.quantity
+                        )}
+                      </TableCell>
+                      <TableCell>{product.sku || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleQuickEdit(product)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Quick Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteProduct(product.id)}>
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-sm text-muted-foreground">
+                Showing {currentProducts.length} of {totalCount} products
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1 || isLoading}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage >= totalPages || isLoading}
+                >
+                  Next
+                </Button>
               </div>
             </div>
-          ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>
-                          {product.disableStockManagement ? (
-                            <Badge variant="secondary">Service</Badge>
-                          ) : (
-                            <Badge variant="outline">Product</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{formatCurrency(product.price, settings)}</TableCell>
-                        <TableCell>
-                          {product.disableStockManagement ? (
-                            <span className="text-muted-foreground">N/A</span>
-                          ) : (
-                            product.quantity
-                          )}
-                        </TableCell>
-                        <TableCell>{product.sku || '-'}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleQuickEdit(product)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Quick Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteProduct(product.id)}>
-                                <Trash className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {/* Inventory Summary Box */}
-               <div className="mt-6 bg-muted/50 p-4 rounded-lg">
-                 <h3 className="text-lg font-medium mb-2">Inventory Summary</h3>
-                 <div className="space-y-2">
-                   <div className="flex items-center justify-between">
-                     <span>Total Inventory Value:</span>
-                     <span className="font-bold">{formatCurrency(totalInventoryValue, settings)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Total Products:</span>
-                    <span className="font-medium">{totalTrackedProducts}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Low Stock Items:</span>
-                    <span className="font-medium">{lowStockProducts}</span>
-                  </div>
+            
+            {/* Inventory Summary Box */}
+             <div className="mt-6 bg-muted/50 p-4 rounded-lg">
+               <h3 className="text-lg font-medium mb-2">Inventory Summary</h3>
+               <div className="space-y-2">
+                 <div className="flex items-center justify-between">
+                   <span>Total Inventory Value:</span>
+                   <span className="font-bold">{formatCurrency(totalInventoryValue, settings)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Total Products:</span>
+                  <span className="font-medium">{totalTrackedProducts}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Low Stock Items:</span>
+                  <span className="font-medium">{lowStockProducts}</span>
                 </div>
               </div>
-              
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-center space-x-2">
+            </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <Button
-                    variant="outline"
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
                     size="sm"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(page)}
                   >
-                    Previous
+                    {page}
                   </Button>
-                  
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
       
       {/* Quick Edit Dialog */}
       {selectedProduct && (

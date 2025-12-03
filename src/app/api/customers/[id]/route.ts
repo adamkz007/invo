@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+
+const CUSTOMERS_TAG = (userId: string) => `customers:${userId}`;
 
 export async function GET(
   request: NextRequest,
@@ -120,6 +123,7 @@ export async function PUT(
       }
     });
     
+    revalidateTag(CUSTOMERS_TAG(userId));
     return NextResponse.json(updatedCustomer);
   } catch (error) {
     console.error('Error updating customer:', error);
@@ -185,6 +189,7 @@ export async function DELETE(
       }
     });
     
+    revalidateTag(CUSTOMERS_TAG(userId));
     return NextResponse.json({ message: 'Customer deleted successfully' });
   } catch (error) {
     console.error('Error deleting customer:', error);
