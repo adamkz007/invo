@@ -1,7 +1,9 @@
-'use client';
-
+import type { Metadata } from 'next';
 import { BlogPostLayout } from '@/components/blog/blog-post-layout';
 import { ArticleContent, Checklist, Highlight, HighlightBox } from '@/components/blog/article-content';
+import { getBlogPostMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = getBlogPostMetadata('malaysian-government-grants-sme');
 
 export default function MalaysianGovernmentGrantsSMEPost() {
   // Define related posts

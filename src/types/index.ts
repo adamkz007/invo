@@ -220,3 +220,19 @@ export interface ReceiptWithDetails {
   items: InvoiceItemWithDetails[];
   createdAt: Date;
 }
+
+export interface BlogPost {
+  slug: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  date: string;
+  publishedAt: string;
+  updatedAt: string;
+  author: string;
+  readTime: string;
+  image: string;
+  imageAlt?: string;
+  featured?: boolean;
+  tags?: string[];
+}

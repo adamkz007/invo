@@ -1,6 +1,8 @@
-'use client';
-
+import type { Metadata } from 'next';
 import { BlogPostLayout } from '@/components/blog/blog-post-layout';
+import { getBlogPostMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = getBlogPostMetadata('invoice-tips-small-business');
 
 export default function InvoiceTipsPost() {
   // Define related posts

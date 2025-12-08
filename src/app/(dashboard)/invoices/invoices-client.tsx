@@ -25,6 +25,13 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -109,6 +116,8 @@ const extractPaidAmount = (invoice: { paidAmount?: number; notes?: string }): nu
   return 0;
 };
 
+const getTodayDateString = () => new Date().toISOString().slice(0, 10);
+
 export function InvoicesClient({
   initialInvoices,
   initialCompany,
@@ -120,6 +129,8 @@ export function InvoicesClient({
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceListItem | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(getTodayDateString);
+  const [paymentMethod, setPaymentMethod] = useState<'BANK' | 'CASH'>('BANK');
   const [invoicesThisMonth, setInvoicesThisMonth] = useState<number>(initialInvoicesThisMonth);
   const invoiceDetailsRef = useRef<Record<string, InvoiceWithDetails>>({});
   const companyDetails = initialCompany;
@@ -145,6 +156,7 @@ export function InvoicesClient({
     !Number.isNaN(parsedPaymentAmount) &&
     parsedPaymentAmount > 0 &&
     parsedPaymentAmount <= remainingBalanceForPayment + 0.00001;
+  const isPaymentFormValid = isPaymentAmountValid && Boolean(paymentDate);
 
   const selectedInvoiceWhatsAppDetails = useMemo(() => {
     if (!selectedInvoice) return null;
@@ -292,11 +304,21 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
   };
 
   const handleOpenPaymentDialog = (invoice: InvoiceListItem) => {
+    if (invoice.status === 'DRAFT') {
+      showToast({
+        variant: 'error',
+        message: 'Mark the invoice as sent before applying a payment.',
+      });
+      return;
+    }
+
     const invoicePaidAmount = extractPaidAmount(invoice);
     const outstandingAmount = Math.max(invoice.total - invoicePaidAmount, 0);
 
     setSelectedInvoiceForPayment(invoice);
     setPaymentAmount(outstandingAmount > 0 ? outstandingAmount.toFixed(2) : '');
+    setPaymentDate(getTodayDateString());
+    setPaymentMethod('BANK');
     setPaymentDialogOpen(true);
   };
 
@@ -341,18 +363,24 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
         },
         body: JSON.stringify({
           action: 'payment',
-          paymentAmount: normalizedAmount
+          paymentAmount: normalizedAmount,
+          paymentDate,
+          paymentMethod,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to apply payment');
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = (errorData as { error?: string } | null)?.error || 'Failed to apply payment';
+        throw new Error(errorMessage);
       }
 
       // Close the dialog and reset state
       setPaymentDialogOpen(false);
       setSelectedInvoiceForPayment(null);
       setPaymentAmount('');
+      setPaymentDate(getTodayDateString());
+      setPaymentMethod('BANK');
       
       // Refresh the page to show updated data
       router.refresh();
@@ -364,9 +392,10 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
       });
     } catch (error) {
       console.error('Error applying payment:', error);
+      const message = error instanceof Error ? error.message : 'Failed to apply payment';
       showToast({
         variant: 'error',
-        message: 'Failed to apply payment'
+        message,
       });
     }
   };
@@ -652,6 +681,30 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
                   </span>
                 </div>
                 <div className="grid gap-2">
+                  <label htmlFor="payment-date" className="text-sm font-medium">
+                    Payment Date
+                  </label>
+                  <Input
+                    id="payment-date"
+                    type="date"
+                    value={paymentDate}
+                    max={getTodayDateString()}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Payment Method</label>
+                  <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'BANK' | 'CASH')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BANK">Bank</SelectItem>
+                      <SelectItem value="CASH">Cash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
                   <label htmlFor="payment-amount" className="text-sm font-medium">
                     Payment Amount
                   </label>
@@ -713,7 +766,7 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
             <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleApplyPayment} disabled={!isPaymentAmountValid}>
+            <Button onClick={handleApplyPayment} disabled={!isPaymentFormValid}>
               Apply Payment
             </Button>
           </DialogFooter>
@@ -895,7 +948,7 @@ function InvoicesList({
                             <Send className="mr-2 h-4 w-4" /> Mark as Sent
                           </DropdownMenuItem>
                         )}
-                        {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                        {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && invoice.status !== 'DRAFT' && (
                           <DropdownMenuItem onSelect={() => onApplyPayment(invoice)}>
                             <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
                           </DropdownMenuItem>
@@ -1006,7 +1059,7 @@ function InvoicesList({
                             <Send className="mr-2 h-4 w-4" /> Mark as Sent
                           </DropdownMenuItem>
                         )}
-                        {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                        {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && invoice.status !== 'DRAFT' && (
                           <DropdownMenuItem onSelect={() => onApplyPayment(invoice)}>
                             <CreditCard className="mr-2 h-4 w-4" /> Apply Payment
                           </DropdownMenuItem>

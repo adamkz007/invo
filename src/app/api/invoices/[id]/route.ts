@@ -133,7 +133,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { action, paymentAmount } = await req.json();
+  const { action, paymentAmount, paymentDate, paymentMethod } = await req.json();
 
   try {
     const { updatedInvoice, receiptPayload } = await prisma.$transaction(async (tx) => {
@@ -189,8 +189,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           throw new Error('Invalid payment amount');
         }
 
+        const parsedPaymentDate = paymentDate ? new Date(paymentDate) : new Date();
+        if (Number.isNaN(parsedPaymentDate.getTime())) {
+          throw new Error('Invalid payment date');
+        }
+
+        const method = paymentMethod ?? 'BANK';
+        if (!['BANK', 'CASH'].includes(method)) {
+          throw new Error('Invalid payment method');
+        }
+
         if (invoice.status === InvoiceStatus.DRAFT) {
-          await adjustStock(tx, invoice.items, user.id, 'decrement');
+          throw new Error('Invoice must be marked as sent before applying payment');
         }
 
         const paymentDecimal = toDecimal(parsedPayment);
@@ -239,8 +249,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             receiptNumber: `RCT-${randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()}`,
             customerName: nextInvoice.customer?.name ?? 'Walk-in Customer',
             customerPhone: nextInvoice.customer?.phoneNumber ?? null,
-            receiptDate: new Date().toISOString(),
-            paymentMethod: 'INVOICE_PAYMENT',
+            receiptDate: parsedPaymentDate.toISOString(),
+            paymentMethod: method,
             total: toNumber(nextInvoice.total),
             notes: `Payment for Invoice ${nextInvoice.invoiceNumber}`,
             items: nextInvoice.items.map((item) => ({
@@ -286,6 +296,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     if (error instanceof Error && error.message === 'Invalid payment amount') {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    if (error instanceof Error && (error.message === 'Invalid payment date' || error.message === 'Invalid payment method')) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    if (error instanceof Error && error.message === 'Invoice must be marked as sent before applying payment') {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 

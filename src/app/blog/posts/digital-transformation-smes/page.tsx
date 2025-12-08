@@ -1,6 +1,8 @@
-'use client';
-
+import type { Metadata } from 'next';
 import { BlogPostLayout } from '@/components/blog/blog-post-layout';
+import { getBlogPostMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = getBlogPostMetadata('digital-transformation-smes');
 
 export default function DigitalTransformationPost() {
   // Define related posts

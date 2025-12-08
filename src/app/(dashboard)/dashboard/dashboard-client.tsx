@@ -301,7 +301,9 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats?.invoiceStats.totalAmount || 0, settings)}</div>
+            <div className="text-2xl font-bold break-words leading-tight max-w-full">
+              {formatCurrency(stats?.invoiceStats.totalAmount || 0, settings)}
+            </div>
             <p className="text-xs text-muted-foreground">
               {growthData.revenueGrowth} from last month
             </p>

@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/providers/toast-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SettingsProvider } from '@/contexts/settings-context';
 import { PWAProvider } from "@/components/providers/pwa-provider";
+import { OrganizationSchema, WebsiteSchema } from "@/components/seo/structured-data";
 
 const dmSerifText = DM_Serif_Text({
   variable: "--font-dm-serif",
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
     template: '%s | Invo'
   },
   description: 'Practical invoicing solution designed for small and medium enterprises in Malaysia. Streamline your billing, track expenses, and manage finances with ease.',
-  keywords: ['invoicing', 'SME', 'Malaysia', 'billing', 'finance', 'business', 'accounting', 'receipts'],
+  keywords: ['invoicing', 'SME', 'Malaysia', 'billing', 'finance', 'business', 'accounting', 'receipts', 'e-invoicing'],
   authors: [{ name: 'Invo Team' }],
   creator: 'Invo',
   publisher: 'Invo',
@@ -46,10 +47,10 @@ export const metadata: Metadata = {
     description: 'Practical invoicing solution designed for small and medium enterprises in Malaysia.',
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/dashboard-preview.png',
         width: 1200,
         height: 630,
-        alt: 'Invo - Smart Invoicing Platform',
+        alt: 'Invo dashboard preview',
       },
     ],
   },
@@ -57,7 +58,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Invo',
     description: 'Practical invoicing solution designed for small and medium enterprises in Malaysia.',
-    images: ['/twitter-image.jpg'],
+    images: ['/dashboard-preview.png'],
     creator: '@invo_my',
   },
   robots: {
@@ -70,10 +71,6 @@ export const metadata: Metadata = {
       'max-image-preview': 'large',
       'max-snippet': -1,
     },
-  },
-  verification: {
-    google: 'your-google-verification-code',
-    yandex: 'your-yandex-verification-code',
   },
   alternates: {
     canonical: 'https://invo.my',
@@ -139,6 +136,8 @@ export default function RootLayout({
             </PWAProvider>
           </SettingsProvider>
         </ThemeProvider>
+        <OrganizationSchema />
+        <WebsiteSchema />
       </body>
     </html>
   );

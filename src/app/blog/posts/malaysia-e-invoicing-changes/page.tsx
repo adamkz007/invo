@@ -1,6 +1,8 @@
-'use client';
-
+import type { Metadata } from 'next';
 import { BlogPostLayout } from '@/components/blog/blog-post-layout';
+import { getBlogPostMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = getBlogPostMetadata('malaysia-e-invoicing-changes');
 
 export default function MalaysiaEInvoicingPost() {
   // Define related posts
