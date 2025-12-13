@@ -48,7 +48,8 @@ import {
   XCircle,
   CreditCard,
   Send,
-  Receipt
+  Receipt,
+  AlertCircle
 } from 'lucide-react';
 import { WhatsAppInvoiceButton, WhatsAppFollowUpButton } from '@/components/whatsapp';
 import Link from 'next/link';
@@ -61,11 +62,19 @@ import type { InvoiceStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
-import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { PLAN_LIMITS } from '@/lib/stripe';
 import type { CompanyDetails } from '../dashboard/dashboard-types';
 import type { InvoicesClientProps, InvoiceListItem } from './invoices-types';
+import dynamic from 'next/dynamic';
+
+const InvoiceDetailsDialog = dynamic(
+  () => import('./invoice-details-dialog').then((mod) => mod.InvoiceDetailsDialog),
+  {
+    loading: () => <div className="p-6 text-center text-sm text-muted-foreground">Loading invoice…</div>,
+    ssr: false,
+  },
+);
 
 // Helper function to get status badge styling - accessible to all components
 const getStatusBadge = (status: string, isCompact: boolean = false) => {
@@ -237,7 +246,12 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
         });
         
         if (receiptsResponse.ok) {
-          const existingReceipts = await receiptsResponse.json();
+          const receiptsPayload = await receiptsResponse.json();
+          const existingReceipts = Array.isArray(receiptsPayload)
+            ? receiptsPayload
+            : Array.isArray(receiptsPayload?.data)
+              ? receiptsPayload.data
+              : [];
           
           // If a receipt exists for this invoice, download that instead
           if (existingReceipts.length > 0) {
@@ -269,6 +283,14 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
       // Fallback not available without full invoice details
     }
   };
+
+  const handleDownloadPDFWithDetails = useCallback(
+    async (invoice: InvoiceWithDetails) => {
+      const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
+      downloadInvoicePDF(invoice, companyDetails);
+    },
+    [companyDetails],
+  );
 
   const handleCancelInvoice = async (invoice: InvoiceListItem) => {
     try {
@@ -480,183 +502,14 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
         onCountInvoices={setInvoicesThisMonth}
       />
 
-      {/* Invoice Details Dialog */}
-      <Dialog open={selectedInvoice !== null} onOpenChange={() => setSelectedInvoice(null)}>
-        <DialogContent className="max-w-xl w-full mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[90vh] sm:max-h-[85vh]">
-          <DialogTitle className="sr-only">Invoice Details</DialogTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Customer Information */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-muted-foreground">Bill To:</h3>
-              <p className="font-medium">{selectedInvoice?.customer.name}</p>
-              {selectedInvoice?.customer.email && (
-                <p className="text-sm text-muted-foreground">{selectedInvoice.customer.email}</p>
-              )}
-              {selectedInvoice?.customer.phoneNumber && (
-                <p className="text-sm text-muted-foreground">{selectedInvoice.customer.phoneNumber}</p>
-              )}
-              {/* Display address using individual fields */}
-              {(selectedInvoice?.customer.street || selectedInvoice?.customer.city || selectedInvoice?.customer.postcode || selectedInvoice?.customer.state || selectedInvoice?.customer.country) && (
-                <div className="text-sm text-muted-foreground whitespace-pre-line">
-                  {selectedInvoice?.customer.street && <p>{selectedInvoice.customer.street}</p>}
-                  {selectedInvoice?.customer.city && selectedInvoice?.customer.postcode && (
-                    <p>{selectedInvoice.customer.city}, {selectedInvoice.customer.postcode}</p>
-                  )}
-                  {selectedInvoice?.customer.city && !selectedInvoice?.customer.postcode && (
-                    <p>{selectedInvoice.customer.city}</p>
-                  )}
-                  {!selectedInvoice?.customer.city && selectedInvoice?.customer.postcode && (
-                    <p>{selectedInvoice.customer.postcode}</p>
-                  )}
-                  {selectedInvoice?.customer.state && <p>{selectedInvoice.customer.state}</p>}
-                  {selectedInvoice?.customer.country && <p>{selectedInvoice.customer.country}</p>}
-                </div>
-              )}
-            </div>
-            
-            {/* Invoice Information */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Invoice #{selectedInvoice?.invoiceNumber}</h2>
-                {getStatusBadge(selectedInvoice?.status || '', true)}
-              </div>
-              <div className="flex flex-col gap-1 text-sm">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Issued: {selectedInvoice ? format(new Date(selectedInvoice.issueDate), 'MMMM d, yyyy') : ''}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Due: {selectedInvoice ? format(new Date(selectedInvoice.dueDate), 'MMMM d, yyyy') : ''}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Company Information */}
-          <div className="mt-4 p-3 bg-muted/50 rounded-md">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-semibold">From:</h3>
-              <span className="font-medium">{companyDetails?.legalName || 'Your Company'}</span>
-            </div>
-            {companyDetails?.email && (
-              <p className="text-xs text-muted-foreground">{companyDetails.email}</p>
-            )}
-            {companyDetails?.phoneNumber && (
-              <p className="text-xs text-muted-foreground">{companyDetails.phoneNumber}</p>
-            )}
-            {companyDetails?.address && (
-              <p className="text-xs text-muted-foreground">{companyDetails.address}</p>
-            )}
-          </div>
-
-          {/* Invoice Items */}
-          <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedInvoice?.items?.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.product.name}
-                        {item.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-bold">{item.quantity}</TableCell>
-                      <TableCell className="text-right font-bold">{formatCurrency(item.unitPrice, settings)}</TableCell>
-                      <TableCell className="text-right font-bold">{formatCurrency(item.quantity * item.unitPrice, settings)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="mt-4 space-y-2">
-            <div className="flex justify-between items-center text-sm">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(selectedInvoice?.subtotal || 0, settings)}</span>
-            </div>
-            
-            {selectedInvoice && selectedInvoice.taxRate > 0 && (
-              <div className="flex justify-between items-center text-sm">
-                <span>Tax ({selectedInvoice.taxRate}%):</span>
-                <span>{formatCurrency(selectedInvoice.taxAmount || 0, settings)}</span>
-              </div>
-            )}
-            
-            {selectedInvoice && selectedInvoice.discountRate > 0 && (
-              <div className="flex justify-between items-center text-sm">
-                <span>Discount ({selectedInvoice.discountRate}%):</span>
-                <span>-{formatCurrency(selectedInvoice.discountAmount || 0, settings)}</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center font-bold text-lg pt-2 border-t">
-              <span>Total:</span>
-              <span>{formatCurrency(selectedInvoice?.total || 0, settings)}</span>
-            </div>
-            
-            {selectedInvoice && extractPaidAmount(selectedInvoice) > 0 && (
-              <>
-                <div className="flex justify-between items-center text-sm text-green-600">
-                  <span>Paid:</span>
-                  <span>{formatCurrency(extractPaidAmount(selectedInvoice), settings)}</span>
-                </div>
-                
-                <div className="flex justify-between items-center font-bold">
-                  <span>Balance Due:</span>
-                  <span>{formatCurrency(selectedInvoice.total - extractPaidAmount(selectedInvoice), settings)}</span>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="text-center text-sm text-muted-foreground mt-4">
-            <p>Thank you for your business!</p>
-            <div className="flex items-center justify-center mt-2">
-              <span>Powered by</span>
-              <div className="flex items-center ml-1">
-                <Image src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} alt="Invo Logo" className="h-4 w-4 mr-1" width={16} height={16} />
-                <span className="font-semibold">Invo</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Action Buttons */}
-          {selectedInvoice && (
-            <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
-              <Button 
-                onClick={() => handleDownloadPDF(selectedInvoice)}
-                className="flex items-center gap-2"
-                variant="outline"
-              >
-                <Download className="h-4 w-4" />
-                Download PDF
-              </Button>
-              
-              {selectedInvoiceWhatsAppDetails && (
-                <WhatsAppInvoiceButton
-                  phoneNumber={selectedInvoiceWhatsAppDetails.phoneNumber}
-                  whatsappUrl={selectedInvoiceWhatsAppDetails.whatsappUrl}
-                  className="flex items-center gap-2"
-                />
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <InvoiceDetailsDialog
+        invoice={selectedInvoice}
+        companyDetails={companyDetails}
+        settings={settings}
+        isDarkMode={isDarkMode}
+        onClose={() => setSelectedInvoice(null)}
+        onDownloadPDF={handleDownloadPDFWithDetails}
+      />
 
       {/* Payment Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
@@ -806,6 +659,36 @@ function InvoicesList({
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const { settings } = useSettings();
 
+  const getStatusTone = useCallback((status: string) => {
+    switch (status) {
+      case 'PAID':
+        return { dot: 'bg-green-500', pill: 'bg-green-50 text-green-800', accent: 'from-green-50 to-white' };
+      case 'PARTIAL':
+        return { dot: 'bg-amber-500', pill: 'bg-amber-50 text-amber-800', accent: 'from-amber-50 to-white' };
+      case 'OVERDUE':
+        return { dot: 'bg-red-500', pill: 'bg-red-50 text-red-800', accent: 'from-red-50 to-white' };
+      case 'SENT':
+        return { dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-800', accent: 'from-blue-50 to-white' };
+      case 'DRAFT':
+        return { dot: 'bg-slate-400', pill: 'bg-slate-50 text-slate-700', accent: 'from-slate-50 to-white' };
+      case 'CANCELLED':
+        return { dot: 'bg-slate-300', pill: 'bg-slate-50 text-slate-500', accent: 'from-slate-50 to-white' };
+      default:
+        return { dot: 'bg-slate-400', pill: 'bg-slate-50 text-slate-700', accent: 'from-slate-50 to-white' };
+    }
+  }, []);
+
+  const getDueDetails = useCallback((dueDate: Date | string) => {
+    const days = calculateDueDays(dueDate);
+    if (days < 0) {
+      return { label: `Due ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`, tone: 'text-red-700', chip: 'bg-red-50 text-red-700', icon: <AlertCircle className="h-4 w-4 text-red-600" /> };
+    }
+    if (days === 0) {
+      return { label: 'Due today', tone: 'text-amber-700', chip: 'bg-amber-50 text-amber-700', icon: <AlertCircle className="h-4 w-4 text-amber-600" /> };
+    }
+    return { label: `Due in ${days} day${days === 1 ? '' : 's'}`, tone: 'text-slate-600', chip: 'bg-slate-50 text-slate-700', icon: <Calendar className="h-4 w-4 text-slate-500" /> };
+  }, []);
+
   // Track current month invoices and pass up to parent component
   useEffect(() => {
     const now = new Date();
@@ -873,73 +756,94 @@ function InvoicesList({
       </div>
 
       {viewMode === 'card' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredInvoices?.map((invoice) => (
-            <Card key={invoice.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="p-3 border-b">
-                  <div className="flex justify-between items-start mb-1">
+            <Card
+              key={invoice.id}
+              className="overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br dark:from-slate-900 dark:to-slate-900/70"
+            >
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-inner ${getStatusTone(invoice.status).dot}`}>
+                      <FileText className="h-5 w-5" />
+                    </div>
                     <div>
-                      <h3 className="font-medium text-sm">{invoice.invoiceNumber}</h3>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Calendar className="mr-1 h-3 w-3" />
-                        {format(invoice.issueDate, 'PP')}
-                      </div>
-                      <div className="flex items-center text-xs mt-0.5">
-                        <span className="text-muted-foreground mr-1">Due:</span>
-                        {(() => {
-                          const dueDays = calculateDueDays(invoice.dueDate);
-                          if (dueDays > 0) {
-                            return <span className="text-muted-foreground font-medium">in {dueDays} days</span>;
-                          } else if (dueDays < 0) {
-                            return <span className="text-red-600 font-medium">{dueDays} days</span>;
-                          } else {
-                            return <span className="text-amber-600 font-medium">today</span>;
-                          }
-                        })()}
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">#{invoice.invoiceNumber}</div>
+                      <div className="text-base sm:text-lg font-semibold leading-tight">{invoice.customer.name}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5" />
+                        Issued {format(invoice.issueDate, 'PP')}
                       </div>
                     </div>
-                    {getStatusBadge(invoice.status, true)}
                   </div>
-                  <div className="flex items-center mt-1 text-xs">
-                    <User className="mr-1 h-3 w-3 text-muted-foreground" />
-                    <span className="truncate">{invoice.customer.name}</span>
+                  <div className={getStatusTone(invoice.status).pill + " rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1"}>
+                    <span className="h-2 w-2 rounded-full bg-current opacity-80" />
+                    {invoice.status}
                   </div>
                 </div>
-                <div className="p-3 flex justify-between items-center">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Amount</div>
-                    <div className="font-bold text-base flex items-center">
-                      <DollarSign className="h-3 w-3 text-muted-foreground" />
-                      {formatCurrency(invoice.total, settings).replace('$', '')}
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">
+                      {invoice.status === 'DRAFT' ? 'Estimated' : 'Total Amount'}
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                      {formatCurrency(invoice.total, settings)}
                     </div>
                     {(invoice.status as string) === 'PARTIAL' && (
                       <div className="text-xs text-green-600">
-                        Paid: {formatCurrency(extractPaidAmount(invoice), settings)}
+                        Paid {formatCurrency(extractPaidAmount(invoice), settings)} so far
                       </div>
                     )}
                   </div>
-                  <div className="flex space-x-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                  {(() => {
+                    const due = getDueDetails(invoice.dueDate);
+                    return (
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${due.chip}`}>
+                          {due.icon}
+                          <span>{due.label}</span>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground border rounded-full px-3 py-2">
+                          <Calendar className="h-4 w-4" />
+                          {format(invoice.dueDate, 'PP')}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-dashed border-slate-200">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <CreditCard className="h-4 w-4 text-slate-400" />
+                    {formatRelativeDate(invoice.dueDate)}
+                    <span className="mx-1">•</span>
+                    Invoice for {invoice.customer.name}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9"
                       onClick={() => onViewInvoice(invoice)}
-                      className="h-7 w-7"
+                      aria-label="View invoice"
                     >
-                      <FileText className="h-3.5 w-3.5" />
+                      <FileText className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9"
                       onClick={() => onDownloadPDF(invoice)}
-                      className="h-7 w-7"
+                      aria-label="Download PDF"
                     >
-                      <Download className="h-3.5 w-3.5" />
+                      <Download className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="More actions">
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -958,7 +862,6 @@ function InvoicesList({
                             <Receipt className="mr-2 h-4 w-4" /> Generate Receipt
                           </DropdownMenuItem>
                         )}
-                        {/* WhatsApp Follow-up for overdue invoices */}
                         {calculateDueDays(invoice.dueDate) < 0 && invoice.customer.phone && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
                           <WhatsAppFollowUpButton
                             invoice={invoice}

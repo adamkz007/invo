@@ -15,7 +15,8 @@ import { formatDistanceToNow } from 'date-fns';
 interface Order {
   id: string;
   orderNumber: string;
-  tableNumber: string;
+  tableNumber?: string | null;
+  customerName?: string | null;
   status: 'KITCHEN' | 'TO_PAY' | 'COMPLETED' | 'CANCELLED';
   total: number;
   createdAt: string;
@@ -151,188 +152,200 @@ export function OrderList({ orders, onOrderUpdate, compact = false }: OrderListP
         const StatusIcon = statusInfo.icon;
         
         return (
-          <Card key={order.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-full ${statusInfo.color} text-white`}>
-                    <StatusIcon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{order.orderNumber}</h3>
-                      <Badge variant="outline">Table {order.tableNumber}</Badge>
+            <Card key={order.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-full ${statusInfo.color} text-white`}>
+                      <StatusIcon className="h-4 w-4" />
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}
-                    </p>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-semibold">{order.orderNumber}</h3>
+                        {order.tableNumber && (
+                          <Badge variant="outline">{order.tableNumber}</Badge>
+                        )}
+                        {order.customerName && (
+                          <Badge variant="secondary">{order.customerName}</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <p className="font-semibold">RM {order.total.toFixed(2)}</p>
-                    <Badge variant="secondary">{statusInfo.label}</Badge>
-                  </div>
-                  
-                  {!compact && (
-                    <div className="flex gap-1">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setSelectedOrder(order)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Order Details</DialogTitle>
-                            <DialogDescription>
-                              {selectedOrder?.orderNumber} - Table {selectedOrder?.tableNumber}
-                            </DialogDescription>
-                          </DialogHeader>
-                          {selectedOrder && (
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-semibold">RM {order.total.toFixed(2)}</p>
+                      <Badge variant="secondary">{statusInfo.label}</Badge>
+                    </div>
+                    {!compact && (
+                      <div className="flex gap-1">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setSelectedOrder(order)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Order Details</DialogTitle>
+                              <DialogDescription>
+                                {selectedOrder?.orderNumber} {selectedOrder?.tableNumber && `- ${selectedOrder?.tableNumber}`}
+                              </DialogDescription>
+                            </DialogHeader>
+                            {selectedOrder && (
+                              <div className="space-y-4">
+                                <div className="flex flex-col gap-1 text-sm">
+                                  {selectedOrder.customerName && (
+                                    <span className="font-medium">Customer: {selectedOrder.customerName}</span>
+                                  )}
+                                  {selectedOrder.tableNumber && (
+                                    <span className="text-muted-foreground">Tag: {selectedOrder.tableNumber}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-medium mb-2">Items:</h4>
+                                  <div className="space-y-2">
+                                    {selectedOrder.items.map((item) => (
+                                      <div key={item.id} className="flex justify-between text-sm">
+                                        <span>{item.quantity}x {item.product.name}</span>
+                                        <span>RM {(item.quantity * item.price).toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                {selectedOrder.notes && (
+                                  <div>
+                                    <h4 className="font-medium mb-1">Notes:</h4>
+                                    <p className="text-sm text-muted-foreground">{selectedOrder.notes}</p>
+                                  </div>
+                                )}
+                                <div className="flex justify-between font-semibold">
+                                  <span>Total:</span>
+                                  <span>RM {selectedOrder.total.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => openEditDialog(order)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Edit Order</DialogTitle>
+                              <DialogDescription>
+                                Update order status and notes
+                              </DialogDescription>
+                            </DialogHeader>
                             <div className="space-y-4">
                               <div>
-                                <h4 className="font-medium mb-2">Items:</h4>
-                                <div className="space-y-2">
-                                  {selectedOrder.items.map((item) => (
-                                    <div key={item.id} className="flex justify-between text-sm">
-                                      <span>{item.quantity}x {item.product.name}</span>
-                                      <span>RM {(item.quantity * item.price).toFixed(2)}</span>
-                                    </div>
-                                  ))}
-                                </div>
+                                <Label htmlFor="status">Status</Label>
+                                <Select value={editStatus} onValueChange={setEditStatus}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="KITCHEN">In Kitchen</SelectItem>
+                                    <SelectItem value="TO_PAY">Ready to Pay</SelectItem>
+                                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              {selectedOrder.notes && (
-                                <div>
-                                  <h4 className="font-medium mb-1">Notes:</h4>
-                                  <p className="text-sm text-muted-foreground">{selectedOrder.notes}</p>
-                                </div>
-                              )}
-                              <div className="flex justify-between font-semibold">
-                                <span>Total:</span>
-                                <span>RM {selectedOrder.total.toFixed(2)}</span>
+                              <div>
+                                <Label htmlFor="notes">Notes</Label>
+                                <Textarea
+                                  id="notes"
+                                  value={editNotes}
+                                  onChange={(e) => setEditNotes(e.target.value)}
+                                  placeholder="Order notes..."
+                                  rows={3}
+                                />
                               </div>
                             </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                      
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => openEditDialog(order)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Edit Order</DialogTitle>
-                            <DialogDescription>
-                              Update order status and notes
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="status">Status</Label>
-                              <Select value={editStatus} onValueChange={setEditStatus}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="KITCHEN">In Kitchen</SelectItem>
-                                  <SelectItem value="TO_PAY">Ready to Pay</SelectItem>
-                                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="notes">Notes</Label>
-                              <Textarea
-                                id="notes"
-                                value={editNotes}
-                                onChange={(e) => setEditNotes(e.target.value)}
-                                placeholder="Order notes..."
-                                rows={3}
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button 
-                              onClick={updateOrder}
-                              disabled={updating === editingOrder?.id}
-                            >
-                              {updating === editingOrder?.id ? 'Updating...' : 'Update Order'}
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                      
-                      {order.status === 'KITCHEN' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => printKitchenChit(order.id)}
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {!compact && (
-                <div className="mt-3 pt-3 border-t">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                      {order.notes && ' • Has notes'}
-                    </div>
-                    
-                    {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
-                      <div className="flex gap-2">
+                            <DialogFooter>
+                              <Button 
+                                onClick={updateOrder}
+                                disabled={updating === editingOrder?.id}
+                              >
+                                {updating === editingOrder?.id ? 'Updating...' : 'Update Order'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                        
                         {order.status === 'KITCHEN' && (
                           <Button 
                             size="sm" 
-                            onClick={() => updateOrderStatus(order.id, 'TO_PAY')}
-                            disabled={updating === order.id}
+                            variant="outline"
+                            onClick={() => printKitchenChit(order.id)}
                           >
-                            Mark Ready
+                            <Printer className="h-4 w-4" />
                           </Button>
                         )}
-                        {order.status === 'TO_PAY' && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
-                            disabled={updating === order.id}
-                          >
-                            Complete Order
-                          </Button>
-                        )}
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                          disabled={updating === order.id}
-                        >
-                          Cancel
-                        </Button>
                       </div>
                     )}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                
+                {!compact && (
+                  <div className="pt-3 border-t">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                        {order.notes && ' • Has notes'}
+                      </div>
+                      
+                      {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                        <div className="flex flex-wrap gap-2">
+                          {order.status === 'KITCHEN' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => updateOrderStatus(order.id, 'TO_PAY')}
+                              disabled={updating === order.id}
+                            >
+                              Mark Ready
+                            </Button>
+                          )}
+                          {order.status === 'TO_PAY' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
+                              disabled={updating === order.id}
+                            >
+                              Complete Order
+                            </Button>
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+                            disabled={updating === order.id}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
         );
       })}
     </div>

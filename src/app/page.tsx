@@ -277,7 +277,10 @@ export default function LandingPage() {
                     src={dashboardImage}
                     alt="Invo Dashboard" 
                     className="w-full h-auto"
+                    sizes="(min-width: 1024px) 640px, 90vw"
                     priority
+                    placeholder="blur"
+                    quality={85}
                   />
                 </div>
                 {/* Mobile image with frame */}
@@ -288,6 +291,8 @@ export default function LandingPage() {
                     width={340}
                     height={650}
                     className="w-full h-auto relative z-10 shadow-lg"
+                    sizes="90vw"
+                    quality={80}
                     onError={(e) => {
                       // Fallback if image doesn't exist
                       e.currentTarget.src = "https://placehold.co/340x650/02228F/ffffff?text=Invo+Mobile";

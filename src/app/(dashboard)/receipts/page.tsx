@@ -322,7 +322,16 @@ function ReceiptsList({
         }
         
         const data = await response.json();
-        setReceipts(data);
+        const records = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+        setReceipts(records);
+        if (!Array.isArray(data) && !Array.isArray(data?.data)) {
+          console.warn('Unexpected receipts response shape; defaulting to empty array');
+        }
       } catch (error) {
         console.error('Error fetching receipts:', error);
         showToast({

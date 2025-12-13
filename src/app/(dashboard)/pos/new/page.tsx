@@ -9,8 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-// Separator component replaced with div
-import { ArrowLeft, Plus, Minus, Trash2, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, ShoppingCart, Tag, User } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -20,13 +19,6 @@ interface Product {
   price: number;
   stock: number;
   category?: string;
-}
-
-interface Table {
-  id: string;
-  name: string;
-  label: string;
-  isActive: boolean;
 }
 
 interface OrderItem {
@@ -42,15 +34,16 @@ interface PosSettings {
   serviceChargeRate: number;
 }
 
-type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
+type OrderType = 'DINE_IN' | 'TAKEAWAY';
 
 export default function NewOrderPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
-  const [tables, setTables] = useState<Table[]>([]);
   const [settings, setSettings] = useState<PosSettings>({ taxRate: 0, serviceChargeRate: 0 });
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [selectedTable, setSelectedTable] = useState<string>('');
+  const [tableTag, setTableTag] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -61,22 +54,21 @@ export default function NewOrderPage() {
     fetchData();
   }, []);
 
+  const normalizeProduct = (product: Product) => ({
+    ...product,
+    price: Number(product.price) || 0,
+  });
+
   const fetchData = async () => {
     try {
-      const [productsRes, tablesRes, settingsRes] = await Promise.all([
+      const [productsRes, settingsRes] = await Promise.all([
         fetch('/api/product'),
-        fetch('/api/pos/tables'),
         fetch('/api/pos/settings')
       ]);
 
       if (productsRes.ok) {
         const productsData = await productsRes.json();
-        setProducts(productsData.products || []);
-      }
-
-      if (tablesRes.ok) {
-        const tablesData = await tablesRes.json();
-        setTables(tablesData.tables || []);
+        setProducts((productsData.products || []).map(normalizeProduct));
       }
 
       if (settingsRes.ok) {
@@ -154,43 +146,28 @@ export default function NewOrderPage() {
       return;
     }
 
-    if (orderType === 'DINE_IN' && !selectedTable) {
-      toast.error('Please select a table for dine-in orders');
+    const hasTagging = tableTag.trim() || customerName.trim();
+    if (!hasTagging) {
+      toast.error('Add a table tag or customer name for tracking');
       return;
     }
 
     setSubmitting(true);
     try {
-      // Find the selected table object to get the table name/number if it's a dine-in order
-      let tableNumber = 'N/A';
-      let tableId = null;
-      
-      if (orderType === 'DINE_IN') {
-        const selectedTableObj = tables.find(table => table.id === selectedTable);
-        if (!selectedTableObj) {
-          toast.error('Selected table not found');
-          setSubmitting(false);
-          return;
-        }
-        tableNumber = selectedTableObj.name;
-        tableId = selectedTable;
-      }
-
       const response = await fetch('/api/pos/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tableId,
-          tableNumber,
+          tableNumber: tableTag || customerName || 'N/A',
           items: orderItems.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: item.price, // Use item.price as unitPrice to match API expectations
             notes: '' // Add empty notes field
           })),
-          notes,
+          notes: notes || `${customerName ? `Customer: ${customerName}. ` : ''}${customerPhone ? `Phone: ${customerPhone}` : ''}`.trim(),
           subtotal,
           serviceCharge,
           taxAmount,
@@ -272,33 +249,34 @@ export default function NewOrderPage() {
                 />
               </div>
               
-              <div className="grid gap-2 max-h-96 overflow-y-auto">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 max-h-[32rem] overflow-y-auto pr-1">
                 {filteredProducts.map((product) => (
-                  <div
+                  <button
+                    type="button"
                     key={product.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                    className="flex flex-col items-start gap-2 rounded-lg border p-3 text-left hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary"
                     onClick={() => addToOrder(product)}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{product.name}</h4>
-                        {product.stock <= 5 && (
-                          <Badge variant="destructive" className="text-xs">
-                            Low Stock
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Stock: {product.stock} | RM {product.price.toFixed(2)}
-                      </p>
+                    <div className="flex items-center justify-between w-full">
+                      <h4 className="font-semibold">{product.name}</h4>
+                      <Badge variant="secondary">RM {product.price.toFixed(2)}</Badge>
                     </div>
-                    <Button size="sm">
+                    <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
+                      <span>Stock: {product.stock}</span>
+                      {product.stock <= 5 && (
+                        <Badge variant="destructive" className="text-xs">
+                          Low Stock
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium text-primary">
                       <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      Add
+                    </div>
+                  </button>
                 ))}
                 {filteredProducts.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
+                  <p className="text-center text-muted-foreground py-8 col-span-full">
                     No products found
                   </p>
                 )}
@@ -326,28 +304,47 @@ export default function NewOrderPage() {
                   <SelectContent>
                     <SelectItem value="DINE_IN">Dine In</SelectItem>
                     <SelectItem value="TAKEAWAY">Takeaway</SelectItem>
-                    <SelectItem value="DELIVERY">Delivery</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {orderType === 'DINE_IN' && (
-                <div>
-                  <Label htmlFor="table">Table</Label>
-                  <Select value={selectedTable} onValueChange={setSelectedTable}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a table" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tables.filter(table => table.isActive).map((table) => (
-                        <SelectItem key={table.id} value={table.id}>
-                          {table.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-3">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="tableTag" className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-muted-foreground" />
+                    Table / Tag
+                  </Label>
+                  <Input
+                    id="tableTag"
+                    placeholder="e.g., T5, Bar, Counter"
+                    value={tableTag}
+                    onChange={(e) => setTableTag(e.target.value)}
+                  />
                 </div>
-              )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="customerName" className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      Customer
+                    </Label>
+                    <Input
+                      id="customerName"
+                      placeholder="Walk-in customer"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerPhone">Phone</Label>
+                    <Input
+                      id="customerPhone"
+                      placeholder="Optional"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
 
               <div>
                 <Label htmlFor="notes">Notes (Optional)</Label>
@@ -439,7 +436,7 @@ export default function NewOrderPage() {
               <Button 
                 className="w-full" 
                 onClick={handleSubmit}
-                disabled={submitting || orderItems.length === 0 || (orderType === 'DINE_IN' && !selectedTable)}
+                disabled={submitting || orderItems.length === 0 || (!tableTag.trim() && !customerName.trim())}
               >
                 {submitting ? 'Creating Order...' : 'Create Order'}
               </Button>
@@ -447,6 +444,25 @@ export default function NewOrderPage() {
           </Card>
         </div>
       </div>
+
+      {/* Mobile sticky summary */}
+      {orderItems.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 shadow-lg backdrop-blur md:hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Total</p>
+              <p className="text-xl font-bold">RM {total.toFixed(2)}</p>
+            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || orderItems.length === 0 || (!tableTag.trim() && !customerName.trim())}
+              className="min-w-[140px]"
+            >
+              {submitting ? 'Creating...' : 'Create Order'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

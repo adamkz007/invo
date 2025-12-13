@@ -1,9 +1,11 @@
+import { unstable_cache } from 'next/cache';
 import type { Prisma, InvoiceStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { toNumber } from '@/lib/decimal';
 
 export const MAX_PAGE_SIZE = 50;
 export const DEFAULT_PAGE_SIZE = 20;
+export const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
 
 export type InvoiceListItem = {
   id: string;
@@ -130,4 +132,32 @@ export async function countInvoicesCreatedThisMonth(userId: string): Promise<num
       },
     },
   });
+}
+
+// Cached helpers for server components
+const invoiceListCache = (userId: string) =>
+  unstable_cache(
+    (options: InvoiceListOptions) => listInvoices(userId, options),
+    ['invoices-list', userId],
+    {
+      revalidate: 120,
+      tags: [INVOICE_TAG(userId)],
+    },
+  );
+
+const invoiceCountThisMonthCache = (userId: string) =>
+  unstable_cache(() => countInvoicesCreatedThisMonth(userId), ['invoice-count-month', userId], {
+    revalidate: 120,
+    tags: [INVOICE_TAG(userId)],
+  });
+
+export function getCachedInvoiceList(
+  userId: string,
+  options: InvoiceListOptions = {},
+): Promise<InvoiceListResponse> {
+  return invoiceListCache(userId)(options);
+}
+
+export function getCachedInvoicesCreatedThisMonth(userId: string): Promise<number> {
+  return invoiceCountThisMonthCache(userId)();
 }

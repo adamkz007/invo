@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { receipts } from '../route';
 
 // Define a Receipt type to match the mock data structure
 interface ReceiptItem {
@@ -67,18 +66,10 @@ export async function GET(
     });
     
     if (!receipt) {
-      // If not found in database, try the in-memory array as fallback
-      const memoryReceipt = receipts.find((r: Receipt) => r.id === id);
-      
-      if (!memoryReceipt) {
-        console.log(`Receipt with ID ${id} not found in database or memory`);
-        return NextResponse.json(
-          { error: 'Receipt not found' },
-          { status: 404 }
-        );
-      }
-      
-      return NextResponse.json(memoryReceipt);
+      return NextResponse.json(
+        { error: 'Receipt not found' },
+        { status: 404 }
+      );
     }
     
     // Add any fields needed for backward compatibility

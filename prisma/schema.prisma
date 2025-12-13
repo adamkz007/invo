@@ -92,6 +92,7 @@ model Product {
   quantity               Int            @default(0)
   sku                    String?
   disableStockManagement Boolean        @default(false)
+  imageUrl               String?
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   userId                 String
@@ -143,6 +144,7 @@ model InvoiceItem {
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([invoiceId, productId])
 }
 
 model Company {

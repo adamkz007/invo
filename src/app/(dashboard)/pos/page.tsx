@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { Plus, Clock, CheckCircle, XCircle, DollarSign, RefreshCw, Search } from 'lucide-react';
 import Link from 'next/link';
 import { OrderList } from '@/components/pos/order-list';
 import { OrderStats } from '@/components/pos/order-stats';
-import { TableGrid } from '@/components/pos/table-grid';
 
 interface Order {
   id: string;
   orderNumber: string;
-  tableNumber: string;
+  tableNumber?: string | null;
+  customerName?: string | null;
   status: 'KITCHEN' | 'TO_PAY' | 'COMPLETED' | 'CANCELLED';
   total: number;
   createdAt: string;
@@ -44,7 +44,8 @@ export default function POSPage() {
     totalSales: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('orders');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'ALL' | Order['status']>('ALL');
 
   useEffect(() => {
     fetchOrders();
@@ -91,6 +92,15 @@ export default function POSPage() {
     fetchOrders();
   };
 
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+      (order.tableNumber || '').toLowerCase().includes(search.toLowerCase()) ||
+      (order.customerName || '').toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = filter === 'ALL' ? true : order.status === filter;
+    return matchesSearch && matchesStatus;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -103,16 +113,20 @@ export default function POSPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Point of Sale</h1>
           <p className="text-muted-foreground">
-            Manage orders, tables, and kitchen operations
+            Fast ordering, customer tagging, and receipts on any device
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={fetchOrders}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
           <Link href="/pos/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -122,83 +136,43 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              Orders in kitchen or ready to pay
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completedToday}</div>
-            <p className="text-xs text-muted-foreground">
-              Orders completed today
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">RM {stats.totalSales.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              Revenue from completed orders
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Stats */}
+      <OrderStats stats={stats} />
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="tables">Tables</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="orders" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Orders</CardTitle>
-              <CardDescription>
-                Manage and track all POS orders
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <OrderList orders={orders} onOrderUpdate={handleOrderUpdate} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="tables" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Table Management</CardTitle>
-              <CardDescription>
-                Configure and monitor your restaurant tables
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TableGrid />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Filters */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Orders</CardTitle>
+          <CardDescription>Search by order, table tag, or customer</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative w-full md:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search orders..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(['ALL', 'KITCHEN', 'TO_PAY', 'COMPLETED', 'CANCELLED'] as const).map((status) => (
+                <Button
+                  key={status}
+                  size="sm"
+                  variant={filter === status ? 'default' : 'outline'}
+                  onClick={() => setFilter(status)}
+                >
+                  {status === 'ALL' ? 'All' : status.replace('_', ' ')}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <OrderList orders={filteredOrders} onOrderUpdate={handleOrderUpdate} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

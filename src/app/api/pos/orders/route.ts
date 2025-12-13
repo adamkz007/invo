@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { tableNumber, tableId, items, notes, orderType = 'DINE_IN' } = body;
+    const { tableNumber, items, notes, orderType = 'DINE_IN' } = body;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -115,14 +115,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // For DINE_IN orders, table is required
-    if (orderType === 'DINE_IN' && !tableNumber) {
-      return NextResponse.json(
-        { error: 'Table number is required for dine-in orders' },
-        { status: 400 }
-      );
-    }
-
     // Validate stock availability
     for (const item of items) {
       const product = await prisma.product.findUnique({
@@ -181,8 +173,8 @@ export async function POST(request: NextRequest) {
     const order = await prisma.posOrder.create({
       data: {
         orderNumber: generateOrderNumber(orderType),
-        tableNumber,
-        tableId: tableId || null,
+        tableNumber: tableNumber || 'N/A',
+        tableId: null,
         orderType,
         subtotal,
         taxRate,

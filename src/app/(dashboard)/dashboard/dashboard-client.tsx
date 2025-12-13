@@ -248,14 +248,14 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
       <h1 className="text-3xl font-bold">Dashboard</h1>
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in duration-500">
-        <Card className="bg-blue-50/80 dark:bg-blue-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-blue-100/80 dark:border-blue-900/40">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="bg-blue-50/80 dark:bg-blue-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-blue-100/80 dark:border-blue-900/40 py-4 gap-4">
+          <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
             <div className="rounded-full p-2 bg-primary/10 dark:bg-primary/20 shadow-sm">
               <FileText className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pt-0 pb-2">
             <div className="text-2xl font-bold">{stats?.totalInvoices}</div>
             <p className="text-xs text-muted-foreground">
               {growthData.invoiceGrowth} from last month
@@ -263,14 +263,14 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
           </CardContent>
         </Card>
         
-        <Card className="bg-orange-50/80 dark:bg-orange-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-orange-100/80 dark:border-orange-900/40">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="bg-orange-50/80 dark:bg-orange-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-orange-100/80 dark:border-orange-900/40 py-4 gap-4">
+          <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
             <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
             <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
               <Users className="h-5 w-5 text-primary dark:text-primary" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pt-0 pb-2">
             <div className="text-2xl font-bold">{stats?.totalCustomers}</div>
             <p className="text-xs text-muted-foreground">
               {growthData.customerGrowth} from last month
@@ -278,14 +278,14 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
           </CardContent>
         </Card>
         
-        <Card className="bg-white dark:bg-amber-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-amber-100/80 dark:border-amber-900/40">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="bg-white dark:bg-amber-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-amber-100/80 dark:border-amber-900/40 py-4 gap-4">
+          <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
             <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
               <Package className="h-5 w-5 text-primary dark:text-primary" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pt-0 pb-2">
             <div className="text-2xl font-bold">{stats?.totalProducts}</div>
             <p className="text-xs text-muted-foreground">
               {growthData.productGrowth} from last month
@@ -293,14 +293,14 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
           </CardContent>
         </Card>
         
-        <Card className="bg-green-50/80 dark:bg-green-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-green-100/80 dark:border-green-900/40">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="bg-green-50/80 dark:bg-green-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-green-100/80 dark:border-green-900/40 py-4 gap-4">
+          <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <div className="rounded-full p-2 bg-green-500/10 dark:bg-green-500/20 shadow-sm">
               <DollarSign className="h-5 w-5 text-green-500 dark:text-green-400" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pt-0 pb-2">
             <div className="text-2xl font-bold break-words leading-tight max-w-full">
               {formatCurrency(stats?.invoiceStats.totalAmount || 0, settings)}
             </div>
@@ -319,7 +319,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
         </TabsList>
         
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -393,39 +393,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
               </CardContent>
             </Card>
             
-            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95 hover:shadow-lg hover:scale-[1.01] transition-all duration-300">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription className="dark:text-muted-foreground/80">
-                  Common tasks to get you started
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2">
-                <a 
-                  href="/invoices/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-primary/10 dark:border-border/60 dark:hover:bg-primary/20 dark:hover:border-primary/30 group"
-                >
-                  <FileText className="mr-2 h-5 w-5 text-primary dark:text-primary/80 group-hover:scale-110 transition-transform duration-200" />
-                  Create New Invoice
-                </a>
-                <a 
-                  href="/customers/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-accent/10 dark:border-border/60 dark:hover:bg-accent/20 dark:hover:border-accent/30 group"
-                >
-                  <Users className="mr-2 h-5 w-5 text-primary dark:text-primary group-hover:scale-110 transition-transform duration-200" />
-                  Add New Customer
-                </a>
-                <a 
-                  href="/inventory/new" 
-                  className="inline-flex items-center rounded border p-2 text-sm font-medium transition-colors hover:bg-secondary/10 dark:border-border/60 dark:hover:bg-secondary/20 dark:hover:border-secondary/30 group"
-                >
-                  <Package className="mr-2 h-5 w-5 text-primary dark:text-primary group-hover:scale-110 transition-transform duration-200" />
-                  Add New Product
-                </a>
-              </CardContent>
-            </Card>
-            
-            <Card className="sm:col-span-2 lg:col-span-1 dark:bg-gradient-to-br dark:from-card dark:to-card/95">
+            <Card className="dark:bg-gradient-to-br dark:from-card dark:to-card/95">
               <CardHeader>
                 <CardTitle>Business Summary</CardTitle>
                 <CardDescription className="dark:text-muted-foreground/80">

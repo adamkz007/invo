@@ -85,3 +85,6 @@ export const blogSitemapEntries = BLOG_POSTS.map((post) => ({
   priority: 0.7,
 }));
 
+
+
+

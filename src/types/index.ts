@@ -34,6 +34,7 @@ export interface ProductSummary {
   quantity: number;
   sku?: string | null;
   disableStockManagement: boolean;
+  imageUrl?: string | null;
 }
 
 export type InvoiceWithRelations = Invoice & {
@@ -85,6 +86,7 @@ export interface ProductFormValues {
   quantity: number;
   sku?: string;
   disableStockManagement?: boolean;
+  imageUrl?: string | null;
 }
 
 export interface InvoiceItemFormValues {
@@ -146,6 +148,7 @@ export interface ProductWithDetails {
   price: number;
   quantity: number;
   sku: string;
+  imageUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
   userId: string;

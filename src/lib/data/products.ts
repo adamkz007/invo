@@ -63,6 +63,7 @@ export async function getProductsForUser(
       quantity: product.quantity,
       sku: product.sku,
       disableStockManagement: product.disableStockManagement,
+      imageUrl: product.imageUrl,
     })),
     totalCount,
     totalPages,

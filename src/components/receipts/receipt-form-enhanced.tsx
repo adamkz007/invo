@@ -74,7 +74,16 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
           throw new Error('Failed to fetch products');
         }
         const data = await response.json();
-        setProducts(data);
+        const records = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+        setProducts(records);
+        if (!Array.isArray(data) && !Array.isArray(data?.data)) {
+          console.warn('Unexpected products response shape; defaulting to empty array');
+        }
       } catch (error) {
         console.error('Error fetching products:', error);
         showToast({
@@ -240,7 +249,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Customer Information - Simple for receipts */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-md bg-muted/10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="customerName"
@@ -308,7 +317,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
         </div>
 
         {/* Receipt Date */}
-        <div className="p-4 border rounded-md bg-muted/10">
+        <div className="space-y-2">
           <ShadcnDatePickerComponent
             name="receiptDate"
             label="Receipt Date"
@@ -320,7 +329,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
         </div>
 
         {/* Receipt Items */}
-        <div className="p-4 border rounded-md">
+        <div className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Receipt Items</h3>
             {ProductFormDialog && (
@@ -481,7 +490,7 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
         {/* Notes and Summary */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Notes (optional) */}
-          <div className="p-4 border rounded-md">
+          <div className="space-y-2">
             <FormField
               control={form.control}
               name="notes"
@@ -504,8 +513,8 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
           </div>
 
           {/* Receipt Summary */}
-          <div className="p-4 border rounded-md">
-            <h3 className="text-lg font-medium mb-4">Receipt Summary</h3>
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Receipt Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between border-b py-2">
                 <span>Total Items:</span>

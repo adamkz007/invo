@@ -17,7 +17,9 @@ import {
   LucideIcon,
   Receipt,
   ShoppingCart,
-  Calculator
+  Calculator,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -60,6 +62,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const [user, setUser] = useState<User | null>(null);
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { theme } = useTheme();
@@ -110,6 +113,10 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
       console.error('Logout failed:', error);
     }
   }, [router]);
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed((prev) => !prev);
+  }, []);
 
   // Memoize base navigation items to prevent recreation
   const baseNavigationItems = useMemo(() => [
@@ -220,34 +227,61 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
       <div className="flex flex-1 h-[calc(100vh-4rem)]">
         {/* Sidebar navigation (desktop) */}
-        <aside className="hidden md:sticky md:top-16 md:h-[calc(100vh-4rem)] border-r bg-muted/40 md:block md:w-64 overflow-y-auto">
-          <nav className="grid gap-1 p-4">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              return (
+        <aside
+          className={`hidden md:sticky md:top-16 md:h-[calc(100vh-4rem)] border-r bg-muted/40 md:block overflow-y-auto transition-all duration-200 ${
+            isSidebarCollapsed ? 'md:w-16' : 'md:w-64'
+          }`}
+        >
+          <div className="flex h-full flex-col">
+            <nav className="flex flex-col gap-1 p-4">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent ${
+                      isActive ? 'bg-accent' : ''
+                    } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    aria-label={isSidebarCollapsed ? item.name : undefined}
+                  >
+                    <Icon className={`${isSidebarCollapsed ? '' : 'mr-2'} h-5 w-5`} />
+                    {!isSidebarCollapsed && item.name}
+                  </Link>
+                );
+              })}
+              
+              <div className={`mt-6 ${isSidebarCollapsed ? 'flex justify-center' : ''}`}>
                 <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent ${
-                    pathname === item.href ? 'bg-accent' : ''
+                  href="/invoices/new"
+                  className={`flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 ${
+                    isSidebarCollapsed ? 'h-10 w-10 p-0' : 'w-full px-3 py-2 text-sm font-medium'
                   }`}
+                  aria-label={isSidebarCollapsed ? 'Create Invoice' : undefined}
                 >
-                  <Icon className="mr-2 h-5 w-5" />
-                  {item.name}
+                  <PlusCircle className={`${isSidebarCollapsed ? '' : 'mr-2'} h-5 w-5`} />
+                  {!isSidebarCollapsed && 'Create Invoice'}
                 </Link>
-              );
-            })}
-            
-            <div className="mt-6">
-              <Link
-                href="/invoices/new"
-                className="flex w-full items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              </div>
+            </nav>
+
+            <div className="p-4 mt-auto">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`w-full justify-center rounded-full transition-colors ${isSidebarCollapsed ? 'h-10' : 'h-10'}`}
+                onClick={toggleSidebar}
+                aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Create Invoice
-              </Link>
+                {isSidebarCollapsed ? (
+                  <PanelLeftOpen className="h-5 w-5" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" />
+                )}
+              </Button>
             </div>
-          </nav>
+          </div>
         </aside>
 
         {/* Main content */}

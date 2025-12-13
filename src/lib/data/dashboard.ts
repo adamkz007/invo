@@ -67,7 +67,7 @@ function coerceDecimal(value: Prisma.Decimal | number | string | null | undefine
 }
 
 async function computeDashboardOverview(userId: string): Promise<DashboardOverview> {
-  const [totals, products, invoiceTotals, invoiceGroups, recentInvoices] = await Promise.all([
+  const [totals, products, invoiceTotals, invoiceGroups, recentInvoices, receiptTotals] = await Promise.all([
     Promise.all([
       prisma.invoice.count({ where: { userId } }),
       prisma.customer.count({ where: { userId } }),
@@ -108,6 +108,12 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
       },
       orderBy: { issueDate: 'desc' },
       take: 6,
+    }),
+    prisma.receipt.aggregate({
+      where: { userId },
+      _sum: {
+        total: true,
+      },
     }),
   ]);
 
@@ -256,8 +262,8 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
       inventoryValue,
     },
     invoiceStats: {
-      amount: coerceDecimal(invoiceTotals._sum.total),
-      paid: coerceDecimal(invoiceTotals._sum.paidAmount),
+      amount: coerceDecimal(invoiceTotals._sum.total) + coerceDecimal(receiptTotals._sum.total),
+      paid: coerceDecimal(invoiceTotals._sum.paidAmount) + coerceDecimal(receiptTotals._sum.total),
       overdue: statusTotals.overdue,
       pending: statusTotals.pending,
       outstanding: statusTotals.outstanding,

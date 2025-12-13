@@ -140,6 +140,7 @@ async function generateInvoiceNumber(tx: Prisma.TransactionClient, userId: strin
 }
 
 export async function GET(req: NextRequest) {
+  const start = performance.now();
   const user = await getUserFromRequest(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -150,14 +151,24 @@ export async function GET(req: NextRequest) {
   try {
     const payload = await invoiceListCache(user.id)(params);
 
-    return NextResponse.json(payload, {
-      headers: {
-        'Cache-Control': 'private, max-age=0, s-maxage=60',
+    const duration = Number((performance.now() - start).toFixed(1));
+
+    return NextResponse.json(
+      payload,
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=0, s-maxage=60',
+          'Server-Timing': `total;dur=${duration}`,
+        },
       },
-    });
+    );
   } catch (error) {
     console.error('Failed to load invoices', error);
-    return NextResponse.json({ error: 'Failed to load invoices' }, { status: 500 });
+    const duration = Number((performance.now() - start).toFixed(1));
+    return NextResponse.json(
+      { error: 'Failed to load invoices' },
+      { status: 500, headers: { 'Server-Timing': `total;dur=${duration}` } },
+    );
   }
 }
 

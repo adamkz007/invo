@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Fetch products for this user with retry logic
-    const products = await retryDatabaseOperation(() => 
+    const products = await retryDatabaseOperation(() =>
       prisma.product.findMany({
         where: {
           userId: user.id
@@ -40,8 +40,14 @@ export async function GET(request: NextRequest) {
         }
       })
     );
+
+    const normalizedProducts = products.map((product) => ({
+      ...product,
+      price: Number(product.price),
+      stock: product.quantity,
+    }));
     
-    return NextResponse.json({ products });
+    return NextResponse.json({ products: normalizedProducts });
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ 

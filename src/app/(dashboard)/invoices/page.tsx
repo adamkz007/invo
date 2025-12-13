@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { InvoicesClient } from './invoices-client';
 import { getAuthenticatedUser } from '@/lib/server-auth';
-import { listInvoices, countInvoicesCreatedThisMonth } from '@/lib/data/invoices';
+import { getCachedInvoiceList, getCachedInvoicesCreatedThisMonth } from '@/lib/data/invoices';
 import { getCompanyDetails } from '@/lib/data/company';
 import { mapCompanyRecordToDetails } from '../dashboard/dashboard-types';
 import type { InvoiceListItem } from './invoices-types';
@@ -15,10 +15,10 @@ export default async function InvoicesPage() {
   }
 
   const [invoiceList, companyRecord, subscriptionStatus, invoicesThisMonth] = await Promise.all([
-    listInvoices(user.id),
+    getCachedInvoiceList(user.id),
     getCompanyDetails(user.id),
     getUserSubscriptionStatus(user.id),
-    countInvoicesCreatedThisMonth(user.id),
+    getCachedInvoicesCreatedThisMonth(user.id),
   ]);
 
   const initialInvoices: InvoiceListItem[] = invoiceList.data;

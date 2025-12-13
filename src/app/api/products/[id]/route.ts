@@ -97,7 +97,13 @@ export async function PUT(
         id: productId
       },
       data: {
-        ...productData,
+        name: productData.name,
+        description: productData.description,
+        price: productData.price,
+        quantity: productData.quantity,
+        sku: productData.sku,
+        disableStockManagement: productData.disableStockManagement,
+        imageUrl: productData.imageUrl,
         userId // Ensure the userId remains the same
       }
     });

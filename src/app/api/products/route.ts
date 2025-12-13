@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
       quantity,
       sku,
       disableStockManagement = false, // Default to false if not provided
+      imageUrl,
     } = productData;
     
     // Create product using Prisma with explicit fields
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
         quantity,
         sku,
         disableStockManagement,
+        imageUrl,
         userId
       }
     });

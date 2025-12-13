@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { ChangeEvent, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,10 +18,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { ProductWithRelations } from '@/types';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
-import { formatCurrency } from '@/lib/utils';
 
 // Form validation schema
 const productFormSchema = z.object({
@@ -32,6 +30,7 @@ const productFormSchema = z.object({
   sku: z.string().min(3, { message: 'SKU must be at least 3 characters' }),
   disableStockManagement: z.boolean().default(false),
   userId: z.string().optional(),
+  imageUrl: z.string().url({ message: 'Image must be a valid URL' }).optional().or(z.literal('')),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -44,6 +43,8 @@ interface ProductFormProps {
 
 export default function ProductForm({ defaultValues, isEditing = false, productId }: ProductFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const router = useRouter();
   const { showToast } = useToast();
   const { settings } = useSettings();
@@ -54,18 +55,19 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
   // Initialize form with default values or empty product
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: defaultValues || {
-      name: '',
-      description: '',
-      price: 0,
-      quantity: 0,
-      sku: '',
-      disableStockManagement: false,
-      userId: '',
-    },
+    defaultValues: defaultValues
+      ? { imageUrl: '', ...defaultValues }
+      : {
+          name: '',
+          description: '',
+          price: 0,
+          quantity: 0,
+          sku: '',
+          disableStockManagement: false,
+          userId: '',
+          imageUrl: '',
+        },
   });
-
-
 
   // Handle form submission
   async function onSubmit(values: ProductFormValues) {
@@ -78,12 +80,17 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
       
       const method = isEditing ? 'PUT' : 'POST';
       
+      const payload = {
+        ...values,
+        imageUrl: values.imageUrl || null,
+      };
+
       const response = await fetch(endpoint, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -128,6 +135,47 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
 
   // Watch for disableStockManagement changes
   const disableStockManagement = form.watch('disableStockManagement');
+
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadError(null);
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/uploads/product-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.error || 'Failed to upload image';
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+      form.setValue('imageUrl', data.url || '');
+      showToast({
+        message: 'Image uploaded successfully',
+        variant: 'success',
+      });
+    } catch (error) {
+      console.error('Error uploading product image:', error);
+      setUploadError('Failed to upload image. Please try again.');
+      showToast({
+        message: 'Failed to upload image',
+        variant: 'error',
+      });
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
+  };
 
   return (
     <Form {...form}>
@@ -190,6 +238,57 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
                 </div>
                 <FormDescription>
                   Unique product identifier
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Product Image */}
+          <FormField
+            control={form.control}
+            name="imageUrl"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Product Image (for POS cards)</FormLabel>
+                <FormControl>
+                  <div className="space-y-3">
+                    {field.value ? (
+                      <div className="flex items-center gap-4">
+                        <div className="relative h-20 w-20 overflow-hidden rounded-lg border bg-muted/50">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={field.value}
+                            alt="Product"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => field.onChange('')}
+                          disabled={isSubmitting || isUploading}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : null}
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={isSubmitting || isUploading}
+                    />
+                    {isUploading && (
+                      <p className="text-sm text-muted-foreground">Uploading image...</p>
+                    )}
+                    {uploadError && (
+                      <p className="text-sm text-destructive">{uploadError}</p>
+                    )}
+                  </div>
+                </FormControl>
+                <FormDescription>
+                  Optional image that appears on POS product cards. Max 5MB.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
