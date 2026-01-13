@@ -19,7 +19,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ["var(--font-open-sans)", "sans-serif"],
-        serif: ["var(--font-dm-serif)", "serif"],
+        serif: ["var(--font-fraunces)", "serif"],
       },
       colors: {
         border: "var(--border)",

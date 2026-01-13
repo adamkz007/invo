@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Serif_Text, Open_Sans } from "next/font/google";
+import { Fraunces, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/providers/toast-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -7,8 +7,8 @@ import { SettingsProvider } from '@/contexts/settings-context';
 import { PWAProvider } from "@/components/providers/pwa-provider";
 import { OrganizationSchema, WebsiteSchema } from "@/components/seo/structured-data";
 
-const dmSerifText = DM_Serif_Text({
-  variable: "--font-dm-serif",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   weight: ["400"],
   subsets: ["latin"],
   display: 'swap',
@@ -119,7 +119,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${dmSerifText.variable} ${openSans.variable} font-sans antialiased`}
+        className={`${fraunces.variable} ${openSans.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"

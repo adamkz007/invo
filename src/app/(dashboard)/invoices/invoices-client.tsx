@@ -762,28 +762,30 @@ function InvoicesList({
               key={invoice.id}
               className="overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br dark:from-slate-900 dark:to-slate-900/70"
             >
-              <CardContent className="p-4 sm:p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3">
+              <CardContent className="p-3 sm:p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
-                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-inner ${getStatusTone(invoice.status).dot}`}>
-                      <FileText className="h-5 w-5" />
+                    <div className={`h-10 w-10 rounded-2xl flex items-center justify-center text-white shadow-inner ${getStatusTone(invoice.status).dot}`}>
+                      <FileText className="h-4 w-4" />
                     </div>
                     <div>
                       <div className="text-xs uppercase tracking-wide text-muted-foreground">#{invoice.invoiceNumber}</div>
                       <div className="text-base sm:text-lg font-semibold leading-tight">{invoice.customer.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5" />
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <User className="h-3 w-3" />
                         Issued {format(invoice.issueDate, 'PP')}
+                        <span className="mx-1">•</span>
+                        Due {formatRelativeDate(invoice.dueDate)}
                       </div>
                     </div>
                   </div>
-                  <div className={getStatusTone(invoice.status).pill + " rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1"}>
+                  <div className={getStatusTone(invoice.status).pill + " rounded-full px-2.5 py-1 text-[11px] font-semibold inline-flex items-center gap-1"}>
                     <span className="h-2 w-2 rounded-full bg-current opacity-80" />
                     {invoice.status}
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="space-y-1">
                     <div className="text-xs text-muted-foreground">
                       {invoice.status === 'DRAFT' ? 'Estimated' : 'Total Amount'}
@@ -801,12 +803,12 @@ function InvoicesList({
                     const due = getDueDetails(invoice.dueDate);
                     return (
                       <div className="flex items-center gap-3">
-                        <div className={`flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${due.chip}`}>
+                        <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ${due.chip}`}>
                           {due.icon}
                           <span>{due.label}</span>
                         </div>
-                        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground border rounded-full px-3 py-2">
-                          <Calendar className="h-4 w-4" />
+                        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground border rounded-full px-3 py-1.5">
+                          <Calendar className="h-3.5 w-3.5" />
                           {format(invoice.dueDate, 'PP')}
                         </div>
                       </div>
@@ -814,18 +816,12 @@ function InvoicesList({
                   })()}
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-dashed border-slate-200">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CreditCard className="h-4 w-4 text-slate-400" />
-                    {formatRelativeDate(invoice.dueDate)}
-                    <span className="mx-1">•</span>
-                    Invoice for {invoice.customer.name}
-                  </div>
-                  <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-end pt-2 border-t border-dashed border-slate-200">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9"
+                      className="h-8 w-8"
                       onClick={() => onViewInvoice(invoice)}
                       aria-label="View invoice"
                     >
@@ -834,7 +830,7 @@ function InvoicesList({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9"
+                      className="h-8 w-8"
                       onClick={() => onDownloadPDF(invoice)}
                       aria-label="Download PDF"
                     >
@@ -842,7 +838,7 @@ function InvoicesList({
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="More actions">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

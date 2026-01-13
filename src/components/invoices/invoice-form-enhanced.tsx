@@ -409,141 +409,141 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
       
       
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 px-1.5 sm:space-y-5 sm:px-4">
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2" ref={customerRef}>
-          {/* Customer Selection */}
-          <Card className="p-2.5 sm:p-5 shadow-sm">
-              <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
-              <FormLabel className="text-sm sm:text-base">Customer</FormLabel>
-              <FormField
-                control={form.control}
-                name="customerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="flex gap-1 sm:gap-2 items-center">
-                        <div className="flex-1">
-                          <Combobox
-                            options={customerOptions}
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="Select a customer"
-                            searchPlaceholder="Search by name or phone number..."
-                            emptyText="No customers found"
-                            disabled={isSubmitting}
-                            className="text-xs sm:text-sm"
-                          />
-                        </div>
-                        {CustomerFormDialog && (
-                          <CustomerFormDialog 
-                            userId="1" 
-                            onCustomerCreated={handleCustomerCreated} 
-                          />
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormMessage className="text-xs sm:text-sm" />
-                  </FormItem>
-                )}
-              />
-
-              {/* Invoice Status */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem className="mt-2 sm:mt-4">
-                    <FormLabel className="text-sm sm:text-base">Status</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      disabled={isSubmitting}
-                    >
+        <Card className="p-2.5 sm:p-5 shadow-sm" ref={customerRef}>
+          <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+              {/* Customer Selection */}
+              <div>
+                <FormLabel className="text-sm sm:text-base">Customer</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="customerId"
+                  render={({ field }) => (
+                    <FormItem>
                       <FormControl>
-                        <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
-                          <SelectValue placeholder="Select status">
-                            {field.value && (
-                              <div className="flex items-center">
-                                {field.value === 'DRAFT' && <Badge className="bg-gray-100 text-gray-800 mr-1 sm:mr-2 text-xs">Draft</Badge>}
-                                {field.value === 'SENT' && <Badge className="bg-blue-100 text-blue-800 mr-1 sm:mr-2 text-xs">Sent</Badge>}
-                                {field.value === 'PAID' && <Badge className="bg-green-100 text-green-800 mr-1 sm:mr-2 text-xs">Paid</Badge>}
-                                {field.value === 'PARTIAL' && <Badge className="bg-amber-100 text-amber-800 mr-1 sm:mr-2 text-xs">Partial</Badge>}
-                                {field.value === 'OVERDUE' && <Badge className="bg-red-100 text-red-800 mr-1 sm:mr-2 text-xs">Overdue</Badge>}
-                                {field.value === 'CANCELLED' && <Badge className="bg-purple-100 text-purple-800 mr-1 sm:mr-2 text-xs">Cancelled</Badge>}
-                              </div>
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
+                        <div className="flex gap-1 sm:gap-2 items-center">
+                          <div className="flex-1">
+                            <Combobox
+                              options={customerOptions}
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Select a customer"
+                              searchPlaceholder="Search by name or phone number..."
+                              emptyText="No customers found"
+                              disabled={isSubmitting}
+                              className="text-xs sm:text-sm"
+                            />
+                          </div>
+                          {CustomerFormDialog && (
+                            <CustomerFormDialog 
+                              userId="1" 
+                              onCustomerCreated={handleCustomerCreated} 
+                            />
+                          )}
+                        </div>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="DRAFT" className="text-xs sm:text-sm">
-                          <div className="flex items-center">
-                            <Badge className="bg-gray-100 text-gray-800 mr-1 sm:mr-2 text-xs">Draft</Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="SENT" className="text-xs sm:text-sm">
-                          <div className="flex items-center">
-                            <Badge className="bg-blue-100 text-blue-800 mr-1 sm:mr-2 text-xs">Sent</Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="PAID" className="text-xs sm:text-sm">
-                          <div className="flex items-center">
-                            <Badge className="bg-green-100 text-green-800 mr-1 sm:mr-2 text-xs">Paid</Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="PARTIAL" className="text-xs sm:text-sm">
-                          <div className="flex items-center">
-                            <Badge className="bg-amber-100 text-amber-800 mr-1 sm:mr-2 text-xs">Partial</Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="OVERDUE" className="text-xs sm:text-sm">
-                          <div className="flex items-center">
-                            <Badge className="bg-red-100 text-red-800 mr-1 sm:mr-2 text-xs">Overdue</Badge>                          </div>
-                        </SelectItem>
-                        <SelectItem value="CANCELLED" className="text-xs sm:text-sm">
-                          <div className="flex items-center">
-                            <Badge className="bg-purple-100 text-purple-800 mr-1 sm:mr-2 text-xs">Cancelled</Badge>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-xs sm:text-sm" />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Dates */}
-          <Card className="p-2.5 sm:p-5 shadow-sm" ref={datesRef}>
-            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
-              <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
-                {/* Issue Date */}
-                <ShadcnDatePickerComponent
-                  name="issueDate"
-                  label="Issue Date"
-                  disabled={isSubmitting}
-                  minDate={new Date()} // Set minimum date to today
-                  dateFormat="yyyy-MM-dd"
-                  placeholder="YYYY-MM-DD"
-                  className="text-xs sm:text-sm"
-                  labelClassName="text-sm sm:text-base"
+                      <FormMessage className="text-xs sm:text-sm" />
+                    </FormItem>
+                  )}
                 />
 
-                {/* Due Date */}
-                <ShadcnDatePickerComponent
-                  name="dueDate"
-                  label="Due Date"
-                  disabled={isSubmitting}
-                  minDate={minDueDate} // Set minimum date to issue date
-                  dateFormat="yyyy-MM-dd"
-                  placeholder="YYYY-MM-DD"
-                  className="text-xs sm:text-sm"
-                  labelClassName="text-sm sm:text-base"
+                {/* Invoice Status */}
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem className="mt-2 sm:mt-4">
+                      <FormLabel className="text-sm sm:text-base">Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
+                            <SelectValue placeholder="Select status">
+                              {field.value && (
+                                <div className="flex items-center">
+                                  {field.value === 'DRAFT' && <Badge className="bg-gray-100 text-gray-800 mr-1 sm:mr-2 text-xs">Draft</Badge>}
+                                  {field.value === 'SENT' && <Badge className="bg-blue-100 text-blue-800 mr-1 sm:mr-2 text-xs">Sent</Badge>}
+                                  {field.value === 'PAID' && <Badge className="bg-green-100 text-green-800 mr-1 sm:mr-2 text-xs">Paid</Badge>}
+                                  {field.value === 'PARTIAL' && <Badge className="bg-amber-100 text-amber-800 mr-1 sm:mr-2 text-xs">Partial</Badge>}
+                                  {field.value === 'OVERDUE' && <Badge className="bg-red-100 text-red-800 mr-1 sm:mr-2 text-xs">Overdue</Badge>}
+                                  {field.value === 'CANCELLED' && <Badge className="bg-purple-100 text-purple-800 mr-1 sm:mr-2 text-xs">Cancelled</Badge>}
+                                </div>
+                              )}
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="DRAFT" className="text-xs sm:text-sm">
+                            <div className="flex items-center">
+                              <Badge className="bg-gray-100 text-gray-800 mr-1 sm:mr-2 text-xs">Draft</Badge>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="SENT" className="text-xs sm:text-sm">
+                            <div className="flex items-center">
+                              <Badge className="bg-blue-100 text-blue-800 mr-1 sm:mr-2 text-xs">Sent</Badge>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="PAID" className="text-xs sm:text-sm">
+                            <div className="flex items-center">
+                              <Badge className="bg-green-100 text-green-800 mr-1 sm:mr-2 text-xs">Paid</Badge>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="PARTIAL" className="text-xs sm:text-sm">
+                            <div className="flex items-center">
+                              <Badge className="bg-amber-100 text-amber-800 mr-1 sm:mr-2 text-xs">Partial</Badge>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="OVERDUE" className="text-xs sm:text-sm">
+                            <div className="flex items-center">
+                              <Badge className="bg-red-100 text-red-800 mr-1 sm:mr-2 text-xs">Overdue</Badge>                          </div>
+                          </SelectItem>
+                          <SelectItem value="CANCELLED" className="text-xs sm:text-sm">
+                            <div className="flex items-center">
+                              <Badge className="bg-purple-100 text-purple-800 mr-1 sm:mr-2 text-xs">Cancelled</Badge>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs sm:text-sm" />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </CardContent>
-          </Card>
-        </div>
+
+              {/* Dates */}
+              <div ref={datesRef}>
+                <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
+                  {/* Issue Date */}
+                  <ShadcnDatePickerComponent
+                    name="issueDate"
+                    label="Issue Date"
+                    disabled={isSubmitting}
+                    minDate={new Date()} // Set minimum date to today
+                    dateFormat="yyyy-MM-dd"
+                    placeholder="YYYY-MM-DD"
+                    className="text-xs sm:text-sm"
+                    labelClassName="text-sm sm:text-base"
+                  />
+
+                  {/* Due Date */}
+                  <ShadcnDatePickerComponent
+                    name="dueDate"
+                    label="Due Date"
+                    disabled={isSubmitting}
+                    minDate={minDueDate} // Set minimum date to issue date
+                    dateFormat="yyyy-MM-dd"
+                    placeholder="YYYY-MM-DD"
+                    className="text-xs sm:text-sm"
+                    labelClassName="text-sm sm:text-base"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Invoice Items */}
         <Card className="p-2.5 sm:p-5 shadow-sm" ref={itemsRef}>
@@ -560,7 +560,7 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
             
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="p-2 sm:p-4 border rounded-md">
+                <div key={field.id} className="p-2 sm:p-4 rounded-md">
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-medium">Item {index + 1}</h4>
                     <Button
@@ -716,9 +716,9 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
           </CardContent>
         </Card>
 
-        {/* Tax and Discount */}
+        {/* Tax, Discount, and Notes */}
         <Card className="p-2.5 sm:p-5 shadow-sm" ref={taxDiscountRef}>
-            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
+          <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
             <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
               {/* Tax Rate */}
               <FormField
@@ -766,31 +766,27 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                 )}
               />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Notes */}
-        <Card className="p-2.5 sm:p-5 shadow-sm" ref={notesRef}>
-            <CardContent className="pt-3 sm:pt-4 px-1.5 sm:px-3">
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm sm:text-base">Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={3}
-                      placeholder="Additional notes for the invoice"
-                      className="text-xs sm:text-sm"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs sm:text-sm" />
-                </FormItem>
-              )}
-            />
+            <div className="mt-3 sm:mt-4" ref={notesRef}>
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="Additional notes for the invoice"
+                        className="text-xs sm:text-sm"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs sm:text-sm" />
+                  </FormItem>
+                )}
+              />
+            </div>
           </CardContent>
         </Card>
 
