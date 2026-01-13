@@ -341,289 +341,233 @@ export async function downloadInvoicePDF(
   doc.setFont('helvetica', 'bold');
   doc.text(formatDate(invoice.dueDate), invoiceDetailsValueX, customerY + 20, { align: 'right' });
   
-  // Status with badge style
+  // Status with clean badge style
   doc.setFont('helvetica', 'normal');
   doc.text('Status', invoiceDetailsX, customerY + 30);
   
-  // Add colored status badge
-  const statusX = invoiceDetailsValueX - 40; // Make the badge wider
+  // Define status badge dimensions - compact and elegant
+  const statusWidth = 32;
+  const statusHeight = 6;
+  const statusX = invoiceDetailsValueX - statusWidth;
   const statusY = customerY + 30;
-  const statusWidth = 40; // Increased width
-  const statusHeight = 8; // Increased height
   
-  // Set status badge color based on status
+  // Get status styling based on status type - using subtle, professional colors
   let statusText = '';
-  let borderR = 0, borderG = 0, borderB = 0; // Variables to store border colors
+  let bgColor = { r: 243, g: 244, b: 246 };
+  let textColor = { r: 75, g: 85, b: 99 };
   
   switch (invoice.status) {
     case 'PAID':
-      doc.setFillColor(220, 252, 231); // Light green
-      doc.setTextColor(22, 101, 52); // Dark green
-      borderR = 22; borderG = 101; borderB = 52;
+      bgColor = { r: 236, g: 253, b: 245 }; // Subtle mint
+      textColor = { r: 5, g: 150, b: 105 }; // Emerald
       statusText = 'PAID';
       break;
     case 'PARTIAL':
-      doc.setFillColor(254, 243, 199); // Light amber/yellow
-      doc.setTextColor(146, 64, 14); // Dark amber/yellow
-      borderR = 146; borderG = 64; borderB = 14;
+      bgColor = { r: 255, g: 251, b: 235 }; // Subtle amber
+      textColor = { r: 180, g: 83, b: 9 }; // Amber
       statusText = 'PARTIAL';
       break;
     case 'OVERDUE':
-      doc.setFillColor(254, 226, 226); // Light red
-      doc.setTextColor(153, 27, 27); // Dark red
-      borderR = 153; borderG = 27; borderB = 27;
+      bgColor = { r: 254, g: 242, b: 242 }; // Subtle red
+      textColor = { r: 185, g: 28, b: 28 }; // Red
       statusText = 'OVERDUE';
       break;
     case 'SENT':
-      doc.setFillColor(219, 234, 254); // Light blue
-      doc.setTextColor(30, 64, 175); // Dark blue
-      borderR = 30; borderG = 64; borderB = 175;
+      bgColor = { r: 239, g: 246, b: 255 }; // Subtle blue
+      textColor = { r: 29, g: 78, b: 216 }; // Blue
       statusText = 'SENT';
       break;
     case 'DRAFT':
-      doc.setFillColor(229, 231, 235); // Light gray
-      doc.setTextColor(75, 85, 99); // Dark gray
-      borderR = 75; borderG = 85; borderB = 99;
+      bgColor = { r: 243, g: 244, b: 246 }; // Subtle gray
+      textColor = { r: 107, g: 114, b: 128 }; // Gray
       statusText = 'DRAFT';
       break;
     case 'CANCELLED':
-      doc.setFillColor(239, 215, 239); // Light purple
-      doc.setTextColor(112, 26, 117); // Dark purple
-      borderR = 112; borderG = 26; borderB = 117;
+      bgColor = { r: 243, g: 244, b: 246 }; // Subtle gray
+      textColor = { r: 107, g: 114, b: 128 }; // Gray
       statusText = 'CANCELLED';
       break;
     default:
-      doc.setFillColor(243, 244, 246); // Light gray
-      doc.setTextColor(75, 85, 99); // Dark gray
-      borderR = 75; borderG = 85; borderB = 99;
       statusText = invoice.status;
   }
   
-  // Draw status badge background with border
-  doc.roundedRect(statusX, statusY - 5, statusWidth, statusHeight, 2, 2, 'F');
+  // Draw clean badge background (no border for cleaner look)
+  doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
+  doc.roundedRect(statusX, statusY - 4, statusWidth, statusHeight, 1.5, 1.5, 'F');
   
-  // Add a subtle border around the badge
-  doc.setDrawColor(borderR, borderG, borderB);
-  doc.setLineWidth(0.1);
-  doc.roundedRect(statusX, statusY - 5, statusWidth, statusHeight, 2, 2, 'S');
-  
-  // Add status text
-  doc.setFontSize(8);
+  // Add status text - centered
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.text(statusText, statusX + statusWidth / 2, statusY, { 
-    align: 'center'
-  });
+  doc.setTextColor(textColor.r, textColor.g, textColor.b);
+  doc.text(statusText, statusX + statusWidth / 2, statusY + 0.5, { align: 'center' });
   
-  // Reset text color and line width
+  // Reset text color
   doc.setTextColor(80, 80, 80);
-  doc.setLineWidth(0.3);
   
   // Invoice Items Table
   const tableTop = 110;
-  const tableRowHeight = 10;
+  const tableRowHeight = 12;
+  const cellPadding = 4;
   
-  // Define column widths - adjusted to prevent text overflow and ensure headers have their own column
+  // Define column widths with better proportions for readability
   const colWidths = {
-    item: contentWidth * 0.05,
-    description: contentWidth * 0.45, // Increased for better text accommodation
-    quantity: contentWidth * 0.15,
-    unitPrice: contentWidth * 0.15,
-    amount: contentWidth * 0.20
+    item: contentWidth * 0.08,        // # column
+    description: contentWidth * 0.42, // Item & Description
+    quantity: contentWidth * 0.12,    // Qty
+    unitPrice: contentWidth * 0.18,   // Unit Price
+    amount: contentWidth * 0.20       // Amount
   };
   
-  // Draw table header with border
-  doc.setFillColor(240, 240, 240); // Light gray background
+  // Calculate column positions
+  const colPositions = {
+    item: margin,
+    description: margin + colWidths.item,
+    quantity: margin + colWidths.item + colWidths.description,
+    unitPrice: margin + colWidths.item + colWidths.description + colWidths.quantity,
+    amount: margin + colWidths.item + colWidths.description + colWidths.quantity + colWidths.unitPrice
+  };
+  
+  // Draw table header background
+  doc.setFillColor(2, 33, 142); // Dark blue header matching the top bar
   doc.rect(margin, tableTop - 6, contentWidth, tableRowHeight, 'F');
-  doc.setDrawColor(200, 200, 200); // Light gray border
-  doc.setLineWidth(0.3);
   
-  // Draw table header horizontal lines
-  doc.line(margin, tableTop - 6, margin + contentWidth, tableTop - 6); // Top border
-  doc.line(margin, tableTop + 4, margin + contentWidth, tableTop + 4); // Bottom border
-  
-  // Draw table header vertical lines
-  let xPos = margin;
-  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // Left border
-  
-  xPos += colWidths.item;
-  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After item number
-  
-  xPos += colWidths.description;
-  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After description
-  
-  xPos += colWidths.quantity;
-  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After quantity
-  
-  xPos += colWidths.unitPrice;
-  doc.line(xPos, tableTop - 6, xPos, tableTop + 4); // After unit price
-  
-  doc.line(margin + contentWidth, tableTop - 6, margin + contentWidth, tableTop + 4); // Right border
-  
-  // Table header text
+  // Table header text - white on blue
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(50, 50, 50);
+  doc.setTextColor(255, 255, 255);
   
-  xPos = margin;
-  doc.text('#', xPos + (colWidths.item / 2), tableTop, { align: 'center' });
-  xPos += colWidths.item;
+  // Center text vertically in header row
+  const headerTextY = tableTop + 1;
   
-  doc.text('ITEM & DESCRIPTION', xPos + 2, tableTop);
-  xPos += colWidths.description;
+  // # column - centered
+  doc.text('#', colPositions.item + (colWidths.item / 2), headerTextY, { align: 'center' });
   
-  doc.text('QTY', xPos - (colWidths.quantity / 2), tableTop, { align: 'center' });
-  xPos += colWidths.quantity;
+  // Item & Description - left aligned with padding
+  doc.text('ITEM & DESCRIPTION', colPositions.description + cellPadding, headerTextY);
   
-  doc.text('UNIT PRICE', xPos - (colWidths.unitPrice / 2), tableTop, { align: 'center' });
-  xPos += colWidths.unitPrice;
+  // Qty - centered
+  doc.text('QTY', colPositions.quantity + (colWidths.quantity / 2), headerTextY, { align: 'center' });
   
-  doc.text('AMOUNT', pageWidth - margin - (colWidths.amount / 2), tableTop, { align: 'center' });
+  // Unit Price - right aligned with padding
+  doc.text('UNIT PRICE', colPositions.unitPrice + colWidths.unitPrice - cellPadding, headerTextY, { align: 'right' });
+  
+  // Amount - right aligned with padding
+  doc.text('AMOUNT', colPositions.amount + colWidths.amount - cellPadding, headerTextY, { align: 'right' });
   
   // Table rows
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(9);
   
-  let yPos = tableTop + tableRowHeight;
-  let startYPos = yPos; // Keep track of starting position for final bottom border
+  let yPos = tableTop + tableRowHeight + 2;
+  const tableBodyStart = yPos - 6;
+  
+  // Draw table body border (outer frame)
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.3);
   
   // Draw table rows
   if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
     invoice.items.forEach((item, index) => {
-      const rowYStart = yPos - 4; // Start position for this row
-      let rowHeight = tableRowHeight; // Default row height
+      const rowYStart = yPos - 5;
+      let rowHeight = tableRowHeight;
       
       // Get item details for calculations
       const itemNameForCalc = item.product?.name || item.description || 'Item';
-      const maxWidthForCalc = colWidths.description - 4; // Leave some margin
+      const maxWidthForCalc = colWidths.description - (cellPadding * 2);
       
-      // Calculate row height based on text wrapping
+      // Calculate row height based on text wrapping (item name only)
       let additionalHeight = 0;
       
-      // Check if item name needs wrapping
+      doc.setFontSize(9);
       if (doc.getTextWidth(itemNameForCalc) > maxWidthForCalc) {
         const textLines = doc.splitTextToSize(itemNameForCalc, maxWidthForCalc);
-        additionalHeight += (textLines.length - 1) * 5;
-      }
-      
-      // Check if description needs wrapping and is different from name
-      if (item.description && item.description !== itemNameForCalc) {
-        const descLines = doc.splitTextToSize(item.description, maxWidthForCalc);
-        additionalHeight += 5; // Basic line for description
-        additionalHeight += (descLines.length - 1) * 5; // Additional lines
+        additionalHeight += (textLines.length - 1) * 4;
       }
       
       rowHeight += additionalHeight;
       
-      // Draw row background (alternating)
-      if (index % 2 === 1) {
-        doc.setFillColor(248, 248, 248); // Very light gray for alternating rows
+      // Draw alternating row background
+      if (index % 2 === 0) {
+        doc.setFillColor(250, 250, 252); // Very subtle blue-gray tint
+        doc.rect(margin, rowYStart, contentWidth, rowHeight, 'F');
+      } else {
+        doc.setFillColor(255, 255, 255);
         doc.rect(margin, rowYStart, contentWidth, rowHeight, 'F');
       }
       
-      // Draw vertical borders for this row
-      xPos = margin;
-      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight); // Left border
-      
-      xPos += colWidths.item;
-      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
-      
-      xPos += colWidths.description;
-      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
-      
-      xPos += colWidths.quantity;
-      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
-      
-      xPos += colWidths.unitPrice;
-      doc.line(xPos, rowYStart, xPos, rowYStart + rowHeight);
-      
-      doc.line(margin + contentWidth, rowYStart, margin + contentWidth, rowYStart + rowHeight); // Right border
-      
-      // Draw bottom border for this row
+      // Draw row bottom border
+      doc.setDrawColor(230, 230, 230);
       doc.line(margin, rowYStart + rowHeight, margin + contentWidth, rowYStart + rowHeight);
       
-      // Add row content
-      xPos = margin;
+      // Center text vertically in row
+      const rowTextY = yPos;
       
-      // Item number
-      doc.text(`${index + 1}`, xPos + (colWidths.item / 2), yPos, { align: 'center' });
-      xPos += colWidths.item;
+      // Item number - centered, lighter color
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(`${index + 1}`, colPositions.item + (colWidths.item / 2), rowTextY, { align: 'center' });
       
       // Item name and description
+      doc.setTextColor(40, 40, 40);
       doc.setFont('helvetica', 'bold');
-      // Handle long item names with text wrapping - reuse variables from row height calculation
-       // Split text if it's too long
-       if (doc.getTextWidth(itemNameForCalc) > maxWidthForCalc) {
-         const textLines = doc.splitTextToSize(itemNameForCalc, maxWidthForCalc);
-         doc.text(textLines[0], xPos + 2, yPos);
-         
-         // If we have more lines from splitting the name, adjust position
-         if (textLines.length > 1) {
-           yPos += 5;
-           doc.text(textLines.slice(1).join(' '), xPos + 2, yPos);
-         }
-       } else {
-         doc.text(itemNameForCalc, xPos + 2, yPos);
-       }
-       
-       doc.setFont('helvetica', 'normal');
-       
-       // Add description on a new line if it exists and is different from the name
-       if (item.description && item.description !== itemNameForCalc) {
-         yPos += 5;
-         // Split description text if it's too long
-         const descLines = doc.splitTextToSize(item.description, maxWidthForCalc);
-         doc.text(descLines, xPos + 2, yPos);
-         
-         // Adjust yPos based on number of description lines
-         if (descLines.length > 1) {
-           yPos += (descLines.length - 1) * 5;
-         }
-       }
-       
-       xPos += colWidths.description;
-       
-       // Reset yPos if we added description lines
-       const originalYPos = yPos - (item.description && item.description !== itemNameForCalc ? 5 : 0);
-       if (yPos !== originalYPos) {
-         yPos = originalYPos;
-       }
+      doc.setFontSize(9);
       
-      // Quantity - make it more prominent
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${item.quantity}`, xPos - (colWidths.quantity / 2), yPos, { align: 'center' });
+      let descYPos = rowTextY;
+      
+      // Handle long item names with text wrapping
+      if (doc.getTextWidth(itemNameForCalc) > maxWidthForCalc) {
+        const textLines = doc.splitTextToSize(itemNameForCalc, maxWidthForCalc);
+        doc.text(textLines[0], colPositions.description + cellPadding, descYPos);
+        
+        if (textLines.length > 1) {
+          for (let i = 1; i < textLines.length; i++) {
+            descYPos += 4;
+            doc.text(textLines[i], colPositions.description + cellPadding, descYPos);
+          }
+        }
+      } else {
+        doc.text(itemNameForCalc, colPositions.description + cellPadding, descYPos);
+      }
+      
+      // Quantity - centered
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      xPos += colWidths.quantity;
+      doc.setTextColor(60, 60, 60);
+      doc.text(`${item.quantity}`, colPositions.quantity + (colWidths.quantity / 2), rowTextY, { align: 'center' });
       
-      // Unit price - make it more prominent
-      doc.setFont('helvetica', 'bold');
-      doc.text(formatCurrency(item.unitPrice, settings), xPos - (colWidths.unitPrice / 2), yPos, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      xPos += colWidths.unitPrice;
+      // Unit price - right aligned
+      doc.text(formatCurrency(item.unitPrice, settings), colPositions.unitPrice + colWidths.unitPrice - cellPadding, rowTextY, { align: 'right' });
       
-      // Amount - make it more prominent
+      // Amount - right aligned, bold
       doc.setFont('helvetica', 'bold');
-      doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin - (colWidths.amount / 2), yPos, { align: 'center' });
+      doc.text(formatCurrency(item.quantity * item.unitPrice, settings), colPositions.amount + colWidths.amount - cellPadding, rowTextY, { align: 'right' });
       doc.setFont('helvetica', 'normal');
       
       yPos += rowHeight;
     });
+    
+    // Draw table outer border
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.4);
+    doc.rect(margin, tableBodyStart, contentWidth, yPos - tableBodyStart);
+    
   } else {
-    // No items - display a message with borders
+    // No items - display a message
     const rowHeight = tableRowHeight + 5;
     
-    // Draw vertical borders
-    doc.line(margin, yPos - 4, margin, yPos - 4 + rowHeight); // Left border
-    doc.line(margin + contentWidth, yPos - 4, margin + contentWidth, yPos - 4 + rowHeight); // Right border
-    
-    // Draw bottom border
-    doc.line(margin, yPos - 4 + rowHeight, margin + contentWidth, yPos - 4 + rowHeight);
+    doc.setFillColor(250, 250, 252);
+    doc.rect(margin, yPos - 5, contentWidth, rowHeight, 'F');
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(margin, yPos - 5, contentWidth, rowHeight, 'S');
     
     doc.setFont('helvetica', 'italic');
-    doc.setTextColor(100, 100, 100);
-    doc.text('No items in this invoice', margin + contentWidth / 2, yPos, { align: 'center' });
+    doc.setTextColor(120, 120, 120);
+    doc.text('No items in this invoice', margin + contentWidth / 2, yPos + 2, { align: 'center' });
     yPos += rowHeight;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
+    doc.setTextColor(60, 60, 60);
   }
   
   // Totals Section
@@ -773,9 +717,10 @@ export async function downloadInvoicePDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
   
-  // Use custom terms if provided, otherwise use default
-  const termsText = companyDetails?.termsAndConditions || 
-    'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.';
+  // Use custom terms from company settings if provided and not empty, otherwise use default
+  const defaultTerms = 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.';
+  const customTerms = companyDetails?.termsAndConditions?.trim();
+  const termsText = customTerms && customTerms.length > 0 ? customTerms : defaultTerms;
   
   // Split terms into multiple lines if needed
   const maxWidth = pageWidth - (margin * 2);

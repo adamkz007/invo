@@ -7,7 +7,8 @@ import { formatCurrency } from '@/lib/utils';
 import type { AppSettings } from '@/lib/utils';
 import type { InvoiceWithDetails } from '@/types';
 import type { CompanyDetails } from '../dashboard/dashboard-types';
-import { Calendar, Download } from 'lucide-react';
+import { Calendar, Download, MessageCircle } from 'lucide-react';
+import { formatPhoneNumber, isValidWhatsAppNumber } from '@/lib/whatsapp';
 import { format } from 'date-fns';
 import Image from 'next/image';
 
@@ -183,11 +184,25 @@ export function InvoiceDetailsDialog({
               </div>
             </div>
 
-            <div className="flex justify-center mt-6">
+            <div className="flex justify-center gap-3 mt-6">
               <Button onClick={() => onDownloadPDF(invoice)} className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 Download PDF
               </Button>
+              {invoice.customer.phoneNumber && isValidWhatsAppNumber(invoice.customer.phoneNumber) && (
+                <Button
+                  onClick={() => {
+                    const phone = formatPhoneNumber(invoice.customer.phoneNumber!);
+                    const message = `Hello! Here's your invoice totalling RM${invoice.total.toFixed(2)} from Invo`;
+                    const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="flex items-center gap-2 bg-[#25D366] hover:bg-[#20BA5A] text-white"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </Button>
+              )}
             </div>
           </>
         )}

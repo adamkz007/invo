@@ -246,7 +246,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
                     } ${isSidebarCollapsed ? 'justify-center' : ''}`}
                     aria-label={isSidebarCollapsed ? item.name : undefined}
                   >
-                    <Icon className={isSidebarCollapsed ? 'h-7 w-7' : 'mr-2 h-5 w-5'} />
+                    <Icon className={`h-5 w-5 ${!isSidebarCollapsed ? 'mr-2' : ''}`} />
                     {!isSidebarCollapsed && item.name}
                   </Link>
                 );
@@ -260,7 +260,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
                   }`}
                   aria-label={isSidebarCollapsed ? 'Create Invoice' : undefined}
                 >
-                  <PlusCircle className={isSidebarCollapsed ? 'h-7 w-7' : 'mr-2 h-5 w-5'} />
+                  <PlusCircle className={`h-5 w-5 ${!isSidebarCollapsed ? 'mr-2' : ''}`} />
                   {!isSidebarCollapsed && 'Create Invoice'}
                 </Link>
               </div>

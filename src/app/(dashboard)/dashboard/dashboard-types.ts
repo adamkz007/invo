@@ -22,6 +22,7 @@ export interface CompanyDetails {
   phoneNumber?: string | null;
   address?: string | null;
   logoUrl?: string | null;
+  termsAndConditions?: string | null;
   paymentMethod?: string | null;
   bankAccountName?: string | null;
   bankName?: string | null;
@@ -119,6 +120,7 @@ export function mapCompanyRecordToDetails(company: CompanyRecord | null): Compan
     phoneNumber: company.phoneNumber ?? null,
     address: company.address ?? null,
     logoUrl: company.logoUrl ?? null,
+    termsAndConditions: company.termsAndConditions ?? null,
     paymentMethod: company.paymentMethod ?? null,
     bankAccountName: company.bankAccountName ?? null,
     bankName: company.bankName ?? null,
