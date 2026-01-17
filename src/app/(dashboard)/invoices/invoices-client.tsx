@@ -134,6 +134,7 @@ export function InvoicesClient({
   initialInvoicesThisMonth,
 }: InvoicesClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithDetails | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceListItem | null>(null);
@@ -479,18 +480,36 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
         </Button>
       </div>
 
-      <div className="flex items-center relative">
-        <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-        <Input 
-          placeholder="Search invoices..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 w-full"
-        />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="flex items-center relative sm:col-span-2">
+          <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search invoices..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="DRAFT">Draft</SelectItem>
+            <SelectItem value="SENT">Sent</SelectItem>
+            <SelectItem value="PARTIAL">Partial</SelectItem>
+            <SelectItem value="PAID">Paid</SelectItem>
+            <SelectItem value="OVERDUE">Overdue</SelectItem>
+            <SelectItem value="CANCELLED">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <InvoicesList 
         searchTerm={searchTerm} 
+        statusFilter={statusFilter}
         initialInvoices={initialInvoices}
         onViewInvoice={handleViewInvoice} 
         onDownloadPDF={handleDownloadPDF}
@@ -633,6 +652,7 @@ const handleDownloadPDF = async (invoice: InvoiceListItem) => {
 interface InvoicesListProps {
   initialInvoices: InvoiceListItem[];
   searchTerm: string;
+  statusFilter: string;
   onViewInvoice: (invoice: InvoiceListItem) => void;
   onDownloadPDF: (invoice: InvoiceListItem) => void;
   onCancelInvoice: (invoice: InvoiceListItem) => void;
@@ -646,6 +666,7 @@ interface InvoicesListProps {
 function InvoicesList({
   initialInvoices,
   searchTerm,
+  statusFilter,
   onViewInvoice,
   onDownloadPDF,
   onCancelInvoice,
@@ -705,29 +726,41 @@ function InvoicesList({
   // Filter invoices based on search term
   const filteredInvoices = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    return invoices.filter(
-      (invoice) =>
-        invoice.invoiceNumber.toLowerCase().includes(term) ||
-        invoice.customer.name.toLowerCase().includes(term),
-    );
-  }, [invoices, searchTerm]);
+    const hasSearch = term.length > 0;
 
-  if (filteredInvoices.length === 0) return (
-    <div className="text-center py-12 border rounded-lg">
-      <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-      <h3 className="text-lg font-medium">No invoices found</h3>
-      <p className="text-muted-foreground mb-4">
-        {searchTerm ? 'Try a different search term' : 'Create your first invoice to get started'}
-      </p>
-      {!searchTerm && (
-        <Link href="/invoices/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create Invoice
-          </Button>
-        </Link>
-      )}
-    </div>
-  );
+    return invoices.filter((invoice) => {
+      if (hasSearch) {
+        const matchesSearch =
+          invoice.invoiceNumber.toLowerCase().includes(term) ||
+          invoice.customer.name.toLowerCase().includes(term);
+        if (!matchesSearch) return false;
+      }
+
+      if (statusFilter !== 'ALL' && invoice.status !== statusFilter) return false;
+
+      return true;
+    });
+  }, [invoices, searchTerm, statusFilter]);
+
+  if (filteredInvoices.length === 0) {
+    const hasAnyFilter = Boolean(searchTerm) || statusFilter !== 'ALL';
+    return (
+      <div className="text-center py-12 border rounded-lg">
+        <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium">No invoices found</h3>
+        <p className="text-muted-foreground mb-4">
+          {hasAnyFilter ? 'Try adjusting your filters' : 'Create your first invoice to get started'}
+        </p>
+        {!hasAnyFilter && (
+          <Link href="/invoices/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create Invoice
+            </Button>
+          </Link>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -771,12 +804,6 @@ function InvoicesList({
                     <div>
                       <div className="text-xs uppercase tracking-wide text-muted-foreground">#{invoice.invoiceNumber}</div>
                       <div className="text-base sm:text-lg font-semibold leading-tight">{invoice.customer.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        Issued {format(invoice.issueDate, 'PP')}
-                        <span className="mx-1">•</span>
-                        Due {formatRelativeDate(invoice.dueDate)}
-                      </div>
                     </div>
                   </div>
                   <div className={getStatusTone(invoice.status).pill + " rounded-full px-2.5 py-1 text-[11px] font-semibold inline-flex items-center gap-1"}>

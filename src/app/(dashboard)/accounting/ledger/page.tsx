@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type Entry = {
   id: string;
@@ -12,6 +14,7 @@ type Entry = {
 };
 
 export default function LedgerPage() {
+  const { settings } = useSettings();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,7 +52,7 @@ export default function LedgerPage() {
               {e.lines.map((l) => (
                 <div key={l.id} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{l.account.code} · {l.account.name}</span>
-                  <span className="font-mono">{Number(l.debit) > 0 ? `Dr ${Number(l.debit).toFixed(2)}` : `Cr ${Number(l.credit).toFixed(2)}`}</span>
+                  <span className="font-mono">{Number(l.debit) > 0 ? `Dr ${formatCurrency(Number(l.debit), settings)}` : `Cr ${formatCurrency(Number(l.credit), settings)}`}</span>
                 </div>
               ))}
             </div>

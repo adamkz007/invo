@@ -37,6 +37,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MSICCodeSearch } from '@/components/ui/msic-code-search';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 
 // Form validation schema
 const companyFormSchema = z.object({
@@ -767,36 +768,51 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                 </TooltipCardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-sm font-medium">POS Module</label>
-                      <p className="text-sm text-muted-foreground">Enable Point of Sale system for in-person transactions</p>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <label htmlFor="pos-module" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        POS Module
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        Enable Point of Sale system for in-person transactions
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant={settings.enablePosModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enablePosModule: true }); }}>Enable</Button>
-                      <Button variant={!settings.enablePosModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enablePosModule: false }); }}>Disable</Button>
-                    </div>
+                    <Switch
+                      id="pos-module"
+                      checked={settings.enablePosModule}
+                      onCheckedChange={(checked) => updateAppSettings({ enablePosModule: checked })}
+                    />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-sm font-medium">Receipts Module</label>
-                      <p className="text-sm text-muted-foreground">Enable quick receipt generation for walk-in customers</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <label htmlFor="receipts-module" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Receipts Module
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        Enable quick receipt generation for walk-in customers
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant={settings.enableReceiptsModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableReceiptsModule: true }); }}>Enable</Button>
-                      <Button variant={!settings.enableReceiptsModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableReceiptsModule: false }); }}>Disable</Button>
-                    </div>
+                    <Switch
+                      id="receipts-module"
+                      checked={settings.enableReceiptsModule}
+                      onCheckedChange={(checked) => updateAppSettings({ enableReceiptsModule: checked })}
+                    />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-sm font-medium">Accounting Module</label>
-                      <p className="text-sm text-muted-foreground">Show accounting features like journals and reports</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <label htmlFor="accounting-module" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Accounting Module
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        Show accounting features like journals and reports
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant={settings.enableAccountingModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableAccountingModule: true }); }}>Enable</Button>
-                      <Button variant={!settings.enableAccountingModule ? "default" : "outline"} size="sm" onClick={() => { updateAppSettings({ enableAccountingModule: false }); }}>Disable</Button>
-                    </div>
+                    <Switch
+                      id="accounting-module"
+                      checked={settings.enableAccountingModule}
+                      onCheckedChange={(checked) => updateAppSettings({ enableAccountingModule: checked })}
+                    />
                   </div>
                 </div>
               </CardContent>

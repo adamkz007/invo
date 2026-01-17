@@ -3,9 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { FileText, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type Metrics = { accountsReceivableTotal: number; revenueMonth: number; cashBalance: number; expensesMonth: number } | null;
 
@@ -25,6 +26,7 @@ function MetricCard({ title, value, hint, icon: Icon }: { title: string; value: 
 }
 
 export default function AccountingPage() {
+  const { settings } = useSettings();
   const [metrics, setMetrics] = useState<Metrics>(null);
   const [period, setPeriod] = useState<string>('MTD');
   const [loading, setLoading] = useState(false);
@@ -96,10 +98,10 @@ export default function AccountingPage() {
 
       {/* KPI Cards (mobile-first grid) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <MetricCard title="Accounts Receivable" value={`$${ar.toFixed(2)}`} hint="Open invoices" icon={FileText} />
-        <MetricCard title="Cash" value={`$${cash.toFixed(2)}`} hint="Bank & cash" icon={Wallet} />
-        <MetricCard title={`Revenue${period === 'All Time' ? '' : ` (${period})`}`} value={`$${revenue.toFixed(2)}`} icon={TrendingUp} />
-        <MetricCard title={`Expenses${period === 'All Time' ? '' : ` (${period})`}`} value={`$${expenses.toFixed(2)}`} icon={TrendingDown} />
+        <MetricCard title="Accounts Receivable" value={formatCurrency(ar, settings)} hint="Unpaid invoice balance" icon={FileText} />
+        <MetricCard title="Cash" value={formatCurrency(cash, settings)} hint="Bank & cash" icon={Wallet} />
+        <MetricCard title={`Sales${period === 'All Time' ? '' : ` (${period})`}`} value={formatCurrency(revenue, settings)} hint="Total invoiced" icon={TrendingUp} />
+        <MetricCard title={`Expenses${period === 'All Time' ? '' : ` (${period})`}`} value={formatCurrency(expenses, settings)} icon={TrendingDown} />
       </div>
 
       {/* Quick actions (thumb-friendly) */}

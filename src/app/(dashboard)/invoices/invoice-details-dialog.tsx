@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { AppSettings } from '@/lib/utils';
 import type { InvoiceWithDetails } from '@/types';
 import type { CompanyDetails } from '../dashboard/dashboard-types';
-import { Calendar, Download, MessageCircle } from 'lucide-react';
+import { Calendar, Download, MessageCircle, Loader2 } from 'lucide-react';
 import { formatPhoneNumber, isValidWhatsAppNumber } from '@/lib/whatsapp';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -29,6 +30,49 @@ export function InvoiceDetailsDialog({
   onClose,
   onDownloadPDF,
 }: Props) {
+  const [isShareLoading, setIsShareLoading] = useState(false);
+
+  const handleWhatsAppShare = async (inv: InvoiceWithDetails) => {
+    const phone = formatPhoneNumber(inv.customer.phoneNumber!);
+    const message = `Hello! Here's your invoice totalling RM${inv.total.toFixed(2)} from Invo`;
+    
+    // Check if Web Share API with files is supported (mainly mobile devices)
+    const canShareFiles = typeof navigator !== 'undefined' && 
+      navigator.share && 
+      navigator.canShare;
+    
+    if (canShareFiles) {
+      try {
+        setIsShareLoading(true);
+        
+        // Dynamic import to reduce bundle size
+        const { generateInvoicePDFBlob } = await import('@/lib/pdf-generator');
+        const { blob, filename } = await generateInvoicePDFBlob(inv, companyDetails, settings);
+        
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        
+        // Check if this specific file type can be shared
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            text: message,
+            files: [file],
+          });
+          setIsShareLoading(false);
+          return;
+        }
+      } catch (error) {
+        // User cancelled or share failed, fall back to text-only
+        console.log('Web Share failed, falling back to WhatsApp URL:', error);
+      } finally {
+        setIsShareLoading(false);
+      }
+    }
+    
+    // Fallback: Open WhatsApp with text-only message
+    const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <Dialog open={invoice !== null} onOpenChange={onClose}>
       <DialogContent className="max-w-xl w-full mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[90vh] sm:max-h-[85vh] dark:bg-gradient-to-br dark:from-card dark:to-card/95">
@@ -191,15 +235,15 @@ export function InvoiceDetailsDialog({
               </Button>
               {invoice.customer.phoneNumber && isValidWhatsAppNumber(invoice.customer.phoneNumber) && (
                 <Button
-                  onClick={() => {
-                    const phone = formatPhoneNumber(invoice.customer.phoneNumber!);
-                    const message = `Hello! Here's your invoice totalling RM${invoice.total.toFixed(2)} from Invo`;
-                    const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
-                    window.open(url, '_blank', 'noopener,noreferrer');
-                  }}
-                  className="flex items-center gap-2 bg-[#25D366] hover:bg-[#20BA5A] text-white"
+                  onClick={() => handleWhatsAppShare(invoice)}
+                  disabled={isShareLoading}
+                  className="flex items-center gap-2 bg-[#25D366] hover:bg-[#20BA5A] text-white disabled:opacity-70"
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  {isShareLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MessageCircle className="h-4 w-4" />
+                  )}
                   WhatsApp
                 </Button>
               )}

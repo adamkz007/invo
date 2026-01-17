@@ -2,10 +2,13 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type PLItem = { accountId: string; code: string; name: string; type: string; amount: number };
 
 export default function ProfitLossPage() {
+  const { settings } = useSettings();
   const [revenues, setRevenues] = useState<PLItem[]>([]);
   const [expenses, setExpenses] = useState<PLItem[]>([]);
   const [totals, setTotals] = useState<{ revenue: number; expense: number; netIncome: number }>({ revenue: 0, expense: 0, netIncome: 0 });
@@ -69,7 +72,7 @@ export default function ProfitLossPage() {
               <div key={i.accountId} className="grid grid-cols-2 sm:grid-cols-3 items-center p-3 text-sm">
                 <div className="font-medium">{i.code}</div>
                 <div className="text-muted-foreground">{i.name}</div>
-                <div className="font-mono">{i.amount.toFixed(2)}</div>
+                <div className="font-mono">{formatCurrency(i.amount, settings)}</div>
               </div>
             ))}
           </div>
@@ -86,13 +89,13 @@ export default function ProfitLossPage() {
               <div key={i.accountId} className="grid grid-cols-2 sm:grid-cols-3 items-center p-3 text-sm">
                 <div className="font-medium">{i.code}</div>
                 <div className="text-muted-foreground">{i.name}</div>
-                <div className="font-mono">{i.amount.toFixed(2)}</div>
+                <div className="font-mono">{formatCurrency(i.amount, settings)}</div>
               </div>
             ))}
             <div className="grid grid-cols-2 sm:grid-cols-3 items-center p-3 text-sm bg-muted/30">
               <div className="font-medium">Net Income</div>
               <div />
-              <div className="font-mono">{totals.netIncome.toFixed(2)}</div>
+              <div className="font-mono">{formatCurrency(totals.netIncome, settings)}</div>
             </div>
           </div>
         </CardContent>

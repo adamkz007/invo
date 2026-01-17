@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type Expense = { id: string; vendor: string; date: string; total: string; status: string };
 
 export default function ExpensesPage() {
+  const { settings } = useSettings();
   const [items, setItems] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +39,7 @@ export default function ExpensesPage() {
               <div key={e.id} className="grid grid-cols-2 sm:grid-cols-4 items-center p-3 text-sm">
                 <div className="font-medium">{e.vendor}</div>
                 <div className="text-muted-foreground">{new Date(e.date).toLocaleDateString()}</div>
-                <div className="font-mono">{Number(e.total).toFixed(2)}</div>
+                <div className="font-mono">{formatCurrency(Number(e.total), settings)}</div>
                 <div className="text-xs">{e.status}</div>
               </div>
             ))}

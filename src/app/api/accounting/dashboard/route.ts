@@ -17,22 +17,33 @@ export async function GET(req: NextRequest) {
     const start = startParam ? new Date(startParam) : null;
     const end = endParam ? new Date(endParam) : null;
 
-    const receiptsDateWhere = start || end ? {
+    const invoicesDateWhere = start || end ? {
+      issueDate: {
+        ...(start ? { gte: start } : {}),
+        ...(end ? { lte: end } : {}),
+      },
+    } : {};
+
+    const expensesDateWhere = start || end ? {
       date: {
         ...(start ? { gte: start } : {}),
         ...(end ? { lte: end } : {}),
       },
     } : {};
 
-    const expensesDateWhere = receiptsDateWhere;
-
-    const [openInvoices, paidReceipts, expensesInRange, bankAccounts] = await Promise.all([
+    const [openInvoices, invoicesInRange, expensesInRange, bankAccounts] = await Promise.all([
+      // Open invoices for accounts receivable (not yet fully paid)
       prisma.invoice.findMany({
-        where: { userId: user.id, status: { in: ['DRAFT', 'SENT', 'PARTIAL'] } },
+        where: { userId: user.id, status: { in: ['DRAFT', 'SENT', 'PARTIAL', 'OVERDUE'] } },
         select: { total: true, paidAmount: true },
       }),
-      prisma.receipt.findMany({
-        where: { userId: user.id, ...(receiptsDateWhere as any) },
+      // All invoices in date range for revenue (excluding cancelled and drafts)
+      prisma.invoice.findMany({
+        where: { 
+          userId: user.id, 
+          status: { notIn: ['CANCELLED', 'DRAFT'] },
+          ...(invoicesDateWhere as any) 
+        },
         select: { total: true },
       }),
       prisma.expense.findMany({
@@ -43,7 +54,8 @@ export async function GET(req: NextRequest) {
     ]);
 
     const accountsReceivableTotal = openInvoices.reduce((sum, inv) => sum + (toNumber(inv.total) - toNumber(inv.paidAmount || 0)), 0);
-    const revenueTotal = paidReceipts.reduce((sum, r) => sum + toNumber(r.total), 0);
+    // Revenue now reflects total amount invoiced (excluding cancelled and draft invoices)
+    const revenueTotal = invoicesInRange.reduce((sum, inv) => sum + toNumber(inv.total), 0);
     const expensesTotal = expensesInRange.reduce((sum, e) => sum + toNumber(e.total), 0);
 
     // Cash balance as-of end date (or now if not provided)

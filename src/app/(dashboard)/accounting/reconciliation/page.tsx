@@ -3,11 +3,14 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type BankAccount = { id: string; name: string; glAccountId: string | null };
 type BankTx = { id: string; date: string; amount: string; description: string; status: string };
 
 export default function ReconciliationPage() {
+  const { settings } = useSettings();
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [selected, setSelected] = useState<string>('');
   const [csvText, setCsvText] = useState('');
@@ -79,7 +82,7 @@ export default function ReconciliationPage() {
               <div key={t.id} className="grid grid-cols-2 sm:grid-cols-4 items-center p-3 text-sm">
                 <div>{new Date(t.date).toLocaleDateString()}</div>
                 <div className="text-muted-foreground">{t.description}</div>
-                <div className="font-mono">{Number(t.amount).toFixed(2)}</div>
+                <div className="font-mono">{formatCurrency(Number(t.amount), settings)}</div>
                 <div className="text-xs">{t.status}</div>
               </div>
             ))}

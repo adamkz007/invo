@@ -4,11 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type Account = { id: string; code: string; name: string; type: string; parentId: string | null; isActive: boolean };
 type TBItem = { accountId: string; code: string; name: string; type: string; debit: number; credit: number; balance: number };
 
 export default function AccountsPage() {
+  const { settings } = useSettings();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [form, setForm] = useState({ code: '', name: '', type: 'ASSET' });
   const [tbItems, setTbItems] = useState<TBItem[]>([]);
@@ -74,14 +77,14 @@ export default function AccountsPage() {
               <div key={t}>
                 <div className="flex items-center justify-between p-3 text-sm">
                   <div className="font-medium">{t}</div>
-                  <div className="font-mono">{(grouped[t]?.total || 0).toFixed(2)}</div>
+                  <div className="font-mono">{formatCurrency(grouped[t]?.total || 0, settings)}</div>
                 </div>
                 <div className="divide-y">
                   {(grouped[t]?.items || []).map((i) => (
                     <div key={i.accountId} className="grid grid-cols-2 sm:grid-cols-3 items-center p-3 text-xs">
                       <div className="font-medium">{i.code}</div>
                       <div className="text-muted-foreground">{i.name}</div>
-                      <div className="font-mono">{i.balance.toFixed(2)}</div>
+                      <div className="font-mono">{formatCurrency(i.balance, settings)}</div>
                     </div>
                   ))}
                 </div>

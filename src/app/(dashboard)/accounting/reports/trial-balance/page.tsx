@@ -2,10 +2,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type TBItem = { accountId: string; code: string; name: string; type: string; debit: number; credit: number; balance: number };
 
 export default function TrialBalancePage() {
+  const { settings } = useSettings();
   const [items, setItems] = useState<TBItem[]>([]);
   const [totals, setTotals] = useState<{ debit: number; credit: number }>({ debit: 0, credit: 0 });
   const [loading, setLoading] = useState(false);
@@ -64,16 +67,16 @@ export default function TrialBalancePage() {
                 <div className="font-medium">{i.code}</div>
                 <div className="text-muted-foreground">{i.name}</div>
                 <div className="hidden sm:block text-muted-foreground">{i.type}</div>
-                <div className="font-mono">{i.debit.toFixed(2)}</div>
-                <div className="font-mono">{i.credit.toFixed(2)}</div>
+                <div className="font-mono">{formatCurrency(i.debit, settings)}</div>
+                <div className="font-mono">{formatCurrency(i.credit, settings)}</div>
               </div>
             ))}
             <div className="grid grid-cols-2 sm:grid-cols-5 items-center p-3 text-sm bg-muted/30">
               <div className="font-medium">Totals</div>
               <div className="text-muted-foreground">{items.length} accounts</div>
               <div className="hidden sm:block" />
-              <div className="font-mono">{totals.debit.toFixed(2)}</div>
-              <div className="font-mono">{totals.credit.toFixed(2)}</div>
+              <div className="font-mono">{formatCurrency(totals.debit, settings)}</div>
+              <div className="font-mono">{formatCurrency(totals.credit, settings)}</div>
             </div>
           </div>
         </CardContent>

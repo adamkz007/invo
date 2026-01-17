@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 export default function NewExpensePage() {
+  const { settings } = useSettings();
   const router = useRouter();
   const { showToast } = useToast();
   const [vendor, setVendor] = useState('');
@@ -60,7 +63,7 @@ export default function NewExpensePage() {
               <SelectItem value="AP">Accounts Payable</SelectItem>
             </SelectContent>
           </Select>
-          <div className="text-sm">Amount: <span className="font-mono">{total.toFixed(2)}</span></div>
+          <div className="text-sm">Amount: <span className="font-mono">{formatCurrency(total, settings)}</span></div>
           <Button onClick={submit} disabled={loading} className="w-full">{loading ? 'Saving…' : 'Save'}</Button>
         </CardContent>
       </Card>

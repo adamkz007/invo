@@ -2,10 +2,13 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useSettings } from '@/contexts/settings-context';
+import { formatCurrency } from '@/lib/utils';
 
 type CFItem = { accountId: string; code: string; name: string; delta: number };
 
 export default function CashFlowPage() {
+  const { settings } = useSettings();
   const [items, setItems] = useState<CFItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -61,13 +64,13 @@ export default function CashFlowPage() {
               <div key={i.accountId} className="grid grid-cols-2 sm:grid-cols-3 items-center p-3 text-sm">
                 <div className="font-medium">{i.code}</div>
                 <div className="text-muted-foreground">{i.name}</div>
-                <div className="font-mono">{i.delta.toFixed(2)}</div>
+                <div className="font-mono">{formatCurrency(i.delta, settings)}</div>
               </div>
             ))}
             <div className="grid grid-cols-2 sm:grid-cols-3 items-center p-3 text-sm bg-muted/30">
               <div className="font-medium">Total</div>
               <div />
-              <div className="font-mono">{total.toFixed(2)}</div>
+              <div className="font-mono">{formatCurrency(total, settings)}</div>
             </div>
           </div>
         </CardContent>

@@ -919,6 +919,194 @@ export async function downloadInvoicePDF(
 }
 
 /**
+ * Generate invoice PDF and return as Blob (for sharing via WhatsApp, etc.)
+ */
+export async function generateInvoicePDFBlob(
+  invoice: InvoiceWithDetails, 
+  companyDetails: CompanyDetails | null = null,
+  settings: AppSettings = defaultSettings
+): Promise<{ blob: Blob; filename: string }> {
+  // Create a new PDF document
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+    compress: true
+  });
+  
+  // Set up document properties
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 20;
+  
+  // Format dates properly
+  const formatDate = (date: Date | string) => {
+    if (typeof date === 'string') {
+      return new Date(date).toLocaleDateString();
+    }
+    return date.toLocaleDateString();
+  };
+  
+  // Add a blue header bar
+  doc.setFillColor(2, 33, 142);
+  doc.rect(0, 0, pageWidth, 40, 'F');
+  
+  // Add INVOICE text in white
+  doc.setFontSize(28);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('INVOICE', margin, 25);
+  
+  // Company Header - Right side
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(companyDetails?.legalName || 'Your Company', pageWidth - margin, 15, { align: 'right' });
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  
+  if (companyDetails) {
+    let yPos = 20;
+    const companyAddress = formatCompanyAddress(companyDetails);
+    
+    if (companyAddress) {
+      const addressLines = companyAddress.split('\n');
+      addressLines.forEach(line => {
+        doc.text(line, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 5;
+      });
+    }
+    
+    if (companyDetails.email) {
+      doc.text(companyDetails.email, pageWidth - margin, yPos, { align: 'right' });
+      yPos += 5;
+    }
+    if (companyDetails.phoneNumber) {
+      doc.text(companyDetails.phoneNumber, pageWidth - margin, yPos, { align: 'right' });
+    }
+  }
+  
+  // Add light blue balance due section
+  doc.setFillColor(220, 230, 255);
+  doc.rect(0, 40, pageWidth, 15, 'F');
+  
+  // Add balance due text
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('BALANCE DUE', pageWidth - margin - 80, 50);
+  
+  doc.setFontSize(14);
+  const balanceDue = invoice.status === 'PAID' ? 0 : 
+    (invoice.status === 'PARTIAL' ? invoice.total - (invoice.paidAmount || 0) : invoice.total);
+  doc.text(formatCurrency(balanceDue, settings), pageWidth - margin, 50, { align: 'right' });
+  
+  // Customer details
+  const customerY = 70;
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text(invoice.customer.name, margin, customerY);
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 80);
+  
+  let yOffset = 7;
+  if (invoice.customer.email) {
+    doc.text(invoice.customer.email, margin, customerY + yOffset);
+    yOffset += 5;
+  }
+  if (invoice.customer.phoneNumber) {
+    doc.text(invoice.customer.phoneNumber, margin, customerY + yOffset);
+    yOffset += 5;
+  }
+  
+  // Invoice details - Right side
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('Invoice #:', pageWidth - margin - 50, customerY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoice.invoiceNumber, pageWidth - margin, customerY, { align: 'right' });
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Issue Date:', pageWidth - margin - 50, customerY + 7);
+  doc.setFont('helvetica', 'normal');
+  doc.text(formatDate(invoice.issueDate), pageWidth - margin, customerY + 7, { align: 'right' });
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Due Date:', pageWidth - margin - 50, customerY + 14);
+  doc.setFont('helvetica', 'normal');
+  doc.text(formatDate(invoice.dueDate), pageWidth - margin, customerY + 14, { align: 'right' });
+  
+  // Items table
+  const tableStartY = 110;
+  
+  // Table header
+  doc.setFillColor(245, 245, 245);
+  doc.rect(margin, tableStartY, pageWidth - margin * 2, 10, 'F');
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('Item', margin + 2, tableStartY + 7);
+  doc.text('Qty', pageWidth - margin - 70, tableStartY + 7, { align: 'right' });
+  doc.text('Price', pageWidth - margin - 40, tableStartY + 7, { align: 'right' });
+  doc.text('Total', pageWidth - margin - 2, tableStartY + 7, { align: 'right' });
+  
+  // Table rows
+  let currentY = tableStartY + 15;
+  doc.setFont('helvetica', 'normal');
+  
+  invoice.items?.forEach((item) => {
+    doc.text(item.product.name, margin + 2, currentY);
+    doc.text(String(item.quantity), pageWidth - margin - 70, currentY, { align: 'right' });
+    doc.text(formatCurrency(item.unitPrice, settings), pageWidth - margin - 40, currentY, { align: 'right' });
+    doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin - 2, currentY, { align: 'right' });
+    currentY += 8;
+  });
+  
+  // Totals section
+  currentY += 10;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(pageWidth - margin - 80, currentY - 5, pageWidth - margin, currentY - 5);
+  
+  doc.text('Subtotal:', pageWidth - margin - 50, currentY);
+  doc.text(formatCurrency(invoice.subtotal || 0, settings), pageWidth - margin, currentY, { align: 'right' });
+  
+  if (invoice.taxRate > 0) {
+    currentY += 7;
+    doc.text(`Tax (${invoice.taxRate}%):`, pageWidth - margin - 50, currentY);
+    doc.text(formatCurrency(invoice.taxAmount || 0, settings), pageWidth - margin, currentY, { align: 'right' });
+  }
+  
+  if (invoice.discountRate > 0) {
+    currentY += 7;
+    doc.text(`Discount (${invoice.discountRate}%):`, pageWidth - margin - 50, currentY);
+    doc.text(`-${formatCurrency(invoice.discountAmount || 0, settings)}`, pageWidth - margin, currentY, { align: 'right' });
+  }
+  
+  currentY += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Total:', pageWidth - margin - 50, currentY);
+  doc.text(formatCurrency(invoice.total || 0, settings), pageWidth - margin, currentY, { align: 'right' });
+  
+  // Footer
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(128, 128, 128);
+  doc.text('Thank you for your business!', pageWidth / 2, pageHeight - 20, { align: 'center' });
+  
+  const filename = `${invoice.invoiceNumber}.pdf`;
+  const blob = doc.output('blob');
+  
+  return { blob, filename };
+}
+
+/**
  * Generate and download a receipt for a paid invoice or standalone receipt
  */
 export async function downloadReceiptPDF(
