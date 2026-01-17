@@ -196,16 +196,16 @@ export function InvoiceDetailsDialog({
                 <span>{formatCurrency(invoice.total || 0, settings)}</span>
               </div>
 
-              {invoice.paidAmount && invoice.paidAmount > 0 && (
+              {(invoice.paidAmount ?? 0) > 0 && (
                 <>
                   <div className="flex justify-between items-center text-sm text-green-600">
                     <span>Paid:</span>
-                    <span>{formatCurrency(invoice.paidAmount, settings)}</span>
+                    <span>{formatCurrency(invoice.paidAmount ?? 0, settings)}</span>
                   </div>
 
                   <div className="flex justify-between items-center font-bold">
                     <span>Balance Due:</span>
-                    <span>{formatCurrency(invoice.total - invoice.paidAmount, settings)}</span>
+                    <span>{formatCurrency(invoice.total - (invoice.paidAmount ?? 0), settings)}</span>
                   </div>
                 </>
               )}
@@ -254,4 +254,3 @@ export function InvoiceDetailsDialog({
     </Dialog>
   );
 }
-

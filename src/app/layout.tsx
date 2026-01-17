@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SettingsProvider } from '@/contexts/settings-context';
 import { PWAProvider } from "@/components/providers/pwa-provider";
 import { OrganizationSchema, WebsiteSchema } from "@/components/seo/structured-data";
+import { NavigationSkeletonOverlay } from "@/components/navigation/navigation-skeleton-overlay";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -131,6 +132,7 @@ export default function RootLayout({
             <PWAProvider>
               <ToastProvider>
                 {children}
+                <NavigationSkeletonOverlay />
                 <div id="datepicker-portal" />
               </ToastProvider>
             </PWAProvider>

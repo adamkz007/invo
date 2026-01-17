@@ -140,9 +140,24 @@
   }
 }
 
+@keyframes invo-loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   .animate-slide-up {
     animation: slide-up 0.3s ease-out forwards;
+  }
+
+  .invo-loading-delay {
+    opacity: 0;
+    animation: invo-loading-fade-in 0.2s ease-out forwards;
+    animation-delay: 350ms;
   }
   
   /* Hide scrollbar but keep functionality */

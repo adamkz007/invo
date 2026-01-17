@@ -285,7 +285,10 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-4 pb-20 md:p-6 md:pb-6">{children}</main>
+        <main className="relative flex-1 overflow-auto p-4 pb-20 md:p-6 md:pb-6">
+          {children}
+          <div id="nav-skeleton-portal" />
+        </main>
       </div>
       
       {/* Mobile bottom navigation */}
