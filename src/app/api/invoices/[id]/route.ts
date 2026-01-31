@@ -45,6 +45,13 @@ function serialiseInvoice(invoice: InvoiceWithItems) {
           }
         : null,
     })),
+    payments: invoice.payments?.map((payment) => ({
+      id: payment.id,
+      amount: toNumber(payment.amount),
+      paymentDate: payment.paymentDate.toISOString(),
+      paymentMethod: payment.paymentMethod,
+      notes: payment.notes,
+    })) ?? [],
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
   };
@@ -63,6 +70,9 @@ async function fetchInvoice(userId: string, invoiceId: string, tx?: Prisma.Trans
         include: {
           product: true,
         },
+      },
+      payments: {
+        orderBy: { paymentDate: 'asc' },
       },
     },
   });
@@ -225,8 +235,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
                 product: true,
               },
             },
+            payments: {
+              orderBy: { paymentDate: 'desc' },
+            },
           },
         }) as InvoiceWithItems;
+
+        // Create payment record
+        await tx.invoicePayment.create({
+          data: {
+            invoiceId: invoice.id,
+            amount: paymentDecimal,
+            paymentDate: parsedPaymentDate,
+            paymentMethod: method,
+          },
+        });
 
         // Post accounting journal entry for payment (Cash/AR)
         try {

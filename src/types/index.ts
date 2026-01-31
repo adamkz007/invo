@@ -103,6 +103,7 @@ export interface InvoiceFormValues {
   dueDate: Date;
   status: InvoiceStatus;
   taxRate: number;
+  discountType?: 'PERCENT' | 'FIXED';
   discountRate: number;
   notes?: string;
   items: InvoiceItemFormValues[];
@@ -165,6 +166,14 @@ export interface InvoiceItemWithDetails {
   description?: string;
 }
 
+export interface InvoicePaymentDetails {
+  id: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  notes?: string | null;
+}
+
 export interface InvoiceWithDetails {
   id: string;
   invoiceNumber: string;
@@ -191,6 +200,7 @@ export interface InvoiceWithDetails {
   paidAmount: number;
   notes?: string;
   items: InvoiceItemWithDetails[];
+  payments?: InvoicePaymentDetails[];
 }
 
 // Receipt specific types

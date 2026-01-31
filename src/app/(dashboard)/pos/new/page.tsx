@@ -19,6 +19,7 @@ interface Product {
   price: number;
   stock: number;
   category?: string;
+  imageUrl?: string | null;
 }
 
 interface OrderItem {
@@ -254,24 +255,41 @@ export default function NewOrderPage() {
                   <button
                     type="button"
                     key={product.id}
-                    className="flex flex-col items-start gap-2 rounded-lg border p-3 text-left hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="flex flex-col rounded-lg border overflow-hidden text-left hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                     onClick={() => addToOrder(product)}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <h4 className="font-semibold">{product.name}</h4>
-                      <Badge variant="secondary">RM {product.price.toFixed(2)}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
-                      <span>Stock: {product.stock}</span>
-                      {product.stock <= 5 && (
-                        <Badge variant="destructive" className="text-xs">
-                          Low Stock
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium text-primary">
-                      <Plus className="h-4 w-4" />
-                      Add
+                    {/* Product Image */}
+                    {product.imageUrl ? (
+                      <div className="w-full h-32 bg-muted/30 overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-24 bg-muted/20 flex items-center justify-center">
+                        <div className="text-4xl opacity-30">📦</div>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2 p-3 w-full">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-semibold leading-tight">{product.name}</h4>
+                        <Badge variant="secondary" className="shrink-0">RM {product.price.toFixed(2)}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
+                        <span>Stock: {product.stock}</span>
+                        {product.stock <= 5 && (
+                          <Badge variant="destructive" className="text-xs">
+                            Low Stock
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium text-primary mt-1">
+                        <Plus className="h-4 w-4" />
+                        Add
+                      </div>
                     </div>
                   </button>
                 ))}

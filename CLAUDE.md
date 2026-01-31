@@ -31,6 +31,9 @@ Invo is a Malaysian invoicing and POS application built for freelancers and SMEs
 - `/src/app/api/` - API routes organized by domain
 - `/src/components/` - Organized by feature (invoices, customers, pos, accounting)
 - `/src/lib/` - Utilities, Prisma client, auth, PDF generation
+- `/src/lib/data/` - Data access layer with typed query functions (invoices.ts, products.ts, etc.)
+- `/src/lib/accounting/` - Double-entry accounting posting utilities
+- `/src/contexts/` - React context providers (settings, etc.)
 - `/prisma/` - Database schema and migrations
 
 ## Common Development Commands
@@ -55,22 +58,27 @@ Invo is a Malaysian invoicing and POS application built for freelancers and SMEs
 ## Important Rules
 
 **Database:**
-- Always ask for explicit approval before resetting any database (from `.trae/rules/project_rules.md`)
+- Always ask for explicit approval before resetting any database
 - Test database connections with `npm run test:db` before major operations
 - Use migration scripts when deploying schema changes to production
 
 **Code Patterns:**
+- Import via the `@/*` alias instead of deep relative paths
 - API routes use Next.js 15 App Router conventions (`route.ts` files)
+- API routes authenticate via `getUserFromRequest()` from `@/lib/auth`
+- Cache invalidation uses `revalidateTag()` with user-scoped tags (e.g., `invoices:${userId}`)
 - Client components are separated from server components (e.g., `dashboard-client.tsx`)
 - Forms use React Hook Form with Zod validation schemas
-- Database operations use Prisma with proper transaction handling
+- Database operations use Prisma with proper transaction handling in `prisma.$transaction()`
 - Audit logging is automatically handled for accounting models
+- Feature folders use kebab-case filenames (e.g., `invoice-form.tsx`), exported components use PascalCase
 
 **UI/UX:**
 - Uses shadcn/ui component library with custom Tailwind theme
 - Dark mode support via `next-themes`
 - Mobile-first responsive design
 - PWA capabilities for offline usage
+- Settings context (`useSettings()`) controls module visibility (POS, Receipts, Accounting)
 
 ## Deployment
 

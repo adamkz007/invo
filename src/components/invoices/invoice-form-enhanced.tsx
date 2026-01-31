@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Form,
   FormControl,
@@ -24,18 +25,9 @@ import { format } from 'date-fns';
 import { Trash2, Plus } from 'lucide-react';
 import { ShadcnDatePickerComponent } from '@/components/ui/shadcn-date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
-// Define InvoiceStatus enum locally
-export enum InvoiceStatus {
-  DRAFT = 'DRAFT',
-  SENT = 'SENT',
-  PAID = 'PAID',
-  PARTIAL = 'PARTIAL',
-  OVERDUE = 'OVERDUE',
-  CANCELLED = 'CANCELLED'
-}
 import { calculateInvoiceTotals, formatCurrency } from '@/lib/utils';
 import { toNumber } from '@/lib/decimal';
-import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues } from '@/types';
+import { CustomerWithRelations, ProductWithRelations, InvoiceFormValues, InvoiceStatus } from '@/types';
 // Dynamic imports for form dialogs to reduce bundle size
 // import CustomerFormDialog from '@/components/customers/customer-form-dialog';
 // import ProductFormDialog from '@/components/products/product-form-dialog';
@@ -57,9 +49,18 @@ const invoiceFormSchema = z.object({
     disableStockManagement: z.boolean().optional().default(false),
   })).min(1, { message: 'Add at least one item' }),
   taxRate: z.coerce.number().min(0).max(100),
-  discountRate: z.coerce.number().min(0).max(100),
+  discountType: z.enum(['PERCENT', 'FIXED']).optional(),
+  discountRate: z.coerce.number().min(0),
   notes: z.string().optional(),
   userId: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if ((data.discountType ?? 'PERCENT') === 'PERCENT' && data.discountRate > 100) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['discountRate'],
+      message: 'Discount Rate must be between 0 and 100',
+    });
+  }
 });
 
 interface InvoiceFormProps {
@@ -78,17 +79,19 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
 
   // Memoize default form values to prevent recreation
   const memoizedDefaultValues = useMemo(() => {
-    return defaultValues || {
+    const baseDefaults: InvoiceFormValues = {
       customerId: preSelectedCustomerId || '',
       issueDate: new Date(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Default to 30 days from now
       status: InvoiceStatus.DRAFT,
       items: [{ productId: '', quantity: 1, unitPrice: 0, description: '', disableStockManagement: false }],
       taxRate: 0,
+      discountType: 'PERCENT',
       discountRate: 0,
       notes: '',
       userId: '',
     };
+    return defaultValues ? { ...baseDefaults, ...defaultValues } : baseDefaults;
   }, [defaultValues, preSelectedCustomerId]);
 
   // Initialize form first, before any effects that depend on it
@@ -179,7 +182,10 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
           unitPrice: item?.unitPrice || 0,
         })) || [],
         values.taxRate || 0,
-        values.discountRate || 0
+        {
+          type: (values.discountType ?? 'PERCENT') === 'FIXED' ? 'FIXED' : 'PERCENT',
+          value: values.discountRate || 0,
+        }
       );
       setTotals(totals);
     });
@@ -269,8 +275,25 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
       // The server will extract the user ID from the token
       
       // Add calculated totals and user ID to the form values
+      const subtotal =
+        values.items?.reduce(
+          (sum, item) => sum + (item?.quantity || 0) * (item?.unitPrice || 0),
+          0,
+        ) || 0;
+
+      const discountType = values.discountType ?? 'PERCENT';
+      const rawDiscount = values.discountRate ?? 0;
+      const effectiveFixedDiscount = Math.min(subtotal, Math.max(0, rawDiscount));
+      const discountRateForApi =
+        discountType === 'FIXED'
+          ? subtotal > 0
+            ? (effectiveFixedDiscount / subtotal) * 100
+            : 0
+          : rawDiscount;
+
       const invoiceData = {
         ...values,
+        discountRate: discountRateForApi,
         userId,
         subtotal: totals.subtotal,
         taxAmount: totals.taxAmount,
@@ -403,6 +426,8 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
   if (isLoading) {
     return <InlineLoading text="Loading..." />;
   }
+
+  const discountType = form.watch('discountType') ?? 'PERCENT';
 
   return (
     <Form {...form}>
@@ -743,18 +768,68 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                 )}
               />
               
-              {/* Discount Rate */}
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="discountType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Discount Type</FormLabel>
+                      <FormControl>
+                        <Tabs
+                          value={field.value ?? 'PERCENT'}
+                          onValueChange={(nextValue) => {
+                            const nextType = nextValue === 'FIXED' ? 'FIXED' : 'PERCENT';
+                            const currentType = (field.value ?? 'PERCENT') === 'FIXED' ? 'FIXED' : 'PERCENT';
+                            if (nextType === currentType) return;
+
+                            const items = form.getValues('items') ?? [];
+                            const subtotal = items.reduce(
+                              (sum, item) => sum + (item?.quantity || 0) * (item?.unitPrice || 0),
+                              0,
+                            );
+                            const currentValue = form.getValues('discountRate') ?? 0;
+
+                            const nextDiscountRate =
+                              nextType === 'FIXED'
+                                ? subtotal * (currentValue / 100)
+                                : subtotal > 0
+                                  ? (currentValue / subtotal) * 100
+                                  : 0;
+
+                            form.setValue('discountRate', Number.isFinite(nextDiscountRate) ? nextDiscountRate : 0);
+                            field.onChange(nextType);
+                          }}
+                        >
+                          <TabsList className="w-full">
+                            <TabsTrigger value="PERCENT" className="text-xs sm:text-sm">
+                              %
+                            </TabsTrigger>
+                            <TabsTrigger value="FIXED" className="text-xs sm:text-sm">
+                              Fixed
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </FormControl>
+                      <FormMessage className="text-xs sm:text-sm" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Discount Value */}
               <FormField
                 control={form.control}
                 name="discountRate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Discount Rate (%)</FormLabel>
+                    <FormLabel className="text-sm sm:text-base">
+                      {discountType === 'FIXED' ? 'Discount Amount' : 'Discount Rate (%)'}
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min="0"
-                        max="100"
+                        max={discountType === 'FIXED' ? undefined : '100'}
                         step="0.01"
                         className="h-8 sm:h-10 text-xs sm:text-sm"
                         {...field}
@@ -765,6 +840,7 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                   </FormItem>
                 )}
               />
+              </div>
             </div>
             <div className="mt-3 sm:mt-4" ref={notesRef}>
               <FormField
@@ -804,7 +880,11 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                 <span>{formatCurrency(totals.taxAmount)}</span>
               </div>
               <div className="flex justify-between text-sm sm:text-base">
-                <span>Discount ({form.watch('discountRate')}%):</span>
+                <span>
+                  {discountType === 'FIXED'
+                    ? 'Discount:'
+                    : `Discount (${form.watch('discountRate')}%):`}
+                </span>
                 <span>-{formatCurrency(totals.discountAmount)}</span>
               </div>
               <div className="flex justify-between font-bold text-base sm:text-lg pt-2 border-t">

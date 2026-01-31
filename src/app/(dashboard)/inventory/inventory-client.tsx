@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, MoreHorizontal, Search, Edit, Trash, Package } from 'lucide-react';
+import { Plus, MoreHorizontal, Search, Edit, Trash, Package, ImageIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
 import { ProductSummary } from '@/types';
@@ -171,6 +171,7 @@ export function InventoryClient({ initialPage }: InventoryClientProps) {
             quantity: updatedProduct.quantity ?? product.quantity,
             disableStockManagement:
               updatedProduct.disableStockManagement ?? product.disableStockManagement,
+            imageUrl: updatedProduct.imageUrl !== undefined ? updatedProduct.imageUrl : product.imageUrl,
           };
         }),
       );
@@ -183,6 +184,7 @@ export function InventoryClient({ initialPage }: InventoryClientProps) {
               quantity: updatedProduct.quantity ?? prev.quantity,
               disableStockManagement:
                 updatedProduct.disableStockManagement ?? prev.disableStockManagement,
+              imageUrl: updatedProduct.imageUrl !== undefined ? updatedProduct.imageUrl : prev.imageUrl,
             }
           : prev,
       );
@@ -291,6 +293,7 @@ export function InventoryClient({ initialPage }: InventoryClientProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[60px]">Image</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Price</TableHead>
@@ -302,6 +305,22 @@ export function InventoryClient({ initialPage }: InventoryClientProps) {
                 <TableBody>
                   {currentProducts.map((product) => (
                     <TableRow key={product.id}>
+                      <TableCell>
+                        {product.imageUrl ? (
+                          <div className="h-10 w-10 overflow-hidden rounded-md border bg-muted/50">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-10 w-10 flex items-center justify-center rounded-md border bg-muted/30">
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>
                         {product.disableStockManagement ? (

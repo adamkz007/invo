@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -28,12 +28,14 @@ import { useToast } from '@/components/ui/toast';
 import { ProductSummary } from '@/types';
 import { useSettings } from '@/contexts/settings-context';
 import { InlineLoading } from '@/components/ui/loading';
+import { ImageIcon, X } from 'lucide-react';
 
 // Form validation schema
 const quickEditSchema = z.object({
   price: z.coerce.number().min(0, { message: 'Price must be a positive number' }),
   quantity: z.coerce.number().min(0, { message: 'Quantity must be a positive number' }),
   disableStockManagement: z.boolean().default(false),
+  imageUrl: z.string().optional().nullable(),
 });
 
 type QuickEditFormValues = z.infer<typeof quickEditSchema>;
@@ -45,13 +47,14 @@ interface QuickEditDialogProps {
   onSave: (updatedProduct: Partial<ProductSummary>) => Promise<void>;
 }
 
-export function QuickEditDialog({ 
-  open, 
-  onOpenChange, 
-  product, 
-  onSave 
+export function QuickEditDialog({
+  open,
+  onOpenChange,
+  product,
+  onSave
 }: QuickEditDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { showToast } = useToast();
   const { settings } = useSettings();
   const [quantityValue, setQuantityValue] = useState<string>(product.quantity.toString());
@@ -63,8 +66,44 @@ export function QuickEditDialog({
       price: product.price !== undefined && product.price !== null ? product.price : 0,
       quantity: product.quantity !== undefined && product.quantity !== null ? product.quantity : 0,
       disableStockManagement: product.disableStockManagement || false,
+      imageUrl: product.imageUrl || null,
     },
   });
+
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/uploads/product-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to upload image');
+      }
+
+      const data = await response.json();
+      form.setValue('imageUrl', data.url || '');
+      showToast({ message: 'Image uploaded', variant: 'success' });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showToast({ message: 'Failed to upload image', variant: 'error' });
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleRemoveImage = () => {
+    form.setValue('imageUrl', null);
+  };
 
   // Watch for disableStockManagement changes
   const disableStockManagement = form.watch('disableStockManagement');
@@ -130,6 +169,61 @@ export function QuickEditDialog({
                     </div>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Product Image */}
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Image</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      {field.value ? (
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-16 w-16 overflow-hidden rounded-lg border bg-muted/50">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={field.value}
+                              alt="Product"
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveImage}
+                            disabled={isSubmitting || isUploading}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 p-3 border border-dashed rounded-lg">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                          <div className="text-sm text-muted-foreground">No image</div>
+                        </div>
+                      )}
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={isSubmitting || isUploading}
+                        className="text-sm"
+                      />
+                      {isUploading && (
+                        <p className="text-sm text-muted-foreground">Uploading...</p>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Image shown in POS. Max 5MB.
+                  </FormDescription>
                 </FormItem>
               )}
             />

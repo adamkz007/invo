@@ -35,9 +35,9 @@ import PasswordResetForm from '@/components/settings/password-reset-form';
 import { SubscriptionSettings } from '@/components/subscription/SubscriptionSettings';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { MSICCodeSearch } from '@/components/ui/msic-code-search';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { EInvoiceSettings } from '@/components/settings/einvoice-settings';
 
 // Form validation schema
 const companyFormSchema = z.object({
@@ -58,7 +58,6 @@ const companyFormSchema = z.object({
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
   qrImageUrl: z.string().optional(),
-  msicCode: z.string().optional(),
 });
 
 type CompanyFormValues = z.infer<typeof companyFormSchema>;
@@ -118,7 +117,6 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
       bankName: '',
       bankAccountNumber: '',
       qrImageUrl: '',
-      msicCode: '',
     },
   });
 
@@ -175,7 +173,6 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
             bankName: data.bankName || '',
             bankAccountNumber: data.bankAccountNumber || '',
             qrImageUrl: data.qrImageUrl || '',
-            msicCode: data.msicCode || '',
           });
           
           // No longer locking fields
@@ -349,6 +346,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
           <TabsTrigger value="subscription" className="flex-none px-4">Subscription</TabsTrigger>
           <TabsTrigger value="business" className="flex-none px-4">Business Details</TabsTrigger>
           <TabsTrigger value="payment" className="flex-none px-4">Payment Information</TabsTrigger>
+          <TabsTrigger value="einvoice" className="flex-none px-4">E-Invoice</TabsTrigger>
           <TabsTrigger value="modules" className="flex-none px-4">Module Settings</TabsTrigger>
           <TabsTrigger value="security" className="flex-none px-4">Security</TabsTrigger>
         </TabsList>
@@ -570,32 +568,6 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                       )}
                     />
 
-                    <Card className="bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900">
-                      <CardHeader>
-                        <TooltipCardTitle tooltip="Information required for Malaysia's e-invoicing compliance">
-                          e-Invoicing
-                        </TooltipCardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <FormField
-                          control={form.control}
-                          name="msicCode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>MSIC Code</FormLabel>
-                              <FormControl>
-                                <MSICCodeSearch value={field.value} onChange={field.onChange} disabled={isSaving} />
-                              </FormControl>
-                              <FormDescription>
-                                Malaysian Standard Industrial Classification code for your business
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
-
                     <Button type="submit" disabled={isSaving || !formIsDirty} className="w-full">
                       {isSaving ? <InlineLoading text="Saving..." /> : 'Save Changes'}
                     </Button>
@@ -758,6 +730,10 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="einvoice" className="space-y-6">
+            <EInvoiceSettings />
           </TabsContent>
 
           <TabsContent value="modules" className="space-y-6">

@@ -87,11 +87,16 @@ export function generateInvoiceNumber(userId: string): string {
 export function calculateInvoiceTotals(
   items: { quantity: number; unitPrice: number }[],
   taxRate: number = 0,
-  discountRate: number = 0
+  discount: number | { type: 'PERCENT' | 'FIXED'; value: number } = 0
 ) {
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   const taxAmount = subtotal * (taxRate / 100);
-  const discountAmount = subtotal * (discountRate / 100);
+  const discountAmount =
+    typeof discount === 'number'
+      ? subtotal * (discount / 100)
+      : discount.type === 'PERCENT'
+        ? subtotal * (discount.value / 100)
+        : Math.min(subtotal, Math.max(0, discount.value));
   const total = subtotal + taxAmount - discountAmount;
 
   return {

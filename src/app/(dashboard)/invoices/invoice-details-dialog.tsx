@@ -12,6 +12,7 @@ import { Calendar, Download, MessageCircle, Loader2 } from 'lucide-react';
 import { formatPhoneNumber, isValidWhatsAppNumber } from '@/lib/whatsapp';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import { EInvoicePanel } from '@/components/invoices/einvoice-panel';
 
 type Props = {
   invoice: InvoiceWithDetails | null;
@@ -141,6 +142,8 @@ export function InvoiceDetailsDialog({
               {companyDetails?.address && <p className="text-xs text-muted-foreground">{companyDetails.address}</p>}
             </div>
 
+            <EInvoicePanel invoiceId={invoice.id} invoiceStatus={invoice.status} />
+
             <div className="border rounded-md overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
@@ -202,6 +205,24 @@ export function InvoiceDetailsDialog({
                     <span>Paid:</span>
                     <span>{formatCurrency(invoice.paidAmount ?? 0, settings)}</span>
                   </div>
+
+                  {/* Payment history */}
+                  {invoice.payments && invoice.payments.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-dashed space-y-1">
+                      <span className="text-xs text-muted-foreground font-medium">Payment History:</span>
+                      {invoice.payments.map((payment, index) => (
+                        <div key={payment.id} className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span>
+                            {format(new Date(payment.paymentDate), 'MMM d, yyyy')}
+                            {payment.paymentMethod && (
+                              <span className="ml-1 text-muted-foreground/60">({payment.paymentMethod})</span>
+                            )}
+                          </span>
+                          <span className="text-green-600">{formatCurrency(payment.amount, settings)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex justify-between items-center font-bold">
                     <span>Balance Due:</span>

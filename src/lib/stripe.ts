@@ -1,5 +1,14 @@
 import Stripe from 'stripe';
 
+// Re-export plan limits from separate file to allow importing without Stripe SDK
+export {
+  PLAN_LIMITS,
+  TRIAL_DURATION_DAYS,
+  hasTrialExpired,
+  hasReachedLimit,
+  calculateTrialEndDate
+} from './plan-limits';
+
 // Check if we're on the server side before initializing Stripe
 const isServer = typeof window === 'undefined';
 
@@ -22,28 +31,6 @@ if (isServer && stripe) {
 
 // Constants
 export const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
-if (isServer && (!STRIPE_PRICE_ID || STRIPE_PRICE_ID.includes('your_stripe_price_id'))) {
-  console.warn('⚠️ Stripe Price ID is missing or invalid. Set a valid STRIPE_PRICE_ID in your environment variables.');
-}
-
-// Duration of trial in days
-export const TRIAL_DURATION_DAYS = 100;
-
-// Plan limits
-export const PLAN_LIMITS = {
-  FREE: {
-    customers: 5,
-    invoicesPerMonth: 15
-  },
-  PREMIUM: {
-    customers: Infinity,
-    invoicesPerMonth: Infinity
-  },
-  TRIAL: {
-    customers: Infinity,
-    invoicesPerMonth: Infinity
-  }
-};
 
 // Create a Stripe customer for a user
 export async function createStripeCustomer(email: string, name: string) {
@@ -155,29 +142,4 @@ export async function createCustomerPortalSession(customerId: string, returnUrl:
   return session.url;
 }
 
-// Calculate trial end date based on trial duration
-export function calculateTrialEndDate(startDate: Date = new Date()): Date {
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + TRIAL_DURATION_DAYS);
-  return endDate;
-}
-
-// Check if user's trial has expired
-export function hasTrialExpired(trialEndDate: Date | null | undefined): boolean {
-  if (!trialEndDate) return false; // If no end date set, assume trial hasn't expired
-  const now = new Date();
-  return now > trialEndDate;
-}
-
-// Check if a user has reached their limit for customers or invoices
-export function hasReachedLimit(
-  subscriptionStatus: string,
-  resourceType: 'customers' | 'invoicesPerMonth',
-  currentCount: number
-): boolean {
-  const planType = subscriptionStatus === 'ACTIVE' ? 'PREMIUM' : 
-                  subscriptionStatus === 'TRIAL' ? 'TRIAL' : 'FREE';
-  
-  const limit = PLAN_LIMITS[planType as keyof typeof PLAN_LIMITS][resourceType];
-  return currentCount >= limit;
-} 
+ 

@@ -173,7 +173,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
                   className="h-8 w-auto"
                 />
               </div>
-              <span className={`font-bold text-xl ${isDarkMode ? "text-white" : "text-primary"}`}>Invo</span>
+              <span className={`font-serif font-bold text-xl ${isDarkMode ? "text-white" : "text-primary"}`}>Invo</span>
             </Link>
           </div>
 
@@ -233,7 +233,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           }`}
         >
           <div className="flex h-full flex-col">
-            <nav className="flex flex-col gap-1 p-4">
+            <nav className={`flex flex-col gap-1 ${isSidebarCollapsed ? 'p-2' : 'p-4'}`}>
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -241,12 +241,12 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent ${
+                    className={`flex items-center rounded-md py-2 text-sm hover:bg-accent ${
                       isActive ? 'bg-accent' : ''
-                    } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    } ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'}`}
                     aria-label={isSidebarCollapsed ? item.name : undefined}
                   >
-                    <Icon className={`h-5 w-5 ${!isSidebarCollapsed ? 'mr-2' : ''}`} />
+                    <Icon className={`h-5 w-5 shrink-0 ${!isSidebarCollapsed ? 'mr-2' : ''}`} />
                     {!isSidebarCollapsed && item.name}
                   </Link>
                 );
@@ -260,13 +260,13 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
                   }`}
                   aria-label={isSidebarCollapsed ? 'Create Invoice' : undefined}
                 >
-                  <PlusCircle className={`h-5 w-5 ${!isSidebarCollapsed ? 'mr-2' : ''}`} />
+                  <PlusCircle className={`h-5 w-5 shrink-0 ${!isSidebarCollapsed ? 'mr-2' : ''}`} />
                   {!isSidebarCollapsed && 'Create Invoice'}
                 </Link>
               </div>
             </nav>
 
-            <div className="p-4 mt-auto">
+            <div className={`mt-auto ${isSidebarCollapsed ? 'p-2' : 'p-4'}`}>
               <Button
                 variant="ghost"
                 size="icon"

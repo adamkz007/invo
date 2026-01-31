@@ -235,14 +235,15 @@ export async function PATCH(
     }
     
     // Extract only the fields we want to update
-    const { price, quantity, disableStockManagement } = productData;
-    
+    const { price, quantity, disableStockManagement, imageUrl } = productData;
+
     // Create an update data object with only the fields that are provided
     const updateData: any = {};
-    
+
     if (price !== undefined) updateData.price = price;
     if (quantity !== undefined) updateData.quantity = quantity;
     if (disableStockManagement !== undefined) updateData.disableStockManagement = disableStockManagement;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl || null;
     
     // Update the product with only the fields that are provided
     const updatedProduct = await prisma.product.update({
