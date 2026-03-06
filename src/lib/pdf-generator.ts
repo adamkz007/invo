@@ -459,8 +459,10 @@ export async function downloadInvoicePDF(
   doc.setTextColor(60, 60, 60);
   doc.setFontSize(9);
   
-  let yPos = tableTop + tableRowHeight + 2;
-  const tableBodyStart = yPos - 6;
+  const headerTopY = tableTop - 6;
+  const headerBottomY = headerTopY + tableRowHeight;
+  let yPos = headerBottomY;
+  const tableBodyStart = yPos;
   
   // Draw table body border (outer frame)
   doc.setDrawColor(220, 220, 220);
@@ -469,7 +471,7 @@ export async function downloadInvoicePDF(
   // Draw table rows
   if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
     invoice.items.forEach((item, index) => {
-      const rowYStart = yPos - 5;
+      const rowYStart = yPos;
       let rowHeight = tableRowHeight;
       
       // Get item details for calculations
@@ -501,7 +503,7 @@ export async function downloadInvoicePDF(
       doc.line(margin, rowYStart + rowHeight, margin + contentWidth, rowYStart + rowHeight);
       
       // Center text vertically in row
-      const rowTextY = yPos;
+      const rowTextY = rowYStart + 7;
       
       // Item number - centered, lighter color
       doc.setFontSize(9);
@@ -558,13 +560,13 @@ export async function downloadInvoicePDF(
     const rowHeight = tableRowHeight + 5;
     
     doc.setFillColor(250, 250, 252);
-    doc.rect(margin, yPos - 5, contentWidth, rowHeight, 'F');
+    doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
     doc.setDrawColor(200, 200, 200);
-    doc.rect(margin, yPos - 5, contentWidth, rowHeight, 'S');
+    doc.rect(margin, yPos, contentWidth, rowHeight, 'S');
     
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(120, 120, 120);
-    doc.text('No items in this invoice', margin + contentWidth / 2, yPos + 2, { align: 'center' });
+    doc.text('No items in this invoice', margin + contentWidth / 2, yPos + 7, { align: 'center' });
     yPos += rowHeight;
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
@@ -652,8 +654,9 @@ export async function downloadInvoicePDF(
     doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'F');
     doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'S'); // Border
     
-    doc.text(`Discount Rate`, totalsX, currentY);
-    doc.text(`${invoice.discountRate.toFixed(2)}%`, pageWidth - margin - 2, currentY, { align: 'right' });
+    const discountAmount = invoice.discountAmount ?? ((invoice.subtotal || 0) * (invoice.discountRate / 100));
+    doc.text(`Discount Rate (${invoice.discountRate.toFixed(2)}%)`, totalsX, currentY);
+    doc.text(`(${formatCurrency(discountAmount, settings)})`, pageWidth - margin - 2, currentY, { align: 'right' });
     currentY += 8;
   }
   
@@ -877,7 +880,8 @@ export async function downloadInvoicePDF(
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
-  const companyTextY = footerTopY + 6; // Position text relative to footer top (approx center)
+  const footerCenterY = footerTopY + (footerHeight / 2);
+  const companyTextY = footerCenterY + 1.5;
   if (companyDetails && companyDetails.registrationNumber) {
     doc.text(`${companyDetails.legalName} (${companyDetails.registrationNumber})`, pageWidth / 2, companyTextY, { align: 'center' });
   } else {
@@ -886,7 +890,7 @@ export async function downloadInvoicePDF(
 
   // Add Invo logo at the bottom right of the PDF
   try {
-    let logoUrl = (typeof window !== 'undefined' ? window.location.origin : '') + '/invo-logo.png';
+    let logoUrl = (typeof window !== 'undefined' ? window.location.origin : '') + '/icons/Invo_Logo_Transparent.png';
     if (companyDetails?.logoUrl) {
       logoUrl = companyDetails.logoUrl;
     }
@@ -896,7 +900,7 @@ export async function downloadInvoicePDF(
       const logoWidth = 10; // Adjust size as needed
       const logoHeight = 10;
       const logoX = pageWidth - logoWidth - 8; // 8mm from right edge
-      const logoY = pageHeight - logoHeight - 4; // 4mm from bottom edge
+      const logoY = footerCenterY - (logoHeight / 2);
       doc.addImage(img, 'PNG', logoX, logoY, logoWidth, logoHeight);
     } catch (logoError) {
       // Try fallback data URL
@@ -904,7 +908,7 @@ export async function downloadInvoicePDF(
         const logoWidth = 10;
         const logoHeight = 10;
         const logoX = pageWidth - logoWidth - 8;
-        const logoY = pageHeight - logoHeight - 4;
+        const logoY = footerCenterY - (logoHeight / 2);
         doc.addImage(FALLBACK_LOGO_DATA_URL, 'PNG', logoX, logoY, logoWidth, logoHeight);
       } catch (dataUrlError) {
         // If all fail, do nothing
@@ -1084,8 +1088,9 @@ export async function generateInvoicePDFBlob(
   
   if (invoice.discountRate > 0) {
     currentY += 7;
-    doc.text(`Discount (${invoice.discountRate}%):`, pageWidth - margin - 50, currentY);
-    doc.text(`-${formatCurrency(invoice.discountAmount || 0, settings)}`, pageWidth - margin, currentY, { align: 'right' });
+    const discountAmount = invoice.discountAmount ?? ((invoice.subtotal || 0) * (invoice.discountRate / 100));
+    doc.text(`Discount Rate (${invoice.discountRate.toFixed(2)}%)`, pageWidth - margin - 50, currentY);
+    doc.text(`(${formatCurrency(discountAmount, settings)})`, pageWidth - margin, currentY, { align: 'right' });
   }
   
   currentY += 10;
@@ -1508,7 +1513,7 @@ export async function downloadReceiptPDF(
   // Try to load the Invo logo
   try {
     // In a browser environment, load the logo
-    let logoUrl = window.location.origin + '/invo-logo.png';
+    let logoUrl = window.location.origin + '/icons/Invo_Logo_Transparent.png';
     
     // Use custom logo if provided in company details
     if (companyDetails?.logoUrl) {
@@ -1536,7 +1541,7 @@ export async function downloadReceiptPDF(
       
       // Try alternative path (relative URL)
       try {
-        const altLogoUrl = '/invo-logo.png';
+        const altLogoUrl = '/icons/Invo_Logo_Transparent.png';
         img = await loadLogoImage(altLogoUrl);
         
         // Position the logo to the left of "Powered by Invo" text

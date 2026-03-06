@@ -1,40 +1,72 @@
-# GitHub Deployment Instructions
+# GitHub + Netlify Deployment Guide
 
-## 1. Create a new repository on GitHub
+This project is designed for GitHub source control and Netlify hosting.
 
-1. Go to [GitHub](https://github.com/) and sign in to your account
-2. Click on the "+" icon in the top right corner and select "New repository"
-3. Name your repository (e.g., "invo")
-4. Optionally add a description
-5. Choose if you want your repository to be public or private
-6. Do NOT initialize the repository with a README, .gitignore, or license file as we already have these
-7. Click "Create repository"
+## 1. Push Repository to GitHub
 
-## 2. Connect your local repository to GitHub
+If the GitHub repository does not exist yet:
 
-After creating the repository, GitHub will display a page with instructions. Follow the "push an existing repository from the command line" section.
-
-Run these commands in your terminal (replace the URL with your actual repository URL):
+1. Create an empty GitHub repository.
+2. Push this local repo:
 
 ```bash
-git remote add origin https://github.com/yourusername/invo.git
+git remote add origin https://github.com/<your-org-or-user>/<repo>.git
 git branch -M main
 git push -u origin main
 ```
 
-## 3. Verify deployment
+For existing repos, just commit and push your changes as usual.
 
-1. Refresh your GitHub repository page
-2. You should see all your project files now uploaded
-3. Your README.md will be displayed on the main page
+## 2. Connect GitHub Repo to Netlify
 
-## 4. Setting up GitHub Pages (optional)
+1. In Netlify, choose `Add new site` -> `Import an existing project`.
+2. Select GitHub and authorize access.
+3. Choose the repository.
 
-If you want to deploy your Next.js application to GitHub Pages:
+## 3. Netlify Build Configuration
 
-1. Go to your repository settings
-2. Scroll down to the GitHub Pages section
-3. Set up GitHub Pages from the main branch
-4. You'll need to add a GitHub workflow file for Next.js deployment
+This repo already includes `netlify.toml` with `@netlify/plugin-nextjs`.
 
-Note: For production use, it's often better to deploy Next.js applications to platforms like Vercel or Netlify that have native Next.js support. 
+- Build command: `npm run build`
+- Publish directory: `.next`
+- Plugin: `@netlify/plugin-nextjs`
+
+Do not use GitHub Pages for this app; Next.js server features and API routes require a Next-capable host (Netlify/Vercel).
+
+## 4. Required Environment Variables
+
+Set these in Netlify project settings:
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `NEXT_PUBLIC_APP_URL`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PRICE_ID`
+- `STRIPE_WEBHOOK_SECRET`
+
+Add any Supabase-specific secrets your environment requires.
+
+## 5. Post-Deploy Validation Checklist
+
+- Open `/login` and verify auth works.
+- Create a test customer and invoice.
+- Verify `/api/dashboard` returns expected data.
+- Verify subscription routes (`/api/subscription/checkout`, webhook endpoint) are configured.
+- Verify PWA assets load (`/manifest.json`, `/sw.js`).
+
+## 6. Recommended Release Flow
+
+1. Run local checks before push:
+
+```bash
+npm run lint
+npm run build
+npm run test:db
+npm run test:api
+```
+
+2. Open PR with:
+- Summary of changes
+- Database/migration notes
+- Env var changes (if any)
+- Screenshots for UI changes

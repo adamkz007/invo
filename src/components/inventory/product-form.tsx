@@ -30,7 +30,17 @@ const productFormSchema = z.object({
   sku: z.string().min(3, { message: 'SKU must be at least 3 characters' }),
   disableStockManagement: z.boolean().default(false),
   userId: z.string().optional(),
-  imageUrl: z.string().url({ message: 'Image must be a valid URL' }).optional().or(z.literal('')),
+  imageUrl: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (value) =>
+        !value ||
+        value.startsWith('/api/uploads/product-image/') ||
+        z.string().url().safeParse(value).success,
+      { message: 'Image must be a valid URL' },
+    ),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;

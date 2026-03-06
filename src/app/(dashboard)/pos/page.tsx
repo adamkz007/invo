@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, CheckCircle, XCircle, DollarSign, RefreshCw, Search } from 'lucide-react';
+import { Plus, Clock, CheckCircle, XCircle, DollarSign, RefreshCw, Search, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { OrderList } from '@/components/pos/order-list';
 import { OrderStats } from '@/components/pos/order-stats';
@@ -123,6 +123,11 @@ export default function POSPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/pos/settings">
+            <Button variant="outline" size="icon" title="POS Settings">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </Link>
           <Button variant="outline" onClick={fetchOrders}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh

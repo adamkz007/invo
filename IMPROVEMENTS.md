@@ -1,26 +1,54 @@
-# Architecture & Database Optimization Review
+# Architecture & Database Improvement Status
 
-## Database
-- ✅ Monetary columns rely on floats (`schema.prisma` lines 60, 79, 84, 144, 174); migrate to `Decimal` with `@db.Decimal(12, 2)` to avoid rounding, enable efficient aggregations, and support precise comparisons.
-- ✅ Multi-tenant tables miss secondary indexes on `userId`, `createdAt`, and `status` despite frequent filters; add composite `@@index([userId, createdAt])`, `@@index([userId, status])`, and single-column indexes for high-cardinality foreign keys (for example `productId`) to prevent full scans.
-- ✅ `InvoiceItem`/`ReceiptItem` store redundant `amount` values computed from quantity × price; replace with database computed columns or derive totals when reading to lower write cost and reduce inconsistency risk.
-- ✅ Status fields are plain strings; convert to Prisma enums so Postgres can use compact storage and enable partial indexes per status.
+Status updated: March 7, 2026.
 
-## Backend APIs
-- ✅ `/api/dashboard` loads every invoice with nested items and aggregates in Node (`src/app/api/dashboard/route.ts` 95-355); replace with Prisma `groupBy`/`aggregate`, materialized views, or database-side window functions so only summarized data moves over the wire.
-- ✅ `/api/invoices` and similar list endpoints return full collections with nested relations and no pagination (`src/app/api/invoices/route.ts` 35-50); expose cursor/take parameters and return lean DTOs with detail endpoints for drill-down.
-- ✅ Stock adjustments perform sequential `findUnique` + `update` calls (`src/app/api/invoices/route.ts` 211-229, `/api/invoices/[id]` 256-269), inflating latency and risking race conditions; preload products and apply updates inside a single `$transaction` or `updateMany` with optimistic locking.
-- ✅ `/api/receipts` fetches an arbitrary user via `getValidUserId()` and omits `userId` filters on reads; require the authenticated user, remove the extra lookup, and apply tenant scoping consistently.
-- ✅ Many routes execute `testConnection()` before real queries (`src/lib/prisma.ts` 22-33, `/api/customer` 22-38, `/api/company` 55-91), doubling round-trips; remove the probe from hot paths and rely on Prisma’s retry handling.
-- ✅ In-memory caches (`/api/dashboard`, `/api/invoices`, `/api/products`) do not persist across serverless instances and risk stale data; migrate to durable cache layers (Next revalidate tags, Redis, or Supabase) with proper invalidation.
+## Completed Improvements
 
-## Frontend
-- ✅ Dashboard, invoices, and inventory pages are client components that issue `useEffect` fetches (`src/app/(dashboard)/dashboard/page.tsx` 189-205, `/invoices/page.tsx` 143-205, `/inventory/page.tsx` 43-93); convert to server components or use server actions so HTML streams with data and caching works automatically.
-- ✅ `InvoicesPage` triggers multiple sequential fetches (company, user, invoice detail, receipts) per interaction; consolidate into a single loader response or adopt React Query/SWR with shared caches.
-- ✅ Customers and inventory pages download entire datasets then paginate/filter in memory; introduce server-side pagination with limit/offset or cursor support and consider virtualized tables for large lists.
-- ✅ PDF/receipt flows refetch invoice details for every export (`/invoices/page.tsx` 189-279); cache invoice detail in state or prefetch via SWR to avoid redundant network requests.
+### Database
 
-## Next Steps
-1. Update Prisma models to use decimals and add the recommended indexes, then regenerate the client and run migrations.
-2. Refactor high-traffic APIs (dashboard, invoices, receipts) to leverage database aggregations, pagination, and transactional stock updates; add regression tests.
-3. Move dashboard/invoice screens to server components or data-fetching hooks with shared caches, remove per-request connection tests, and document the new caching strategy.
+- Monetary fields have been migrated to `Decimal` across core commerce/accounting models in `prisma/schema.prisma`.
+- Multi-tenant indexing is now present on key tables (`Invoice`, `Customer`, `Product`) with user/date and user/status indexes.
+- Redundant persisted line `amount` columns are no longer used in `InvoiceItem`/`ReceiptItem`.
+- Several status domains are now enums (`InvoiceStatus`, POS and e-invoice enums) instead of ad hoc strings.
+
+### Backend APIs
+
+- `/api/dashboard` now delegates to `src/lib/data/dashboard.ts` using aggregate/groupBy/raw SQL patterns instead of loading full collections into Node.
+- `/api/invoices`, `/api/customers`, `/api/products`, and `/api/receipts` support paginated list responses.
+- Invoice creation/update stock flows are transaction-based and preload product records within `$transaction`.
+- `/api/receipts` is tenant-scoped via authenticated user (`getUserFromRequest`) and no longer uses fallback user lookup logic.
+- Hot-path APIs no longer call `testConnection()` before request work.
+- `revalidateTag()` and `unstable_cache()` are now used on list endpoints with user-scoped cache tags.
+
+### Frontend
+
+- `src/app/(dashboard)/dashboard/page.tsx` and `src/app/(dashboard)/invoices/page.tsx` are server-rendered entry pages that prefetch initial data.
+- Invoices module has been split into focused components (`invoices-client.tsx`, `invoices-list.tsx`, `payment-dialog.tsx`, `invoice-details-dialog.tsx`).
+- Dynamic imports are used for heavier interactions (invoice dialogs, WhatsApp actions, PDF generation, chart modules).
+
+## Remaining Risks and Gaps
+
+### API/Auth Consistency
+
+- `src/app/api/products/route.ts` still supports a default fallback user (`userId = '1'`) when auth token resolution fails. This should be replaced with strict authenticated access (same model used by invoices/customers/receipts).
+
+### Frontend Data Fetching Consistency
+
+- `src/app/(dashboard)/customers/page.tsx` remains client-driven and fetches data in effects; it can be migrated to server-first data loading with smaller client islands.
+- `src/app/(dashboard)/dashboard/dashboard-client.tsx` is still a large client component; charts and invoice detail interactions are optimized, but additional splitting and memoization can reduce client bundle size.
+
+### Caching & Query Hygiene
+
+- Dashboard and invoice paths now use better caching, but cache strategy is mixed across modules. A unified cache policy document (TTL + invalidation ownership by domain) is still missing.
+
+### e-Invoice Compliance Scope
+
+- e-invoice schemas/config/readiness APIs exist, but full MyInvois submission/signing and PEPPOL transport remain implementation work (tracked in `einvoice-implementation.md`).
+
+## Prioritized Next Steps
+
+1. Remove unauthenticated fallback user behavior in `src/app/api/products/route.ts` and align with `getUserFromRequest`.
+2. Move customers page to server-loaded initial data and keep client code focused on interactions only.
+3. Continue dashboard-client decomposition (chart islands, dialog islands, utility extraction) and measure bundle/runtime impact.
+4. Document and standardize cache strategy for all domain APIs.
+5. Execute e-invoice phase work from `einvoice-implementation.md` with clear sandbox/prod rollout gates.

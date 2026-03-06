@@ -119,14 +119,16 @@ async function adjustStock(
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUserFromRequest(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { id } = await params;
+
   try {
-    const invoice = await fetchInvoice(user.id, params.id);
+    const invoice = await fetchInvoice(user.id, id);
     return NextResponse.json(serialiseInvoice(invoice));
   } catch (error) {
     if (error instanceof Error && error.message === 'Invoice not found') {
@@ -137,17 +139,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUserFromRequest(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { id } = await params;
   const { action, paymentAmount, paymentDate, paymentMethod } = await req.json();
 
   try {
     const { updatedInvoice, receiptPayload } = await prisma.$transaction(async (tx) => {
-      const invoice = await fetchInvoice(user.id, params.id, tx);
+      const invoice = await fetchInvoice(user.id, id, tx);
       let nextInvoice: InvoiceWithItems = invoice;
       let receiptData: Record<string, unknown> | null = null;
 
@@ -298,13 +301,33 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (receiptPayload) {
       try {
-        await fetch(`${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/receipts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-receipts-module-enabled': 'true',
+        // Create receipt directly using Prisma instead of HTTP call for reliability
+        const items = receiptPayload.items as Array<{
+          productId: string;
+          quantity: number;
+          unitPrice: number;
+          description: string;
+        }>;
+        
+        await prisma.receipt.create({
+          data: {
+            receiptNumber: receiptPayload.receiptNumber as string,
+            customerName: receiptPayload.customerName as string,
+            customerPhone: (receiptPayload.customerPhone as string) ?? null,
+            receiptDate: new Date(receiptPayload.receiptDate as string),
+            paymentMethod: receiptPayload.paymentMethod as string,
+            notes: receiptPayload.notes as string,
+            total: toDecimal(receiptPayload.total as number),
+            userId: user.id,
+            items: {
+              create: items.map((item) => ({
+                quantity: item.quantity,
+                unitPrice: toDecimal(item.unitPrice),
+                description: item.description ?? '',
+                productId: item.productId,
+              })),
+            },
           },
-          body: JSON.stringify(receiptPayload),
         });
         revalidateTag(RECEIPTS_TAG(user.id));
       } catch (error) {
@@ -335,15 +358,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUserFromRequest(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { id } = await params;
+
   try {
     await prisma.$transaction(async (tx) => {
-      const invoice = await fetchInvoice(user.id, params.id, tx);
+      const invoice = await fetchInvoice(user.id, id, tx);
 
       if (
         invoice.status === InvoiceStatus.PAID ||

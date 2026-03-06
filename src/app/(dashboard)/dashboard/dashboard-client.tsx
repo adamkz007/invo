@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { DashboardLoading } from '@/components/ui/loading';
 import { useSettings } from '@/contexts/settings-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ComponentType } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -118,58 +119,69 @@ interface DashboardClientProps {
   initialCompany: CompanyDetails | null;
 }
 
+type DashboardFilterPeriod = 'allTime' | 'currentMonth' | 'currentYear';
+
+const FILTER_PERIOD_LABELS: Record<DashboardFilterPeriod, string> = {
+  allTime: 'all time',
+  currentMonth: 'current month',
+  currentYear: 'current year',
+};
+
 export function DashboardClient({ initialStats, initialCompany }: DashboardClientProps) {
   const stats = initialStats;
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithDetails | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardFilterPeriod>('allTime');
   const companyDetails = initialCompany;
   const { showToast } = useToast();
   const { settings } = useSettings();
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
 
-  // Memoize growth percentages to prevent recalculation on each render
-  const growthData = useMemo(() => {
-    const formatGrowth = (currentTotal: number, currentMonthDelta: number): string => {
-      const previousTotal = Math.max(0, currentTotal - currentMonthDelta);
-      if (previousTotal === 0) {
-        if (currentTotal === 0) return "0%";
-        return "+100%";
-      }
-
-      const percentage = (currentMonthDelta / previousTotal) * 100;
-      if (!isFinite(percentage)) return "N/A";
-      const sign = percentage >= 0 ? "+" : "";
-      return `${sign}${percentage.toFixed(1)}%`;
-    };
-
-    if (stats?.growth) {
-      const {
-        currentMonthInvoices,
-        currentMonthCustomers,
-        currentMonthProducts,
-        currentMonthRevenue,
-      } = stats.growth;
-
-      const invoiceGrowth = formatGrowth(stats.totalInvoices || 0, currentMonthInvoices);
-      const customerGrowth = formatGrowth(stats.totalCustomers || 0, currentMonthCustomers);
-      const productGrowth = formatGrowth(stats.totalProducts || 0, currentMonthProducts);
-      const revenueGrowth = formatGrowth(stats.invoiceStats.totalAmount || 0, currentMonthRevenue);
-
+  const filteredPeriodMetrics = useMemo(() => {
+    if (!stats?.periods) {
       return {
-        invoiceGrowth,
-        customerGrowth,
-        productGrowth,
-        revenueGrowth,
+        invoices: stats?.totalInvoices ?? 0,
+        customers: stats?.totalCustomers ?? 0,
+        products: stats?.totalProducts ?? 0,
+        revenue: stats?.invoiceStats.totalAmount ?? 0,
       };
     }
 
-    return {
-      invoiceGrowth: "N/A",
-      customerGrowth: "N/A",
-      productGrowth: "N/A",
-      revenueGrowth: "N/A",
+    return stats.periods[selectedPeriod];
+  }, [selectedPeriod, stats]);
+
+  const comparisonMetrics = useMemo(() => {
+    if (!stats?.comparisons) return null;
+    if (selectedPeriod === 'currentMonth') return stats.comparisons.previousMonth;
+    if (selectedPeriod === 'currentYear') return stats.comparisons.previousYear;
+    return null;
+  }, [selectedPeriod, stats]);
+
+  const deltaData = useMemo(() => {
+    const formatPercentageDelta = (currentValue: number, previousValue?: number) => {
+      if (previousValue === undefined) return '0.0%';
+      if (previousValue === 0) {
+        return currentValue === 0 ? '0.0%' : '+100.0%';
+      }
+      const percentage = ((currentValue - previousValue) / previousValue) * 100;
+      const sign = percentage >= 0 ? '+' : '';
+      return `${sign}${percentage.toFixed(1)}%`;
     };
-  }, [stats]);
+
+    const formatAbsoluteDelta = (currentValue: number, previousValue?: number) => {
+      if (previousValue === undefined) return '0';
+      const absoluteDelta = currentValue - previousValue;
+      const sign = absoluteDelta > 0 ? '+' : '';
+      return `${sign}${absoluteDelta}`;
+    };
+
+    return {
+      invoiceDelta: formatPercentageDelta(filteredPeriodMetrics.invoices, comparisonMetrics?.invoices),
+      customerDelta: formatAbsoluteDelta(filteredPeriodMetrics.customers, comparisonMetrics?.customers),
+      productDelta: formatAbsoluteDelta(filteredPeriodMetrics.products, comparisonMetrics?.products),
+      revenueDelta: formatPercentageDelta(filteredPeriodMetrics.revenue, comparisonMetrics?.revenue),
+    };
+  }, [comparisonMetrics, filteredPeriodMetrics]);
 
   // Handle invoice selection
   const handleViewInvoice = async (invoiceId: string) => {
@@ -245,7 +257,21 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <div className="w-full sm:w-[190px]">
+          <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as DashboardFilterPeriod)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="allTime">All time</SelectItem>
+              <SelectItem value="currentMonth">Current month</SelectItem>
+              <SelectItem value="currentYear">Current year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in duration-500">
         <Card className="bg-blue-50/80 dark:bg-blue-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-blue-100/80 dark:border-blue-900/40 py-4 gap-4">
@@ -256,9 +282,9 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
             </div>
           </CardHeader>
           <CardContent className="px-4 pt-0 pb-2">
-            <div className="text-2xl font-bold">{stats?.totalInvoices}</div>
+            <div className="text-2xl font-bold">{filteredPeriodMetrics.invoices}</div>
             <p className="text-xs text-muted-foreground">
-              {growthData.invoiceGrowth} from last month
+              {deltaData.invoiceDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
             </p>
           </CardContent>
         </Card>
@@ -271,9 +297,9 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
             </div>
           </CardHeader>
           <CardContent className="px-4 pt-0 pb-2">
-            <div className="text-2xl font-bold">{stats?.totalCustomers}</div>
+            <div className="text-2xl font-bold">{filteredPeriodMetrics.customers}</div>
             <p className="text-xs text-muted-foreground">
-              {growthData.customerGrowth} from last month
+              {deltaData.customerDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
             </p>
           </CardContent>
         </Card>
@@ -286,9 +312,9 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
             </div>
           </CardHeader>
           <CardContent className="px-4 pt-0 pb-2">
-            <div className="text-2xl font-bold">{stats?.totalProducts}</div>
+            <div className="text-2xl font-bold">{filteredPeriodMetrics.products}</div>
             <p className="text-xs text-muted-foreground">
-              {growthData.productGrowth} from last month
+              {deltaData.productDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
             </p>
           </CardContent>
         </Card>
@@ -302,10 +328,10 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
           </CardHeader>
           <CardContent className="px-4 pt-0 pb-2">
             <div className="text-2xl font-bold break-words leading-tight max-w-full">
-              {formatCurrency(stats?.invoiceStats.totalAmount || 0, settings)}
+              {formatCurrency(filteredPeriodMetrics.revenue, settings)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {growthData.revenueGrowth} from last month
+              {deltaData.revenueDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
             </p>
           </CardContent>
         </Card>
@@ -799,7 +825,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
                 <div className="flex items-center justify-center mt-2">
                   <span>Powered by</span>
                   <div className="flex items-center ml-1">
-                    <Image src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} alt="Invo Logo" className="h-4 w-4 mr-1" width={16} height={16} />
+                    <Image src="/icons/Invo_Logo_Transparent.png" alt="Invo Logo" className="h-4 w-4 mr-1" width={16} height={16} />
                     <span className="text-xs font-medium">Invo</span>
                   </div>
                 </div>

@@ -1,140 +1,64 @@
-# Invoices Page Optimization Plan
+# Invoices Optimization Plan (Status Refresh)
+
+Status updated: March 7, 2026.
 
 ## Current State
-- Compilation time: 5.5s with 4133 modules
-- Main file: `src/app/(dashboard)/invoices/invoices-client.tsx` (1024 lines)
-- Heavy dependencies loaded eagerly
 
-## Root Causes Identified
+- `src/app/(dashboard)/invoices/invoices-client.tsx` is now 459 lines (down from the previous monolith).
+- Invoices page is server-rendered at route entry (`src/app/(dashboard)/invoices/page.tsx`) with preloaded initial data.
+- Module is split into:
+  - `invoices-client.tsx`
+  - `invoices-list.tsx`
+  - `payment-dialog.tsx`
+  - `invoice-details-dialog.tsx`
+  - `invoices-types.ts`
 
-### 1. Monolithic Client Component
-`invoices-client.tsx` contains everything in one file:
-- `InvoicesClient` (main container)
-- `InvoicesList` (list with card/table views)
-- Payment dialog (embedded)
-- All filtering, status badge, and utility functions
+## Completed Optimizations
 
-### 2. Heavy Eager Dependencies
-| Import | Size Impact | Used When |
-|--------|-------------|-----------|
-| `@/components/whatsapp` | Medium | Only for overdue invoices in dropdown |
-| `@/lib/stripe` | Large | Only `PLAN_LIMITS` constant needed |
-| 15+ lucide-react icons | Medium | Various, some rarely used |
-| `date-fns` (multiple imports) | Medium | Formatting dates |
+- `PLAN_LIMITS` was extracted to `src/lib/plan-limits.ts` and consumed in client code.
+- `InvoicesList` is extracted and dynamically imported.
+- `PaymentDialog` is extracted and dynamically imported.
+- `InvoiceDetailsDialog` is dynamically imported.
+- WhatsApp follow-up actions are lazily loaded inside the list module.
+- PDF generation is dynamically imported at interaction time.
+- Server-side prefetch for initial invoice list and subscription status is in place.
 
-### 3. Stripe SDK Coupling
-`src/lib/stripe.ts` imports the full Stripe SDK but client-side only needs:
-```typescript
-export const PLAN_LIMITS = { FREE: {...}, PREMIUM: {...}, TRIAL: {...} }
-```
+## Remaining Optimization Opportunities
 
-### 4. WhatsApp Components Loaded Eagerly
-```typescript
-import { WhatsAppInvoiceButton, WhatsAppFollowUpButton } from '@/components/whatsapp';
-```
-These are only used in dropdown menus for specific invoice states.
+### 1) Further Client Bundle Reduction
 
-## Optimization Steps
+- Split parts of `invoices-client.tsx` into smaller hooks/util modules:
+  - payment form state + validation
+  - invoice detail cache utilities
+  - status transition handlers
+- Audit icon imports and remove rarely used symbols from primary render paths.
 
-### Step 1: Extract Plan Limits (Quick Win)
-Create `src/lib/plan-limits.ts` with just the constants:
-```typescript
-// src/lib/plan-limits.ts
-export const PLAN_LIMITS = {
-  FREE: { customers: 5, invoicesPerMonth: 15 },
-  PREMIUM: { customers: Infinity, invoicesPerMonth: Infinity },
-  TRIAL: { customers: Infinity, invoicesPerMonth: Infinity }
-};
+### 2) Data Fetching Consistency
 
-export function hasReachedLimit(...) { ... }
-export function hasTrialExpired(...) { ... }
-```
-Update imports in `invoices-client.tsx` to use this instead of `@/lib/stripe`.
+- Keep list rendering server-first while progressively migrating some interaction fetches to shared cache hooks (SWR/React Query) if repeated across views.
+- Evaluate optimistic UI updates for payment/cancel actions to reduce full `router.refresh()` dependency.
 
-### Step 2: Extract InvoicesList Component
-Move `InvoicesList` to `src/app/(dashboard)/invoices/invoices-list.tsx`:
-```typescript
-// invoices-list.tsx
-'use client';
-export function InvoicesList({ ... }) { ... }
-```
-Then dynamically import in `invoices-client.tsx`:
-```typescript
-const InvoicesList = dynamic(
-  () => import('./invoices-list').then(mod => mod.InvoicesList),
-  { loading: () => <InvoicesListSkeleton />, ssr: false }
-);
-```
+### 3) Type and DTO Tightening
 
-### Step 3: Extract Payment Dialog
-Create `src/app/(dashboard)/invoices/payment-dialog.tsx`:
-```typescript
-// payment-dialog.tsx
-'use client';
-export function PaymentDialog({ invoice, onClose, onSubmit }) { ... }
-```
-Dynamic import with loading state.
+- Standardize API response DTOs for list/detail/payment routes to reduce ad hoc casting and duplicate mapping logic.
 
-### Step 4: Lazy Load WhatsApp Components
-Replace eager import with dynamic loading:
-```typescript
-// In InvoicesList, load WhatsApp buttons only when needed
-const WhatsAppFollowUpButton = dynamic(
-  () => import('@/components/whatsapp').then(mod => mod.WhatsAppFollowUpButton),
-  { ssr: false, loading: () => null }
-);
-```
+### 4) Observability for Performance
 
-### Step 5: Consolidate Date Formatting
-Create a single date utility export:
-```typescript
-// src/lib/date.ts
-export { format, formatDistanceToNow } from 'date-fns';
-export function formatRelativeDate(date) { ... }
-export function calculateDueDays(date) { ... }
-```
+- Add timing instrumentation for invoice detail fetch, PDF generation trigger, and mutation round-trips.
+- Track performance regressions in `/api/observability/web-vitals`.
 
-### Step 6: Optimize Icon Imports (Optional)
-Consider creating an icons barrel file for commonly used icons:
-```typescript
-// src/components/icons.tsx
-export { FileText, Download, MoreHorizontal, Plus } from 'lucide-react';
-```
+## Next Execution Steps
 
-## Expected Results
+1. Extract invoice interaction logic from `invoices-client.tsx` into dedicated hooks.
+2. Add focused client-side perf instrumentation for invoice list interactions.
+3. Benchmark bundle and interaction timing before/after extraction.
+4. Document stable performance budgets for invoices UI in this file.
 
-| Metric | Before | After (Est.) |
-|--------|--------|--------------|
-| Initial bundle | ~4133 modules | ~2500 modules |
-| Compile time | 5.5s | ~3s |
-| First paint | Blocked by full load | Progressive |
+## Files in Scope
 
-## Implementation Priority
-
-1. **High Impact, Low Effort:**
-   - Extract `PLAN_LIMITS` to separate file
-   - Dynamic import `InvoiceDetailsDialog` (already done ✓)
-
-2. **High Impact, Medium Effort:**
-   - Extract and lazy load `InvoicesList`
-   - Lazy load WhatsApp components
-
-3. **Medium Impact, Medium Effort:**
-   - Extract Payment Dialog
-   - Consolidate date utilities
-
-4. **Lower Priority:**
-   - Icon optimization
-   - Further component splitting
-
-## Files to Create/Modify
-
-### New Files:
-- `src/lib/plan-limits.ts`
+- `src/app/(dashboard)/invoices/invoices-client.tsx`
 - `src/app/(dashboard)/invoices/invoices-list.tsx`
 - `src/app/(dashboard)/invoices/payment-dialog.tsx`
-- `src/lib/date.ts` (optional consolidation)
-
-### Modified Files:
-- `src/app/(dashboard)/invoices/invoices-client.tsx` (major refactor)
-- `src/lib/stripe.ts` (re-export from plan-limits)
+- `src/app/(dashboard)/invoices/invoice-details-dialog.tsx`
+- `src/lib/plan-limits.ts`
+- `src/lib/data/invoices.ts`

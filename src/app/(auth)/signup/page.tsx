@@ -23,7 +23,7 @@ export default function SignUpPage() {
         <div className="mb-6 text-center">
           <div className="flex justify-center items-center">
             <Image 
-              src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} 
+              src="/icons/Invo_Logo_Transparent.png" 
               alt="Invo Logo" 
               width={40} 
               height={40} 

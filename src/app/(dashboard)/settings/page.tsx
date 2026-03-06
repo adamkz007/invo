@@ -199,24 +199,23 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
   async function fetchUserData() {
     try {
       console.log('Fetching user data');
-      // Use the test API endpoint temporarily to bypass authentication
-      const response = await fetch('/api/user/test');
+      const response = await fetch('/api/user/me');
       
       console.log('User data response status:', response.status);
       if (response.ok) {
         const data = await response.json();
         console.log('User data received:', data);
-        if (data && data.user) {
-          setUserData(data.user); 
+        if (data) {
+          setUserData(data); 
           
           // If we have user data, pre-populate form fields as needed
-          if (data.user.email && !form.getValues('email')) {
-            form.setValue('email', data.user.email);
+          if (data.email && !form.getValues('email')) {
+            form.setValue('email', data.email);
           }
           
           // Populate the phone number from the user's account if not already set
-          if (data.user.phoneNumber && !form.getValues('phoneNumber')) {
-            form.setValue('phoneNumber', data.user.phoneNumber);
+          if (data.phoneNumber && !form.getValues('phoneNumber')) {
+            form.setValue('phoneNumber', data.phoneNumber);
           }
         }
       } else {

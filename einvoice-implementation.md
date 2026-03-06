@@ -2,6 +2,23 @@
 
 This document maps Malaysia e-Invoice issuance requirements (LHDN MyInvois) and PEPPOL (BIS Billing 3.0) requirements against the current Invo codebase, and lists what must be added for compliance.
 
+## Implementation status update (March 7, 2026)
+
+The project now includes foundational e-invoice implementation work:
+
+- Prisma models and enums for e-invoice configuration/documents/events (`EInvoiceConfig`, `EInvoiceDocument`, `EInvoiceEvent`, status/profile/document enums).
+- Company/customer/product/invoice-item e-invoice-related fields (TIN/BRN, PEPPOL IDs, unit/classification/tax metadata).
+- E-invoice configuration API: `GET/PUT /api/einvoice/config`.
+- Invoice e-invoice readiness/state API: `GET /api/invoices/[id]/einvoice`.
+- Validation utilities in `src/lib/einvoice/*`.
+
+Still pending for full compliance:
+
+- LHDN MyInvois OAuth/token flow and document submission lifecycle.
+- UBL generation + XAdES signing pipeline.
+- Polling/ID persistence from authority responses, cancellation/rejection API integration.
+- End-to-end PEPPOL BIS export/send workflows.
+
 ## Sources (primary)
 
 - LHDN MyInvois SDK (API docs): https://sdk.myinvois.hasil.gov.my/
@@ -17,9 +34,10 @@ This document maps Malaysia e-Invoice issuance requirements (LHDN MyInvois) and 
 
 **Data model (Prisma)**
 
-- `Invoice` has header-level `taxRate`, `taxAmount`, `discountRate`, `discountAmount`, `total`, `paidAmount`, and a relation to `InvoiceItem`. No per-line tax model. (`prisma/schema.prisma`)
-- `Customer` supports `registrationType`, `registrationNumber`, and `taxIdentificationNumber` fields. (`prisma/schema.prisma`)
-- `Company` supports `registrationNumber`, `taxIdentificationNumber`, address fields (`street/city/postcode/state/country`), `msicCode`, and bank account fields. (`prisma/schema.prisma`)
+- `Invoice` supports header totals and links to `InvoiceItem`, and e-invoice documents/events are modeled separately. (`prisma/schema.prisma`)
+- `InvoiceItem` includes line-level e-invoice metadata (`unitCode`, `taxCategoryCode`, optional line-level `taxRate`, exemption/classification fields). (`prisma/schema.prisma`)
+- `Customer` and `Company` include both existing registration/tax fields and explicit e-invoice fields (`tin`, `brn`, PEPPOL participant/scheme IDs on customer, SST/tourism tax fields on company). (`prisma/schema.prisma`)
+- `EInvoiceConfig`, `EInvoiceDocument`, and `EInvoiceEvent` provide module-level storage for config/state/audit trails. (`prisma/schema.prisma`)
 
 **Invoice issuance workflow**
 
@@ -29,7 +47,7 @@ This document maps Malaysia e-Invoice issuance requirements (LHDN MyInvois) and 
 
 **Important implication**
 
-Invo today issues invoices as PDFs/records. Malaysia e-Invoice compliance requires issuing a structured, standards-based document (UBL 2.1 XML/JSON), applying a digital signature (XAdES), submitting to MyInvois for validation, persisting the returned IDs/status, and distributing a human-readable view that includes tax authority metadata (typically QR/validation link).
+Invo now has e-invoice data structures and readiness checks, but compliant issuance still requires generating structured UBL payloads, applying digital signatures (XAdES where required), submitting to MyInvois, persisting authority IDs/statuses, and distributing validated metadata (typically validation link/QR) in customer-facing outputs.
 
 ## What “LHDN compliant issuance” means (minimum)
 
@@ -54,14 +72,14 @@ Based on PEPPOL BIS Billing 3.0:
 
 | Requirement area | LHDN / MyInvois expectation | PEPPOL expectation | Invo today | Gap / work needed |
 |---|---|---|---|---|
-| Structured document | UBL 2.1 XML/JSON document types/versions per SDK | UBL 2.1 with PEPPOL BIS customization | No UBL/JSON invoice export | Add UBL generation (LHDN variant + PEPPOL variant) |
-| Digital signature | XAdES enveloped (RSA + SHA-256), certificate profile requirements | PEPPOL does not require XAdES for BIS itself, but delivery may require signing at transport layer (AS4) via Access Point | No signing | Add signing pipeline and secure certificate/key management |
-| Submission to tax authority | OAuth/token + submit/poll/cancel/reject APIs | Not applicable | None | Add MyInvois API client, storage, and workflows |
-| Identifiers returned by authority | Store submissionId, document IDs, long ID for validation link, status | Not applicable | None | Add persistence + surface in UI/PDF |
-| Supplier identity | Supplier TIN/BRN and address/contacts with field constraints | Seller legal entity + VAT/tax scheme IDs + endpoint ID | Company has registrationNumber/taxIdentificationNumber + address | Add explicit TIN/BRN semantics, SST/TTX fields, validation and code lists |
-| Buyer identity | Buyer TIN + ID types/values (B2B/B2C variants), optional email/phone rules | Buyer endpoint ID, legal entity, address | Customer has registrationType/registrationNumber/taxIdentificationNumber, address | Add PEPPOL endpoint IDs, enforce field constraints, add “general buyer” handling rules for consolidation where applicable |
-| Item classification | SDK codes + required classifications for items where applicable | Item standard identifiers (optional) + unit codes required | Product only has name/description/sku | Add classification code fields and code lists; add unit of measure |
-| Tax modeling | Typically line-level tax categories and tax breakdown; SDK includes tax exemption support | EN16931/PEPPOL tax categories and VAT breakdown rules | Header-level taxRate only | Add per-line tax category/rate/exemption + computed totals |
+| Structured document | UBL 2.1 XML/JSON document types/versions per SDK | UBL 2.1 with PEPPOL BIS customization | Readiness/config APIs exist, but no final UBL generator in issuance flow yet | Add production UBL generation (LHDN variant + PEPPOL variant) |
+| Digital signature | XAdES enveloped (RSA + SHA-256), certificate profile requirements | PEPPOL does not require XAdES for BIS itself, but delivery may require signing at transport layer (AS4) via Access Point | No signing pipeline yet | Add signing pipeline and secure certificate/key management |
+| Submission to tax authority | OAuth/token + submit/poll/cancel/reject APIs | Not applicable | Config and readiness endpoints implemented; no MyInvois submit lifecycle yet | Add MyInvois API client, token management, submit/poll/cancel/reject workflows |
+| Identifiers returned by authority | Store submissionId, document IDs, long ID for validation link, status | Not applicable | Storage model exists but authority IDs not populated end-to-end | Add persistence + surface in UI/PDF |
+| Supplier identity | Supplier TIN/BRN and address/contacts with field constraints | Seller legal entity + VAT/tax scheme IDs + endpoint ID | Company includes explicit TIN/BRN + SST/tourism tax fields | Add stricter field validation and code-list enforcement |
+| Buyer identity | Buyer TIN + ID types/values (B2B/B2C variants), optional email/phone rules | Buyer endpoint ID, legal entity, address | Customer includes TIN/BRN plus PEPPOL participant/scheme IDs | Add profile-specific validation rules and fallback handling for B2C cases |
+| Item classification | SDK codes + required classifications for items where applicable | Item standard identifiers (optional) + unit codes required | Product/invoice-item support unit/classification/tax metadata | Add authoritative code-list validation and mapping rules |
+| Tax modeling | Typically line-level tax categories and tax breakdown; SDK includes tax exemption support | EN16931/PEPPOL tax categories and VAT breakdown rules | Header-level and line-level metadata now both exist | Enforce reconciliation rules and generate compliant tax breakdown blocks in UBL |
 | Allowances/charges | Supported, with validations | Required modeling; totals must reconcile | Discount is header-level only | Add invoice-level + line-level allowances/charges and reconciliation rules |
 | Currency | MYR default; foreign currency requires exchange rate element per SDK notes | Currency codes in UBL; VAT accounting currency constraints | AppSettings supports currency code; no exchange rates | Add exchange rate data model + UI and ensure UBL output includes it when needed |
 | Lifecycle and state | MyInvois statuses: Submitted/Valid/Invalid/Cancelled; token lifetime; rate limits | PEPPOL delivery status managed by Access Point | Invo statuses: DRAFT/SENT/PAID/PARTIAL/OVERDUE/CANCELLED | Add e-Invoice status model separate from commercial invoice status |
@@ -88,6 +106,8 @@ Options:
 - **Full send mode (recommended):** Integrate with a PEPPOL Access Point provider API to send to recipients and receive delivery status.
 
 ## What needs to be added to Invo (implementation backlog)
+
+Note: parts of this backlog (especially data model foundations) are already implemented; keep this section as the target state checklist for full compliance completion.
 
 ### 1) Data model changes (Prisma)
 
@@ -528,4 +548,3 @@ Add e-invoice smoke tests as scripts (consistent with `src/scripts` approach in 
 - Sign XML and verify signature is present and hashing is stable.
 - Mock MyInvois endpoints (or use sandbox env in a separate workflow) to verify submit + poll logic.
 - Generate PEPPOL XML and validate it using official validator tooling (can be CI-only).
-

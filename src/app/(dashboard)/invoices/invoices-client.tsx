@@ -19,7 +19,6 @@ import { formatPhoneNumber } from '@/lib/whatsapp';
 import { InvoiceWithDetails } from '@/types';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
-import { useTheme } from 'next-themes';
 // Import from plan-limits instead of stripe to avoid loading Stripe SDK on client
 import { PLAN_LIMITS } from '@/lib/plan-limits';
 import type { CompanyDetails } from '../dashboard/dashboard-types';
@@ -96,8 +95,6 @@ export function InvoicesClient({
   const { showToast } = useToast();
   const router = useRouter();
   const { settings } = useSettings();
-  const { theme } = useTheme();
-  const isDarkMode = theme === 'dark';
 
   const selectedInvoiceWhatsAppDetails = useMemo(() => {
     if (!selectedInvoice) return null;
@@ -437,7 +434,6 @@ export function InvoicesClient({
         invoice={selectedInvoice}
         companyDetails={companyDetails}
         settings={settings}
-        isDarkMode={isDarkMode}
         onClose={() => setSelectedInvoice(null)}
         onDownloadPDF={handleDownloadPDFWithDetails}
       />

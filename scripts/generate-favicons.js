@@ -12,7 +12,7 @@ console.log('node scripts/generate-favicons.js');
 const sharp = require('sharp');
 
 const sizes = [16, 32, 72, 96, 128, 144, 152, 192, 384, 512];
-const inputFile = path.join(__dirname, '../public/invo-logo.png');
+const inputFile = path.join(__dirname, '../public/icons/Invo_Logo_Transparent.png');
 const outputDir = path.join(__dirname, '../public/icons');
 
 // Create output directory if it doesn't exist

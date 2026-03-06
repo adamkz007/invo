@@ -1,52 +1,89 @@
-# Invo - Modern Invoicing for Malaysian Freelancers & SMEs
+# Invo
 
-Invo is a simple, practical invoicing solution designed specifically for Malaysian small businesses and freelancers.
+Invo is a Malaysian invoicing and POS platform for freelancers and SMEs, built with Next.js 15.
 
-## Features
+## Current Product Scope
 
-- **Simple Invoicing**: Create professional invoices in seconds
-- **Customer Relationships**: Keep track of all your clients in one place
-- **Business Insights**: See how your business is performing with easy-to-understand charts
-- **Time-Saving Tools**: Set up recurring invoices and automated reminders
-- **Work Anywhere**: Access your business from your phone, tablet, or computer
-- **POS System**: Manage restaurant tables and orders with our integrated POS system
-
-## PWA Support
-
-Invo is now a Progressive Web App (PWA), which means it can be installed on your device and used offline. Features include:
-
-- **Installable**: Add Invo to your home screen for quick access
-- **Offline Support**: Continue working even without an internet connection
-- **App-like Experience**: Full-screen mode without browser UI elements
-- **Automatic Updates**: Always get the latest version
-
-To install Invo on your device:
-1. Open the website in a compatible browser (Chrome, Edge, Safari, etc.)
-2. Look for the "Add to Home Screen" or "Install" option in your browser
-3. Follow the prompts to install
+- Invoices with payments, PDF generation, and receipt generation
+- Customer management with limits by subscription plan
+- Inventory and product management (including stock-aware invoice flows)
+- POS order workflows (tables, orders, status transitions, kitchen chit printing)
+- Accounting module (ledger, accounts, expenses, bank import, tax rates, financial reports)
+- Stripe subscription flows (checkout, portal, webhook handling)
+- E-invoice readiness module (configuration, validation, invoice readiness checks)
+- Marketing/blog pages, SEO structured data, and web-vitals endpoint
+- PWA support via service worker + manifest
 
 ## Tech Stack
 
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- Framer Motion
+- Next.js 15 (App Router) + React 19 + TypeScript
+- Prisma ORM (`@prisma/client` / Prisma 6)
+- PostgreSQL/Supabase in production
+- Tailwind CSS + shadcn/ui + Radix
+- React Hook Form + Zod
+- Stripe
 
-## Database Migrations
+## Getting Started
 
-Invo uses Prisma for local development and Supabase in production. To keep the databases in sync, we have several migration scripts:
+1. Install dependencies:
 
-- `npm run db:deploy` - Deploy Prisma schema changes to the local database
-- `node migrate-to-supabase.js` - Migrate the basic schema to Supabase
-- `node sync-schema-migration.js` - Sync additional fields to Supabase
-- `node migrate-pos-tables.js` - Migrate POS tables to Supabase
+```bash
+npm install
+```
 
-When adding new POS tables or modifying existing ones, make sure to run the appropriate migration scripts.
+2. Configure environment variables (`.env.local`):
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `NEXT_PUBLIC_APP_URL`
+- `STRIPE_SECRET_KEY` (for subscription features)
+- `STRIPE_PRICE_ID` (for subscription checkout)
+- `STRIPE_WEBHOOK_SECRET` (for webhook verification)
+
+3. Start development server:
+
+```bash
+npm run dev
+```
+
+## Common Commands
+
+- `npm run dev` - Start local dev server
+- `npm run build` - Generate Prisma client and build Next.js app
+- `npm run lint` - Run ESLint
+- `npm run analyze` - Build with bundle analyzer
+- `npm run seed` - Push schema + seed data
+- `npm run db:deploy` - Run Prisma deployment helper (`prisma/deploy.js`)
+- `npm run test:db` - Database connection smoke test
+- `npm run test:api` - API smoke test script
+
+## Database and Migration Notes
+
+- `prisma/schema.prisma` is the source of truth for models.
+- Supabase SQL migrations live in `supabase/migrations`.
+- Root-level migration helpers:
+  - `node migrate-to-supabase.js`
+  - `node sync-schema-migration.js`
+  - `node migrate-pos-tables.js`
+- Run `npm run test:db` before and after major schema changes.
+
+## PWA
+
+PWA support is wired through:
+
+- `public/manifest.json`
+- `public/sw.js`
+- `src/components/providers/pwa-provider.tsx`
+
+The app registers the service worker from the root layout and supports installable app behavior.
 
 ## Deployment
 
-- **Netlify**: The repository includes a `netlify.toml` that installs `@netlify/plugin-nextjs` and publishes the `.next` build output. Set the Netlify build command to `npm run build` (default) and ensure environment variables like `DATABASE_URL`, `JWT_SECRET`, and `NEXT_PUBLIC_APP_URL` are configured. The plugin handles routing so marketing and dashboard routes resolve correctly.
+Netlify deployment is configured via `netlify.toml` with `@netlify/plugin-nextjs`.
+
+- Build command: `npm run build`
+- Publish directory: `.next`
+- Ensure required environment variables are set in Netlify project settings.
 
 ## License
 

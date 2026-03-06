@@ -33,7 +33,7 @@ interface BreadcrumbItem {
 export const OrganizationSchema: React.FC<OrganizationSchemaProps> = ({
   name = "Invo",
   url = "https://invo.my",
-  logo = "https://invo.my/invo-logo.png",
+  logo = "https://invo.my/icons/Invo_Logo_Transparent.png",
   description = "Practical invoicing solution designed for small and medium enterprises in Malaysia"
 }) => {
   const organizationSchema = {
@@ -87,7 +87,7 @@ export const ArticleSchema: React.FC<{ post: BlogPostProps }> = ({ post }) => {
       "name": "Invo",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://invo.my/invo-logo.png"
+        "url": "https://invo.my/icons/Invo_Logo_Transparent.png"
       }
     },
     "datePublished": post.publishedAt,

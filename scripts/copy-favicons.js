@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Source logo file
-const logoPath = path.join(__dirname, '../public/invo-logo.png');
+const logoPath = path.join(__dirname, '../public/icons/Invo_Logo_Transparent.png');
 
 // Destination paths
 const destinations = [

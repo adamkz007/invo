@@ -182,7 +182,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center space-x-2">
             <div className="relative h-8 w-8">
               <Image 
-                src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} 
+                src="/icons/Invo_Logo_Transparent.png" 
                 alt="Invo Logo" 
                 width={32}
                 height={32}
@@ -1080,7 +1080,7 @@ export default function LandingPage() {
           
           <div className="mt-8 pt-6 border-t border-border/40 flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0 bg-background/60 px-4 py-1.5 rounded-full shadow-sm border border-border/30 hover:shadow-md transition-all duration-300">
-              <Image src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} alt="Invo Logo" width={32} height={32} className="h-7 w-auto mr-2" />
+              <Image src="/icons/Invo_Logo_Transparent.png" alt="Invo Logo" width={32} height={32} className="h-7 w-auto mr-2" />
               <span className={`font-bold ${isDarkMode ? "text-white" : "text-primary"}`}>Invo</span>
             </div>
             <p className="text-sm text-muted-foreground bg-muted/50 px-4 py-1.5 rounded-full">

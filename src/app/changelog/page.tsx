@@ -14,6 +14,13 @@ export default function ChangelogPage() {
         <p className="text-muted-foreground mb-8">See what's new and improved in Invo.</p>
         <div className="space-y-10">
           <div>
+            <h2 className="text-xl font-bold mb-2">7 Mar 2026</h2>
+            <ul className="list-disc pl-6 space-y-2 text-base">
+              <li>Updated invoice PDF layout</li>
+              <li>Filter dashboard by time range</li>
+            </ul>
+          </div>
+          <div>
             <h2 className="text-xl font-bold mb-2">v1.2.1</h2>
             <ul className="list-disc pl-6 space-y-2 text-base">
               <li>Fixes on Receipt module</li>

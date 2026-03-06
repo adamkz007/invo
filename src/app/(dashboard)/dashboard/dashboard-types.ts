@@ -31,6 +31,40 @@ export interface CompanyDetails {
 }
 
 export interface DashboardStats {
+  periods: {
+    allTime: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+    currentMonth: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+    currentYear: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+  };
+  comparisons: {
+    previousMonth: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+    previousYear: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+  };
   totalInvoices: number;
   totalCustomers: number;
   totalProducts: number;
@@ -68,6 +102,40 @@ export interface DashboardStats {
 
 export function mapDashboardOverviewToStats(data: DashboardOverview): DashboardStats {
   return {
+    periods: {
+      allTime: {
+        invoices: data.periods?.allTime?.invoices ?? data.totals.invoices ?? 0,
+        customers: data.periods?.allTime?.customers ?? data.totals.customers ?? 0,
+        products: data.periods?.allTime?.products ?? data.totals.products ?? 0,
+        revenue: data.periods?.allTime?.revenue ?? data.invoiceStats.amount ?? 0,
+      },
+      currentMonth: {
+        invoices: data.periods?.currentMonth?.invoices ?? data.growth?.currentMonth?.invoices ?? 0,
+        customers: data.periods?.currentMonth?.customers ?? data.growth?.currentMonth?.customers ?? 0,
+        products: data.periods?.currentMonth?.products ?? data.growth?.currentMonth?.products ?? 0,
+        revenue: data.periods?.currentMonth?.revenue ?? data.growth?.currentMonth?.revenue ?? 0,
+      },
+      currentYear: {
+        invoices: data.periods?.currentYear?.invoices ?? 0,
+        customers: data.periods?.currentYear?.customers ?? 0,
+        products: data.periods?.currentYear?.products ?? 0,
+        revenue: data.periods?.currentYear?.revenue ?? 0,
+      },
+    },
+    comparisons: {
+      previousMonth: {
+        invoices: data.comparisons?.previousMonth?.invoices ?? data.growth?.previousMonth?.invoices ?? 0,
+        customers: data.comparisons?.previousMonth?.customers ?? data.growth?.previousMonth?.customers ?? 0,
+        products: data.comparisons?.previousMonth?.products ?? data.growth?.previousMonth?.products ?? 0,
+        revenue: data.comparisons?.previousMonth?.revenue ?? data.growth?.previousMonth?.revenue ?? 0,
+      },
+      previousYear: {
+        invoices: data.comparisons?.previousYear?.invoices ?? 0,
+        customers: data.comparisons?.previousYear?.customers ?? 0,
+        products: data.comparisons?.previousYear?.products ?? 0,
+        revenue: data.comparisons?.previousYear?.revenue ?? 0,
+      },
+    },
     totalInvoices: data.totals.invoices ?? 0,
     totalCustomers: data.totals.customers ?? 0,
     totalProducts: data.totals.products ?? 0,

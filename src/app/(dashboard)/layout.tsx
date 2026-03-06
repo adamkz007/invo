@@ -33,7 +33,7 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ProfileNotification } from '@/components/ui/profile-notification';
 import { DashboardLoading } from '@/components/ui/loading';
-import { useTheme } from 'next-themes';
+import { ReleaseChangelogPopup } from '@/components/navigation/release-changelog-popup';
 import { useSettings } from '@/contexts/settings-context';
 
 interface User {
@@ -65,8 +65,6 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { theme } = useTheme();
-  const isDarkMode = theme === 'dark';
   const { settings } = useSettings();
 
   // TEMPORARILY BYPASSING AUTHENTICATION
@@ -163,24 +161,21 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="relative h-8 w-8">
+            <Link href="/dashboard" className="flex items-center">
+              <div className="relative h-9 w-9">
                 <Image 
-                  src={isDarkMode ? "/invo-logo-w.png" : "/invo-logo.png"} 
+                  src="/icons/Invo_Logo_Transparent.png" 
                   alt="Invo" 
-                  width={32} 
-                  height={32}
-                  className="h-8 w-auto"
+                  width={36} 
+                  height={36}
+                  className="h-9 w-auto"
                 />
               </div>
-              <span className={`font-serif font-bold text-xl ${isDarkMode ? "text-white" : "text-primary"}`}>Invo</span>
             </Link>
           </div>
 
-          {/* Theme toggle and user dropdown */}
+          {/* User dropdown */}
           <div className="flex items-center space-x-2">
-            <ThemeToggle />
-            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -209,11 +204,37 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
                   </p>
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="md:hidden"
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <span>Theme</span>
+                    <ThemeToggle />
+                  </div>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings">
                     <Settings className="mr-2 h-5 w-5" />
                     <span>Settings</span>
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="hidden md:flex"
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <span>Theme</span>
+                    <ThemeToggle />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="hidden md:flex" onClick={toggleSidebar}>
+                  {isSidebarCollapsed ? (
+                    <PanelLeftOpen className="mr-2 h-5 w-5" />
+                  ) : (
+                    <PanelLeftClose className="mr-2 h-5 w-5" />
+                  )}
+                  <span>{isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-5 w-5" />
@@ -324,6 +345,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
       {/* Profile notification */}
       <ProfileNotification />
+      <ReleaseChangelogPopup userId={user?.id} />
     </div>
   );
 });

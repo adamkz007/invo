@@ -10,7 +10,11 @@ const ALLOWED_MIME_PREFIX = 'image/';
 function getProductImageStore() {
   // For local development, pass credentials explicitly
   const siteID = process.env.NETLIFY_SITE_ID;
-  const token = process.env.NETLIFY_AUTH_TOKEN;
+  const token =
+    process.env.NETLIFY_AUTH_TOKEN ||
+    process.env.NETLIFY_TOKEN ||
+    process.env.AUTH_TOKEN ||
+    process.env.auth_token;
 
   if (siteID && token) {
     return getStore({
@@ -33,7 +37,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get('file');
 
-  if (!file || typeof file === 'string' || !(file instanceof File)) {
+  if (!file || typeof file === 'string' || !(file instanceof Blob)) {
     return NextResponse.json({ error: 'Image file is required' }, { status: 400 });
   }
 
@@ -45,7 +49,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Image is too large (max 5MB)' }, { status: 413 });
   }
 
-  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const fileName = file instanceof File ? file.name : 'upload.jpg';
+  const extension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
   const objectKey = `products/${user.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
 
   try {
@@ -68,6 +73,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 
 

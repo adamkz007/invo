@@ -18,7 +18,6 @@ type Props = {
   invoice: InvoiceWithDetails | null;
   companyDetails: CompanyDetails | null;
   settings: AppSettings;
-  isDarkMode: boolean;
   onClose: () => void;
   onDownloadPDF: (invoice: InvoiceWithDetails) => void;
 };
@@ -27,7 +26,6 @@ export function InvoiceDetailsDialog({
   invoice,
   companyDetails,
   settings,
-  isDarkMode,
   onClose,
   onDownloadPDF,
 }: Props) {
@@ -238,7 +236,7 @@ export function InvoiceDetailsDialog({
                 <span>Powered by</span>
                 <div className="flex items-center ml-1">
                   <Image
-                    src={isDarkMode ? '/invo-logo-w.png' : '/invo-logo.png'}
+                    src="/icons/Invo_Logo_Transparent.png"
                     alt="Invo Logo"
                     className="h-4 w-4 mr-1"
                     width={16}

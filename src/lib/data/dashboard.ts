@@ -6,6 +6,40 @@ import { toNumber } from '@/lib/decimal';
 export const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
 
 export interface DashboardOverview {
+  periods: {
+    allTime: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+    currentMonth: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+    currentYear: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+  };
+  comparisons: {
+    previousMonth: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+    previousYear: {
+      invoices: number;
+      customers: number;
+      products: number;
+      revenue: number;
+    };
+  };
   totals: {
     invoices: number;
     customers: number;
@@ -59,6 +93,13 @@ function getMonthRange(offset: number) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
   const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  return { start, end };
+}
+
+function getYearRange(offset: number) {
+  const now = new Date();
+  const start = new Date(now.getFullYear() + offset, 0, 1);
+  const end = new Date(start.getFullYear() + 1, 0, 1);
   return { start, end };
 }
 
@@ -186,13 +227,26 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
   const { start: currentStart, end: currentEnd } = getMonthRange(0);
   const { start: previousStart, end: previousEnd } = getMonthRange(-1);
 
+  const { start: currentYearStart, end: currentYearEnd } = getYearRange(0);
+  const { start: previousYearStart, end: previousYearEnd } = getYearRange(-1);
+
   const [
     currentMonthInvoices,
     previousMonthInvoices,
+    currentYearInvoices,
+    previousYearInvoices,
     currentMonthCustomers,
     previousMonthCustomers,
+    currentYearCustomers,
+    previousYearCustomers,
     currentMonthProducts,
     previousMonthProducts,
+    currentYearProducts,
+    previousYearProducts,
+    currentMonthReceipts,
+    previousMonthReceipts,
+    currentYearReceipts,
+    previousYearReceipts,
   ] = await Promise.all([
     prisma.invoice.aggregate({
       where: {
@@ -216,6 +270,28 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
       _count: { _all: true },
       _sum: { total: true },
     }),
+    prisma.invoice.aggregate({
+      where: {
+        userId,
+        issueDate: {
+          gte: currentYearStart,
+          lt: currentYearEnd,
+        },
+      },
+      _count: { _all: true },
+      _sum: { total: true },
+    }),
+    prisma.invoice.aggregate({
+      where: {
+        userId,
+        issueDate: {
+          gte: previousYearStart,
+          lt: previousYearEnd,
+        },
+      },
+      _count: { _all: true },
+      _sum: { total: true },
+    }),
     prisma.customer.count({
       where: {
         userId,
@@ -231,6 +307,24 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
         createdAt: {
           gte: previousStart,
           lt: previousEnd,
+        },
+      },
+    }),
+    prisma.customer.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: currentYearStart,
+          lt: currentYearEnd,
+        },
+      },
+    }),
+    prisma.customer.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: previousYearStart,
+          lt: previousYearEnd,
         },
       },
     }),
@@ -251,10 +345,112 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
           lt: previousEnd,
         },
       },
+    }),
+    prisma.product.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: currentYearStart,
+          lt: currentYearEnd,
+        },
+      },
+    }),
+    prisma.product.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: previousYearStart,
+          lt: previousYearEnd,
+        },
+      },
+    }),
+    prisma.receipt.aggregate({
+      where: {
+        userId,
+        receiptDate: {
+          gte: currentStart,
+          lt: currentEnd,
+        },
+      },
+      _sum: { total: true },
+    }),
+    prisma.receipt.aggregate({
+      where: {
+        userId,
+        receiptDate: {
+          gte: previousStart,
+          lt: previousEnd,
+        },
+      },
+      _sum: { total: true },
+    }),
+    prisma.receipt.aggregate({
+      where: {
+        userId,
+        receiptDate: {
+          gte: currentYearStart,
+          lt: currentYearEnd,
+        },
+      },
+      _sum: { total: true },
+    }),
+    prisma.receipt.aggregate({
+      where: {
+        userId,
+        receiptDate: {
+          gte: previousYearStart,
+          lt: previousYearEnd,
+        },
+      },
+      _sum: { total: true },
     }),
   ]);
 
+  const allTimeRevenue = coerceDecimal(invoiceTotals._sum.total) + coerceDecimal(receiptTotals._sum.total);
+  const currentMonthRevenue =
+    coerceDecimal(currentMonthInvoices._sum.total) + coerceDecimal(currentMonthReceipts._sum.total);
+  const previousMonthRevenue =
+    coerceDecimal(previousMonthInvoices._sum.total) + coerceDecimal(previousMonthReceipts._sum.total);
+  const currentYearRevenue =
+    coerceDecimal(currentYearInvoices._sum.total) + coerceDecimal(currentYearReceipts._sum.total);
+  const previousYearRevenue =
+    coerceDecimal(previousYearInvoices._sum.total) + coerceDecimal(previousYearReceipts._sum.total);
+
   return {
+    periods: {
+      allTime: {
+        invoices: totals[0],
+        customers: totals[1],
+        products: totals[2],
+        revenue: allTimeRevenue,
+      },
+      currentMonth: {
+        invoices: currentMonthInvoices._count?._all ?? 0,
+        customers: currentMonthCustomers,
+        products: currentMonthProducts,
+        revenue: currentMonthRevenue,
+      },
+      currentYear: {
+        invoices: currentYearInvoices._count?._all ?? 0,
+        customers: currentYearCustomers,
+        products: currentYearProducts,
+        revenue: currentYearRevenue,
+      },
+    },
+    comparisons: {
+      previousMonth: {
+        invoices: previousMonthInvoices._count?._all ?? 0,
+        customers: previousMonthCustomers,
+        products: previousMonthProducts,
+        revenue: previousMonthRevenue,
+      },
+      previousYear: {
+        invoices: previousYearInvoices._count?._all ?? 0,
+        customers: previousYearCustomers,
+        products: previousYearProducts,
+        revenue: previousYearRevenue,
+      },
+    },
     totals: {
       invoices: totals[0],
       customers: totals[1],
@@ -262,7 +458,7 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
       inventoryValue,
     },
     invoiceStats: {
-      amount: coerceDecimal(invoiceTotals._sum.total) + coerceDecimal(receiptTotals._sum.total),
+      amount: allTimeRevenue,
       paid: coerceDecimal(invoiceTotals._sum.paidAmount) + coerceDecimal(receiptTotals._sum.total),
       overdue: statusTotals.overdue,
       pending: statusTotals.pending,
@@ -293,13 +489,13 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
         invoices: currentMonthInvoices._count?._all ?? 0,
         customers: currentMonthCustomers,
         products: currentMonthProducts,
-        revenue: coerceDecimal(currentMonthInvoices._sum.total),
+        revenue: currentMonthRevenue,
       },
       previousMonth: {
         invoices: previousMonthInvoices._count?._all ?? 0,
         customers: previousMonthCustomers,
         products: previousMonthProducts,
-        revenue: coerceDecimal(previousMonthInvoices._sum.total),
+        revenue: previousMonthRevenue,
       },
     },
   };
