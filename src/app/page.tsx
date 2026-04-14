@@ -115,8 +115,7 @@ export default function LandingPage() {
         "Partial payments, taxes, and discounts"
       ],
       cta: "Get Started",
-      highlighted: false,
-      limitedTime: false
+      highlighted: false
     },
     {
       name: "Pro",
@@ -130,8 +129,7 @@ export default function LandingPage() {
         "Custom logo & branding"
       ],
       cta: "Start Free Trial",
-      highlighted: true,
-      limitedTime: false
+      highlighted: true
     },
     {
       name: "Lifetime",

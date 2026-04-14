@@ -168,19 +168,25 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
     setIsLoading(true);
     
     try {
+      const returnUrl = `${window.location.origin}/settings`;
       const response = await fetch('/api/subscription/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, returnUrl }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create checkout session');
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = (errorData as { error?: string } | null)?.error || 'Failed to create checkout session';
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
+      if (!data?.url || typeof data.url !== 'string') {
+        throw new Error('Stripe checkout URL is missing from server response.');
+      }
       
       // Checkout will redirect, so trigger refresh on return
       if (onSubscriptionChange) {
@@ -188,11 +194,12 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
         sessionStorage.setItem('refresh_subscription', 'true');
       }
       
-      window.location.href = data.url;
+      window.location.assign(data.url);
     } catch (err) {
       console.error('Checkout error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Stripe payment processing failed. Please try again later.';
       showToast({
-        message: 'Stripe payment processing failed. Please try again later or consider cancelling your subscription request.',
+        message: errorMessage,
         variant: 'error'
       });
     } finally {

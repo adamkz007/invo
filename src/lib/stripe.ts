@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { normalizeSubscriptionPlan, type SubscriptionPlanKey } from './subscription-plans';
+import { SubscriptionPlanKey, normalizeSubscriptionPlan } from './subscription-plans';
 
 // Re-export plan limits from separate file to allow importing without Stripe SDK
 export {
@@ -79,13 +79,14 @@ export async function createCheckoutSession(
   const priceId = getStripePriceIdForPlan(normalizedPlan);
   const isLifetimePlan = normalizedPlan === 'LIFETIME';
 
-  if (!priceId || priceId.includes('your_stripe_price_id')) {
+  if (!priceId || !priceId.startsWith('price_')) {
     const missingVar = isLifetimePlan ? 'STRIPE_LIFETIME_PRICE_ID' : 'STRIPE_PRICE_ID';
     throw new Error(`Invalid Stripe Price ID. Set a valid ${missingVar} in your environment variables.`);
   }
   
   // Create a checkout session with optional customer email
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+    ui_mode: 'hosted',
     payment_method_types: ['card'],
     line_items: [
       {
@@ -122,6 +123,10 @@ export async function createCheckoutSession(
   }
   
   const session = await stripe.checkout.sessions.create(sessionConfig);
+
+  if (!session.url) {
+    throw new Error('Stripe checkout session was created without a redirect URL.');
+  }
 
   return session.url;
 }

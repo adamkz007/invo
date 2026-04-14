@@ -74,25 +74,40 @@ CREATE TABLE IF NOT EXISTS "pos_settings" (
 );
 
 -- Add foreign key from PosOrder to PosTable
-ALTER TABLE "pos_orders"
-ADD CONSTRAINT "pos_orders_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "pos_tables"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'pos_orders_tableId_fkey'
+      AND conrelid = '"pos_orders"'::regclass
+  ) THEN
+    ALTER TABLE "pos_orders"
+    ADD CONSTRAINT "pos_orders_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "pos_tables"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END
+$$;
 
 -- Create triggers for updatedAt columns
+DROP TRIGGER IF EXISTS update_pos_orders_updated_at ON "pos_orders";
 CREATE TRIGGER update_pos_orders_updated_at
 BEFORE UPDATE ON "pos_orders"
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_pos_order_items_updated_at ON "pos_order_items";
 CREATE TRIGGER update_pos_order_items_updated_at
 BEFORE UPDATE ON "pos_order_items"
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_pos_tables_updated_at ON "pos_tables";
 CREATE TRIGGER update_pos_tables_updated_at
 BEFORE UPDATE ON "pos_tables"
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_pos_settings_updated_at ON "pos_settings";
 CREATE TRIGGER update_pos_settings_updated_at
 BEFORE UPDATE ON "pos_settings"
 FOR EACH ROW
