@@ -101,12 +101,12 @@ export async function createCheckoutSession(
       priceId,
     },
     billing_address_collection: 'auto',
-    payment_method_collection: 'always',
     success_url: `${returnUrl}?success=true&plan=${normalizedPlan}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${returnUrl}?canceled=true`,
   };
 
   if (!isLifetimePlan) {
+    sessionConfig.payment_method_collection = 'always';
     sessionConfig.subscription_data = {
       metadata: {
         plan: normalizedPlan,
