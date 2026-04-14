@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { calculateTrialEndDate, hasTrialExpired, TRIAL_DURATION_DAYS, PLAN_LIMITS } from '@/lib/stripe';
-import { format } from 'date-fns';
+import { TRIAL_DURATION_DAYS } from '@/lib/plan-limits';
 import { useToast } from '@/components/ui/toast';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -19,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
+import { normalizeSubscriptionPlan, type SubscriptionPlanKey } from '@/lib/subscription-plans';
 
 interface SubscriptionSettingsProps {
   user: {
@@ -29,6 +29,7 @@ interface SubscriptionSettingsProps {
     trialEndDate?: Date | string | null;
     subscriptionStatus?: string;
     currentPeriodEnd?: Date | string | null;
+    billingPlan?: SubscriptionPlanKey;
   };
   onSubscriptionChange?: () => void;
 }
@@ -77,6 +78,7 @@ function formatDate(date: Date | null): string {
 
 export function SubscriptionSettings({ user, onSubscriptionChange }: SubscriptionSettingsProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlanKey | null>(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isBetaLoading, setIsBetaLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | undefined>(user?.subscriptionStatus);
@@ -84,6 +86,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
   const searchParams = useSearchParams();
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailInput, setEmailInput] = useState(user?.email || '');
+  const [pendingCheckoutPlan, setPendingCheckoutPlan] = useState<SubscriptionPlanKey>('PRO_MONTHLY');
   
   console.log('SubscriptionSettings - Initial render with user:', user);
   console.log('SubscriptionSettings - subscriptionStatus:', user?.subscriptionStatus);
@@ -99,6 +102,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
     const beta = searchParams.get('beta');
     const trial = searchParams.get('trial');
     const demo = searchParams.get('demo');
+    const completedPlan = normalizeSubscriptionPlan(searchParams.get('plan'));
     
     if (success === 'true') {
       if (trial === 'true') {
@@ -116,24 +120,32 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
           message: 'Beta upgrade successful! You now have premium features.',
           variant: 'success'
         });
+      } else if (completedPlan === 'LIFETIME') {
+        showToast({
+          message: 'Lifetime plan activated! You now have Pro features forever.',
+          variant: 'success'
+        });
       } else if (demo === 'true') {
         showToast({
           message: 'Premium upgrade successful! You now have access to all premium features.',
           variant: 'success'
         });
-        
-        if (user) {
-          setSubscriptionStatus('active');
-          user.subscriptionStatus = 'active';
-          if (!user.currentPeriodEnd) {
-            const oneMonthFromNow = new Date();
-            oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
-            user.currentPeriodEnd = oneMonthFromNow;
-          }
+      }
+
+      if (demo === 'true' && user) {
+        setSubscriptionStatus('ACTIVE');
+        user.subscriptionStatus = 'ACTIVE';
+        if (completedPlan === 'LIFETIME') {
+          user.billingPlan = 'LIFETIME';
+          user.currentPeriodEnd = null;
+        } else if (!user.currentPeriodEnd) {
+          const oneMonthFromNow = new Date();
+          oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+          user.currentPeriodEnd = oneMonthFromNow;
         }
       }
     }
-  }, [searchParams, showToast, user]);
+  }, [searchParams, showToast, user, onSubscriptionChange]);
 
   const trialStartDate = parseDate(user?.trialStartDate);
   const trialEndDateFromDB = parseDate(user?.trialEndDate);
@@ -145,19 +157,14 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
   const normalizedStatus = subscriptionStatus?.toUpperCase();
   const isInTrial = normalizedStatus === 'TRIAL' && trialStartDate && trialEndDate && new Date() < trialEndDate;
   const isSubscribed = normalizedStatus === 'ACTIVE';
-  const trialExpired = normalizedStatus === 'TRIAL' && trialStartDate && trialEndDate && new Date() > trialEndDate;
+  const isLifetimePlan = isSubscribed && user?.billingPlan === 'LIFETIME';
   
   const planType = isSubscribed ? 'PREMIUM' : isInTrial ? 'TRIAL' : 'FREE';
   
   const features = PLAN_FEATURES[planType as keyof typeof PLAN_FEATURES];
   
-  const handleUpgrade = async () => {
-    if (user?.email?.endsWith('@example.com')) {
-      setEmailInput(user.email);
-      setShowEmailDialog(true);
-      return;
-    }
-    
+  const startCheckout = async (plan: SubscriptionPlanKey) => {
+    setLoadingPlan(plan);
     setIsLoading(true);
     
     try {
@@ -166,7 +173,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ plan }),
       });
       
       if (!response.ok) {
@@ -189,8 +196,20 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
         variant: 'error'
       });
     } finally {
+      setLoadingPlan(null);
       setIsLoading(false);
     }
+  };
+
+  const handleUpgrade = async (plan: SubscriptionPlanKey) => {
+    if (user?.email?.endsWith('@example.com')) {
+      setPendingCheckoutPlan(plan);
+      setEmailInput(user.email);
+      setShowEmailDialog(true);
+      return;
+    }
+
+    await startCheckout(plan);
   };
 
   // Add an effect to check for post-redirect refresh
@@ -261,33 +280,8 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
       user.email = emailInput;
       
       setShowEmailDialog(false);
-      
-      setIsLoading(true);
-      
-      try {
-        const checkoutResponse = await fetch('/api/subscription/checkout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}),
-        });
-        
-        if (!checkoutResponse.ok) {
-          throw new Error('Failed to create checkout session');
-        }
-        
-        const data = await checkoutResponse.json();
-        
-        window.location.href = data.url;
-      } catch (err) {
-        console.error('Checkout error:', err);
-        showToast({
-          message: 'Failed to initiate checkout. Please try again.',
-          variant: 'error'
-        });
-        setIsLoading(false);
-      }
+
+      await startCheckout(pendingCheckoutPlan);
       
     } catch (error) {
       console.error('Error updating email:', error);
@@ -298,16 +292,19 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
     }
   };
   
-  const plan = isSubscribed ? {
-    name: 'Premium Plan',
-    price: 'RM9/month'
-  } : isInTrial ? {
+  const plan = isSubscribed ? (
+    isLifetimePlan
+      ? { name: 'Lifetime Plan', price: 'RM269 one-time' }
+      : { name: 'Premium Plan', price: 'RM9/month' }
+  ) : isInTrial ? {
     name: 'Beta Access',
     price: 'Free for now'
   } : {
     name: 'Free Plan',
     price: 'Free'
   };
+
+  const canManageSubscription = isSubscribed && !isLifetimePlan;
 
   const handleBetaUpgrade = async () => {
     setIsBetaLoading(true);
@@ -375,7 +372,8 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
           <CardTitle className="flex justify-between items-center">
             Subscription
             {isInTrial && <Badge className="bg-blue-500">Trial</Badge>}
-            {isSubscribed && <Badge className="bg-green-500">Premium</Badge>}
+            {isLifetimePlan && <Badge className="bg-amber-500 text-amber-950">Lifetime</Badge>}
+            {isSubscribed && !isLifetimePlan && <Badge className="bg-green-500">Premium</Badge>}
             {!isInTrial && !isSubscribed && <Badge>Free</Badge>}
           </CardTitle>
         </CardHeader>
@@ -407,7 +405,17 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
               </div>
             )}
             
-            {isSubscribed && currentPeriodEnd && (
+            {isLifetimePlan && (
+              <div className="text-sm space-y-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-md">
+                <div className="flex justify-between items-center">
+                  <p className="font-medium text-amber-700 dark:text-amber-300">Lifetime Plan</p>
+                  <Badge className="bg-amber-500 text-amber-950">Limited-time offer</Badge>
+                </div>
+                <p>You have permanent Pro access with no recurring charges.</p>
+              </div>
+            )}
+
+            {isSubscribed && !isLifetimePlan && currentPeriodEnd && (
               <div className="text-sm space-y-2 p-3 bg-green-50 dark:bg-green-950 rounded-md">
                 <div className="flex justify-between items-center">
                   <p className="font-medium text-green-700 dark:text-green-300">Premium Plan</p>
@@ -421,14 +429,33 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
         <CardFooter className="flex flex-col space-y-3">
           {!isSubscribed && (
             <>
-              <Button onClick={handleUpgrade} disabled={isLoading} className="w-full">
+              <Button onClick={() => handleUpgrade('PRO_MONTHLY')} disabled={isLoading} className="w-full">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    {loadingPlan === 'PRO_MONTHLY' ? 'Starting Pro checkout...' : 'Processing...'}
                   </>
                 ) : (
-                  'Upgrade to Premium (RM9/month)'
+                  'Upgrade to Pro (RM9/month)'
+                )}
+              </Button>
+
+              <Button
+                onClick={() => handleUpgrade('LIFETIME')}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full border-amber-300 hover:border-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/30"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {loadingPlan === 'LIFETIME' ? 'Starting Lifetime checkout...' : 'Processing...'}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <span>Lifetime (RM269 one-time)</span>
+                    <Badge className="bg-amber-500 text-amber-950">Limited time</Badge>
+                  </div>
                 )}
               </Button>
               
@@ -453,7 +480,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
             </>
           )}
           
-          {isSubscribed && (
+          {canManageSubscription && (
             <Button 
               variant="outline" 
               className="w-full" 

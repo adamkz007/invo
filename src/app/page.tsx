@@ -115,10 +115,11 @@ export default function LandingPage() {
         "Partial payments, taxes, and discounts"
       ],
       cta: "Get Started",
-      highlighted: false
+      highlighted: false,
+      limitedTime: false
     },
     {
-      name: "Premium",
+      name: "Pro",
       price: "RM9",
       period: "per month",
       description: "Ideal for growing businesses",
@@ -129,7 +130,23 @@ export default function LandingPage() {
         "Custom logo & branding"
       ],
       cta: "Start Free Trial",
-      highlighted: true
+      highlighted: true,
+      limitedTime: false
+    },
+    {
+      name: "Lifetime",
+      price: "RM269",
+      period: "one-time",
+      description: "Limited-time deal for permanent Pro access",
+      features: [
+        "Everything in Pro",
+        "Unlimited clients and invoices",
+        "All future Pro updates",
+        "No recurring billing"
+      ],
+      cta: "Claim Lifetime Deal",
+      highlighted: false,
+      limitedTime: true
     }
   ];
 
@@ -816,7 +833,7 @@ export default function LandingPage() {
             </motion.p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {plans.map((plan, index) => (
               <motion.div
                 key={plan.name}
@@ -833,6 +850,11 @@ export default function LandingPage() {
                 {plan.highlighted && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md border border-primary/20">
                     MOST POPULAR
+                  </div>
+                )}
+                {plan.limitedTime && (
+                  <div className="absolute top-3 right-3 bg-amber-500 text-amber-950 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                    LIMITED TIME
                   </div>
                 )}
                 <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>

@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { normalizeSubscriptionPlan, type SubscriptionPlanKey } from './subscription-plans';
 
 // Re-export plan limits from separate file to allow importing without Stripe SDK
 export {
@@ -31,6 +32,11 @@ if (isServer && stripe) {
 
 // Constants
 export const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || '';
+export const STRIPE_LIFETIME_PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID || '';
+
+export function getStripePriceIdForPlan(plan: SubscriptionPlanKey): string {
+  return plan === 'LIFETIME' ? STRIPE_LIFETIME_PRICE_ID : STRIPE_PRICE_ID;
+}
 
 // Create a Stripe customer for a user
 export async function createStripeCustomer(email: string, name: string) {
@@ -53,12 +59,13 @@ export async function createStripeCustomer(email: string, name: string) {
   return customer.id;
 }
 
-// Create a subscription for a customer
-export async function createSubscription(
+// Create a checkout session for subscription or one-time lifetime payment
+export async function createCheckoutSession(
   customerId: string,
-  priceId: string = STRIPE_PRICE_ID,
+  plan: SubscriptionPlanKey,
   returnUrl: string,
-  email?: string
+  email?: string,
+  userId?: string
 ) {
   if (!stripe) {
     if (isServer) {
@@ -68,12 +75,17 @@ export async function createSubscription(
     }
   }
   
+  const normalizedPlan = normalizeSubscriptionPlan(plan);
+  const priceId = getStripePriceIdForPlan(normalizedPlan);
+  const isLifetimePlan = normalizedPlan === 'LIFETIME';
+
   if (!priceId || priceId.includes('your_stripe_price_id')) {
-    throw new Error('Invalid Stripe Price ID. Set a valid STRIPE_PRICE_ID in your environment variables.');
+    const missingVar = isLifetimePlan ? 'STRIPE_LIFETIME_PRICE_ID' : 'STRIPE_PRICE_ID';
+    throw new Error(`Invalid Stripe Price ID. Set a valid ${missingVar} in your environment variables.`);
   }
   
   // Create a checkout session with optional customer email
-  const sessionConfig: any = {
+  const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     payment_method_types: ['card'],
     line_items: [
       {
@@ -81,12 +93,26 @@ export async function createSubscription(
         quantity: 1,
       },
     ],
-    mode: 'subscription',
+    mode: isLifetimePlan ? 'payment' : 'subscription',
+    metadata: {
+      plan: normalizedPlan,
+      userId: userId || '',
+      priceId,
+    },
     billing_address_collection: 'auto',
     payment_method_collection: 'always',
-    success_url: `${returnUrl}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${returnUrl}?success=true&plan=${normalizedPlan}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${returnUrl}?canceled=true`,
   };
+
+  if (!isLifetimePlan) {
+    sessionConfig.subscription_data = {
+      metadata: {
+        plan: normalizedPlan,
+        userId: userId || '',
+      },
+    };
+  }
   
   // Use customer ID parameter (preferred) or email, but not both
   if (customerId) {

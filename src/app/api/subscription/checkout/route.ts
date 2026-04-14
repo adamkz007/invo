@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSubscription, createStripeCustomer, stripe, STRIPE_PRICE_ID } from '@/lib/stripe';
+import { createCheckoutSession, createStripeCustomer, getStripePriceIdForPlan } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { normalizeSubscriptionPlan } from '@/lib/subscription-plans';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse request body
-    const { returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings` } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const returnUrl = body.returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings`;
+    const selectedPlan = normalizeSubscriptionPlan(body.plan);
+    const selectedPriceId = getStripePriceIdForPlan(selectedPlan);
 
     // Get the complete user data
     const userData = await prisma.user.findUnique({
@@ -32,16 +36,18 @@ export async function POST(req: NextRequest) {
       
       // For simulated customers, set the subscription status to active in the database
       try {
-        // Calculate current period end (1 month from now)
-        const currentPeriodEnd = new Date();
-        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+        const isLifetime = selectedPlan === 'LIFETIME';
+        const currentPeriodEnd = isLifetime ? null : new Date();
+        if (currentPeriodEnd) {
+          currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+        }
         
         await prisma.user.update({
           where: { id: user.id },
           data: { 
-            subscriptionStatus: 'active',
-            stripeSubscriptionId: `sub_sim_${Date.now()}`,
-            stripePriceId: STRIPE_PRICE_ID || 'price_sim_standard',
+            subscriptionStatus: 'ACTIVE',
+            stripeSubscriptionId: isLifetime ? null : `sub_sim_${Date.now()}`,
+            stripePriceId: selectedPriceId || (isLifetime ? 'price_sim_lifetime' : 'price_sim_standard'),
             currentPeriodEnd: currentPeriodEnd,
           }
         });
@@ -52,7 +58,7 @@ export async function POST(req: NextRequest) {
       }
       
       // Return a demo success URL instead of actual Stripe checkout
-      const demoSuccessUrl = `${returnUrl}?success=true&demo=true&session_id=demo_session_${Date.now()}`;
+      const demoSuccessUrl = `${returnUrl}?success=true&demo=true&plan=${selectedPlan}&session_id=demo_session_${Date.now()}`;
       return NextResponse.json({ url: demoSuccessUrl });
     }
     
@@ -60,12 +66,15 @@ export async function POST(req: NextRequest) {
     const isStripeConfigured = process.env.STRIPE_SECRET_KEY && 
                               (process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') || 
                                process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')) &&
-                              process.env.STRIPE_PRICE_ID &&
-                              !process.env.STRIPE_PRICE_ID.includes('your_stripe_price_id');
+                              selectedPriceId &&
+                              !selectedPriceId.includes('your_stripe_price_id');
 
     if (!isStripeConfigured) {
-      console.error('Stripe is not properly configured');
-      return NextResponse.json({ error: 'Stripe is not properly configured' }, { status: 500 });
+      console.error(`Stripe is not properly configured for selected plan: ${selectedPlan}`);
+      return NextResponse.json(
+        { error: `Stripe is not properly configured for ${selectedPlan === 'LIFETIME' ? 'Lifetime' : 'Pro Monthly'} plan` },
+        { status: 500 }
+      );
     }
 
     // If we don't have a customer ID, create a new one
@@ -98,11 +107,12 @@ export async function POST(req: NextRequest) {
       // Get the user's email, providing a fallback if null
       const userEmail = userData.email || `user-${userData.id}@example.com`;
       
-      checkoutUrl = await createSubscription(
+      checkoutUrl = await createCheckoutSession(
         customerId, 
-        STRIPE_PRICE_ID, 
+        selectedPlan,
         returnUrl,
-        userEmail
+        userEmail,
+        user.id
       );
     } catch (error) {
       console.error('Checkout error:', error);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import type { SubscriptionPlanKey } from '@/lib/subscription-plans';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,6 +29,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Return user data with subscription info, ensuring email is included
+    let billingPlan: SubscriptionPlanKey = 'PRO_MONTHLY';
+    if (
+      userData.stripePriceId &&
+      process.env.STRIPE_LIFETIME_PRICE_ID &&
+      userData.stripePriceId === process.env.STRIPE_LIFETIME_PRICE_ID
+    ) {
+      billingPlan = 'LIFETIME';
+    }
+
     const publicUserData = {
       id: userData.id,
       name: userData.name,
@@ -37,7 +47,8 @@ export async function GET(req: NextRequest) {
       trialStartDate: userData.trialStartDate,
       trialEndDate: userData.trialEndDate,
       currentPeriodEnd: userData.currentPeriodEnd,
-      stripeCustomerId: userData.stripeCustomerId
+      stripeCustomerId: userData.stripeCustomerId,
+      billingPlan
     };
 
     console.log('API: Returning user data with subscription info');

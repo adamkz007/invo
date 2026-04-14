@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
+import { normalizeSubscriptionPlan } from '@/lib/subscription-plans';
 
 // This is your Stripe webhook secret for testing
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 export async function POST(req: NextRequest) {
+  if (!stripe) {
+    return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+  }
+
   const payload = await req.text();
   const signature = req.headers.get('stripe-signature') || '';
 
@@ -24,31 +29,62 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
-      
-      // Get the subscription details
-      if (session.subscription && session.customer) {
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-        const customerId = session.customer as string;
+      const customerId = session.customer as string | null;
 
-        // Find the user with the stripeCustomerId
-        const user = await prisma.user.findFirst({
-          where: {
-            stripeCustomerId: customerId,
+      if (!customerId) {
+        break;
+      }
+
+      // Find the user with the stripeCustomerId
+      const user = await prisma.user.findFirst({
+        where: {
+          stripeCustomerId: customerId,
+        },
+      });
+
+      if (!user) {
+        break;
+      }
+
+      const planFromMetadata = normalizeSubscriptionPlan(session.metadata?.plan);
+      const isLifetimeCheckout = session.mode === 'payment' || planFromMetadata === 'LIFETIME';
+      
+      // Lifetime one-time payment
+      if (isLifetimeCheckout) {
+        let paidPriceId = session.metadata?.priceId || null;
+
+        try {
+          const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+          paidPriceId = lineItems.data[0]?.price?.id || paidPriceId;
+        } catch (error) {
+          console.error('Failed to fetch line items for checkout session:', error);
+        }
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            subscriptionStatus: 'ACTIVE',
+            stripeSubscriptionId: null,
+            stripePriceId: paidPriceId,
+            currentPeriodEnd: null,
           },
         });
+        break;
+      }
 
-        if (user) {
-          // Update user subscription details
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              subscriptionStatus: 'ACTIVE',
-              stripeSubscriptionId: subscription.id,
-              stripePriceId: subscription.items.data[0].price.id,
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            },
-          });
-        }
+      // Recurring subscription checkout
+      if (session.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            subscriptionStatus: 'ACTIVE',
+            stripeSubscriptionId: subscription.id,
+            stripePriceId: subscription.items.data[0].price.id,
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          },
+        });
       }
       break;
     }

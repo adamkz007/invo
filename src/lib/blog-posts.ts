@@ -34,6 +34,21 @@ export const BLOG_POSTS: BlogPost[] = [
     tags: ['SME grants', 'financing', 'Malaysia', 'funding'],
   },
   {
+    slug: 'malaysia-tax-filing-form-b-form-be-ya-2025',
+    title: 'Malaysia SME Tax Filing 2025: Form B and Form BE, Step by Step',
+    excerpt: 'A two-part guide for Malaysian SMEs and individuals: how to file Form B for business income and Form BE for employment income, with sample calculations.',
+    category: 'Taxes',
+    date: 'March 7, 2026',
+    publishedAt: '2026-03-07T00:00:00.000Z',
+    updatedAt: '2026-03-07T00:00:00.000Z',
+    author: 'Adam',
+    readTime: '12 min read',
+    image: '/blog/tax-deductions.jpg',
+    imageAlt: 'Malaysia tax filing for SMEs',
+    featured: false,
+    tags: ['tax filing', 'Form B', 'Form BE', 'Malaysia', 'SME'],
+  },
+  {
     slug: 'inventory-management-retail',
     title: 'Smart Inventory Management for Malaysian Retail Businesses',
     excerpt: 'Learn how effective inventory management can reduce costs and improve customer satisfaction for Malaysian retailers.',
@@ -119,4 +134,3 @@ export function getBlogPostBySlug(slug: string) {
 export function getBlogPostUrl(slug: string) {
   return `${siteUrl}/blog/posts/${slug}`;
 }
-
