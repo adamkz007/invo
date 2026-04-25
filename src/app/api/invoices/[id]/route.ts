@@ -90,17 +90,22 @@ async function adjustStock(
   userId: string,
   direction: 'increment' | 'decrement',
 ) {
-  const adjustments = new Map<string, number>();
+  const adjustments = new Map<string, { quantity: number; productName: string }>();
 
   for (const item of items) {
     if (!item.product || item.product.disableStockManagement) {
       continue;
     }
 
-    adjustments.set(item.productId, (adjustments.get(item.productId) || 0) + item.quantity);
+    const existing = adjustments.get(item.productId);
+    adjustments.set(item.productId, {
+      quantity: (existing?.quantity || 0) + item.quantity,
+      productName: item.product.name,
+    });
   }
 
-  for (const [productId, quantity] of adjustments.entries()) {
+  for (const [productId, adjustment] of adjustments.entries()) {
+    const { quantity, productName } = adjustment;
     if (direction === 'decrement') {
       const result = await tx.product.updateMany({
         where: { id: productId, userId, quantity: { gte: quantity } },
@@ -108,7 +113,7 @@ async function adjustStock(
       });
 
       if (result.count === 0) {
-        throw new Error(`Insufficient stock for product ${productId}`);
+        throw new Error(`Insufficient stock for product ${productName || productId}`);
       }
     } else {
       await tx.product.updateMany({

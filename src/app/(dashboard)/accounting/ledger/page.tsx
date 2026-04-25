@@ -27,7 +27,13 @@ export default function LedgerPage() {
     const res = await fetch(`/api/accounting/ledger?${params.toString()}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      setEntries((prev) => [...prev, ...data.entries]);
+      setEntries((prev) => {
+        const unique = new Map(prev.map((entry) => [entry.id, entry]));
+        for (const entry of data.entries as Entry[]) {
+          unique.set(entry.id, entry);
+        }
+        return Array.from(unique.values());
+      });
       setCursor(data.nextCursor);
     }
     setLoading(false);

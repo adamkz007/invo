@@ -10,26 +10,43 @@ export function ProfileNotification() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    let activeController: AbortController | null = null;
+
     const checkProfileStatus = async () => {
+      activeController?.abort();
+      const controller = new AbortController();
+      activeController = controller;
+
       try {
-        setIsLoading(true);
+        if (isMounted) setIsLoading(true);
         // Fetch company details to check if profile is updated
-        const response = await fetch('/api/company');
+        const response = await fetch('/api/company', {
+          signal: controller.signal,
+          cache: 'no-store',
+        });
         
         if (response.ok) {
           const data = await response.json();
           
           // If data is null or legalName is empty, profile needs to be updated
-          setIsVisible(!data || !data.legalName);
+          if (isMounted) setIsVisible(!data || !data.legalName);
         } else {
           // If there's an error fetching company details, assume profile needs updating
-          setIsVisible(true);
+          if (isMounted) setIsVisible(true);
         }
       } catch (error) {
-        console.error('Error checking profile status:', error);
-        setIsVisible(true);
+        const isAbortError =
+          error instanceof DOMException && error.name === 'AbortError';
+
+        if (!isAbortError) {
+          console.error('Error checking profile status:', error);
+          if (isMounted) setIsVisible(true);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted && !controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -45,6 +62,8 @@ export function ProfileNotification() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      isMounted = false;
+      activeController?.abort();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);

@@ -1,26 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStore } from '@netlify/blobs';
+import { getProductImageStore } from '@/lib/product-image-store';
 
 export const runtime = 'nodejs';
-
-function getProductImageStore() {
-  const siteID = process.env.NETLIFY_SITE_ID;
-  const token =
-    process.env.NETLIFY_AUTH_TOKEN ||
-    process.env.NETLIFY_TOKEN ||
-    process.env.AUTH_TOKEN ||
-    process.env.auth_token;
-
-  if (siteID && token) {
-    return getStore({
-      name: 'product-images',
-      siteID,
-      token,
-    });
-  }
-
-  return getStore('product-images');
-}
 
 export async function GET(
   request: NextRequest,

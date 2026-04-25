@@ -194,6 +194,7 @@ export interface InvoiceWithDetails {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
+  discountType?: 'PERCENT' | 'FIXED';
   discountRate: number;
   discountAmount: number;
   total: number;

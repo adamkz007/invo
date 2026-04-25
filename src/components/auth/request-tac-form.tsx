@@ -9,29 +9,15 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertCircle } from 'lucide-react';
 import { InlineLoading } from '@/components/ui/loading';
+import { isValidMalaysiaPhoneNumber } from '@/lib/phone';
 
 // Malaysia phone number validation schema
 const formSchema = z.object({
   phoneNumber: z
     .string()
-    .refine(
-      (value) => {
-        // Must start with Malaysia country code +60
-        if (!value.startsWith('+60')) {
-          return false;
-        }
-        
-        // Get the number without country code
-        const numberWithoutCode = value.substring(3);
-        
-        // Check if it's a valid Malaysia mobile number
-        // Malaysia mobile numbers start with 1 and are 9-10 digits after the country code
-        return /^1\d{8,9}$/.test(numberWithoutCode);
-      },
-      {
-        message: 'Please enter a valid Malaysia mobile number',
-      }
-    ),
+    .refine(isValidMalaysiaPhoneNumber, {
+      message: 'Please enter a valid Malaysia mobile number',
+    }),
 });
 
 interface RequestTACFormProps {
@@ -100,23 +86,6 @@ export default function RequestTACForm({ onSuccess, isLogin = true, initialPhone
     } finally {
       setIsLoading(false);
     }
-  }
-
-  // Malaysia-specific phone number validation
-  function isValidMalaysiaPhoneNumber(phone: string): boolean {
-    // Must start with Malaysia country code +60
-    if (!phone.startsWith('+60')) {
-      return false;
-    }
-    
-    // Get the number without country code
-    const numberWithoutCode = phone.substring(3);
-    
-    // Malaysia mobile numbers:
-    // - Must start with 1
-    // - Must be 9-10 digits after the country code
-    // - Common prefixes: 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-    return /^1[0-9]{8,9}$/.test(numberWithoutCode);
   }
 
   return (

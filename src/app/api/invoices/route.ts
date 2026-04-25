@@ -226,6 +226,7 @@ export async function POST(req: NextRequest) {
         },
         select: {
           id: true,
+          name: true,
           quantity: true,
           disableStockManagement: true,
         },
@@ -242,7 +243,7 @@ export async function POST(req: NextRequest) {
         if (!product.disableStockManagement) {
           const remaining = product.quantity - item.quantity;
           if (remaining < 0) {
-            throw new Error(`Insufficient stock for product ${item.productId}`);
+            throw new Error(`Insufficient stock for product ${product.name}`);
           }
           product.quantity = remaining;
         }

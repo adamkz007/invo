@@ -164,6 +164,24 @@ function formatCompanyAddress(companyDetails: any): string {
   return companyDetails.address || '';
 }
 
+function formatPdfDate(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+function getDiscountLabel(invoice: InvoiceWithDetails): string {
+  const discountType = (invoice as InvoiceWithDetails & { discountType?: 'PERCENT' | 'FIXED' }).discountType ?? 'PERCENT';
+  if (discountType === 'FIXED') {
+    return 'Discount';
+  }
+
+  return `Discount (Rate: ${invoice.discountRate.toFixed(2)}%)`;
+}
+
 export async function downloadInvoicePDF(
   invoice: InvoiceWithDetails, 
   companyDetails: CompanyDetails | null = null,
@@ -182,14 +200,6 @@ export async function downloadInvoicePDF(
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;
   const contentWidth = pageWidth - (margin * 2);
-  
-  // Format dates properly
-  const formatDate = (date: Date | string) => {
-    if (typeof date === 'string') {
-      return new Date(date).toLocaleDateString();
-    }
-    return date.toLocaleDateString();
-  };
   
   // Add a blue header bar
   doc.setFillColor(2, 33, 142); // Dark blue background
@@ -334,12 +344,12 @@ export async function downloadInvoicePDF(
   doc.setFont('helvetica', 'normal');
   doc.text('Invoice Date', invoiceDetailsX, customerY + 10);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatDate(invoice.issueDate), invoiceDetailsValueX, customerY + 10, { align: 'right' });
+  doc.text(formatPdfDate(invoice.issueDate), invoiceDetailsValueX, customerY + 10, { align: 'right' });
   
   doc.setFont('helvetica', 'normal');
   doc.text('Due Date', invoiceDetailsX, customerY + 20);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatDate(invoice.dueDate), invoiceDetailsValueX, customerY + 20, { align: 'right' });
+  doc.text(formatPdfDate(invoice.dueDate), invoiceDetailsValueX, customerY + 20, { align: 'right' });
   
   // Status with clean badge style
   doc.setFont('helvetica', 'normal');
@@ -655,7 +665,7 @@ export async function downloadInvoicePDF(
     doc.rect(totalsX - 5, currentY - 5, totalsWidth + 5, 10, 'S'); // Border
     
     const discountAmount = invoice.discountAmount ?? ((invoice.subtotal || 0) * (invoice.discountRate / 100));
-    doc.text(`Discount Rate (${invoice.discountRate.toFixed(2)}%)`, totalsX, currentY);
+    doc.text(getDiscountLabel(invoice), totalsX, currentY);
     doc.text(`(${formatCurrency(discountAmount, settings)})`, pageWidth - margin - 2, currentY, { align: 'right' });
     currentY += 8;
   }
@@ -807,13 +817,19 @@ export async function downloadInvoicePDF(
         const labelBaselineY = currentRowY + baselineOffset;
         const valueBaselineY = currentRowY + baselineOffset;
 
+        // Match the invoice item table header style for title cells
+        doc.setFillColor(2, 33, 142);
+        doc.rect(tableX, currentRowY, labelColumnWidth, row.height, 'F');
+
         doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
         row.labelLines.forEach((line, lineIdx) => {
           const textY = labelBaselineY + (lineIdx * lineHeight);
           doc.text(line, labelStartX, textY);
         });
 
         doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
         row.valueLines.forEach((line, lineIdx) => {
           const textY = valueBaselineY + (lineIdx * lineHeight);
           doc.text(line, valueStartX, textY);
@@ -943,14 +959,6 @@ export async function generateInvoicePDFBlob(
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;
   
-  // Format dates properly
-  const formatDate = (date: Date | string) => {
-    if (typeof date === 'string') {
-      return new Date(date).toLocaleDateString();
-    }
-    return date.toLocaleDateString();
-  };
-  
   // Add a blue header bar
   doc.setFillColor(2, 33, 142);
   doc.rect(0, 0, pageWidth, 40, 'F');
@@ -1038,12 +1046,12 @@ export async function generateInvoicePDFBlob(
   doc.setFont('helvetica', 'bold');
   doc.text('Issue Date:', pageWidth - margin - 50, customerY + 7);
   doc.setFont('helvetica', 'normal');
-  doc.text(formatDate(invoice.issueDate), pageWidth - margin, customerY + 7, { align: 'right' });
+  doc.text(formatPdfDate(invoice.issueDate), pageWidth - margin, customerY + 7, { align: 'right' });
   
   doc.setFont('helvetica', 'bold');
   doc.text('Due Date:', pageWidth - margin - 50, customerY + 14);
   doc.setFont('helvetica', 'normal');
-  doc.text(formatDate(invoice.dueDate), pageWidth - margin, customerY + 14, { align: 'right' });
+  doc.text(formatPdfDate(invoice.dueDate), pageWidth - margin, customerY + 14, { align: 'right' });
   
   // Items table
   const tableStartY = 110;
@@ -1089,7 +1097,7 @@ export async function generateInvoicePDFBlob(
   if (invoice.discountRate > 0) {
     currentY += 7;
     const discountAmount = invoice.discountAmount ?? ((invoice.subtotal || 0) * (invoice.discountRate / 100));
-    doc.text(`Discount Rate (${invoice.discountRate.toFixed(2)}%)`, pageWidth - margin - 50, currentY);
+    doc.text(getDiscountLabel(invoice), pageWidth - margin - 50, currentY);
     doc.text(`(${formatCurrency(discountAmount, settings)})`, pageWidth - margin, currentY, { align: 'right' });
   }
   

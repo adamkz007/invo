@@ -28,6 +28,7 @@ import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { InlineLoading } from '@/components/ui/loading';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { isValidMalaysiaPhoneNumber } from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -35,23 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Malaysia-specific phone number validation
-function isValidMalaysiaPhoneNumber(phone: string): boolean {
-  // Must start with Malaysia country code +60
-  if (!phone.startsWith('+60')) {
-    return false;
-  }
-  
-  // Get the number without country code
-  const numberWithoutCode = phone.substring(3);
-  
-  // Malaysia mobile numbers:
-  // - Must start with 1
-  // - Must be 9-10 digits after the country code
-  // - Common prefixes: 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-  return /^1[0-9]{8,9}$/.test(numberWithoutCode);
-}
 
 const customerFormSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),

@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStore } from '@netlify/blobs';
 import { getUserFromRequest } from '@/lib/auth';
+import { getProductImageStore } from '@/lib/product-image-store';
 
 export const runtime = 'nodejs';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_PREFIX = 'image/';
-
-function getProductImageStore() {
-  // For local development, pass credentials explicitly
-  const siteID = process.env.NETLIFY_SITE_ID;
-  const token =
-    process.env.NETLIFY_AUTH_TOKEN ||
-    process.env.NETLIFY_TOKEN ||
-    process.env.AUTH_TOKEN ||
-    process.env.auth_token;
-
-  if (siteID && token) {
-    return getStore({
-      name: 'product-images',
-      siteID,
-      token,
-    });
-  }
-
-  // In Netlify runtime, credentials are automatic
-  return getStore('product-images');
-}
 
 export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
@@ -73,5 +52,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 

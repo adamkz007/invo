@@ -9,17 +9,18 @@ import { useSettings } from '@/contexts/settings-context';
 import { formatCurrency } from '@/lib/utils';
 
 type Metrics = { accountsReceivableTotal: number; revenueMonth: number; cashBalance: number; expensesMonth: number } | null;
+type Expense = { id: string; vendor: string; date: string; total: string; status: string };
 
 function MetricCard({ title, value, hint, icon: Icon }: { title: string; value: string; hint?: string; icon: any }) {
   return (
     <Card className="rounded-xl">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-5 w-5 text-muted-foreground" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2.5 pb-1.5">
+        <CardTitle className="text-xs font-medium">{title}</CardTitle>
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
       </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <div className="text-2xl font-bold">{value}</div>
-        {hint ? <p className="text-xs text-muted-foreground mt-1">{hint}</p> : null}
+      <CardContent className="p-2.5 pt-0">
+        <div className="text-lg font-bold leading-tight">{value}</div>
+        {hint ? <p className="mt-0.5 text-[11px] leading-none text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>
   );
@@ -28,8 +29,10 @@ function MetricCard({ title, value, hint, icon: Icon }: { title: string; value: 
 export default function AccountingPage() {
   const { settings } = useSettings();
   const [metrics, setMetrics] = useState<Metrics>(null);
+  const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
   const [period, setPeriod] = useState<string>('MTD');
   const [loading, setLoading] = useState(false);
+  const [expensesLoading, setExpensesLoading] = useState(false);
 
   const { start, end } = useMemo(() => {
     const now = new Date();
@@ -77,6 +80,18 @@ export default function AccountingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
+  useEffect(() => {
+    (async () => {
+      setExpensesLoading(true);
+      const res = await fetch('/api/accounting/expenses', { cache: 'no-store' });
+      if (res.ok) {
+        const items: Expense[] = await res.json();
+        setRecentExpenses(items.slice(0, 5));
+      }
+      setExpensesLoading(false);
+    })();
+  }, []);
+
   const ar = metrics?.accountsReceivableTotal ?? 0;
   const cash = metrics?.cashBalance ?? 0;
   const expenses = metrics?.expensesMonth ?? 0;
@@ -113,6 +128,27 @@ export default function AccountingPage() {
           <Button variant="secondary" className="w-full">Record Expense</Button>
         </Link>
       </div>
+
+      <Card className="rounded-xl">
+        <CardHeader className="p-3">
+          <CardTitle className="text-sm">Recent Expenses</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {recentExpenses.map((expense) => (
+              <div key={expense.id} className="grid grid-cols-2 items-center p-3 text-sm sm:grid-cols-4">
+                <div className="font-medium">{expense.vendor}</div>
+                <div className="text-muted-foreground">{new Date(expense.date).toLocaleDateString()}</div>
+                <div className="font-mono">{formatCurrency(Number(expense.total), settings)}</div>
+                <div className="text-xs">{expense.status}</div>
+              </div>
+            ))}
+            {!expensesLoading && recentExpenses.length === 0 ? (
+              <div className="p-3 text-sm text-muted-foreground">No expenses yet</div>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Shortcuts */}
       <div className="grid grid-cols-1 gap-2">
