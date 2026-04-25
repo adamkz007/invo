@@ -1,11 +1,9 @@
-'use client';
-
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, User, FileText } from 'lucide-react';
-import Image from 'next/image';
-import { ArticleFooter } from '@/components/blog/article-footer';
+import type { Metadata } from 'next';
+import { BlogPostLayout } from '@/components/blog/blog-post-layout';
 import { ArticleContent, Checklist, Highlight, HighlightBox } from '@/components/blog/article-content';
+import { getBlogPostMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = getBlogPostMetadata('inventory-management-retail');
 
 export default function InventoryManagementRetailPost() {
   // Define related posts
@@ -45,75 +43,19 @@ export default function InventoryManagementRetailPost() {
     }
   ];
 
-  // Author information
-  const author = {
-    role: 'Founder'
-  };
-
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-primary text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Link href="/blog" className="inline-flex items-center gap-1.5 text-white/90 hover:text-white mb-6 bg-white/10 px-2.5 py-1.5 rounded-md transition-colors hover:bg-white/20">
-              <ArrowLeft className="h-4 w-4" />
-              <FileText className="h-4 w-4" />
-              <span>Blog</span>
-            </Link>
-            <div className="inline-block px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium mb-4">
-              Inventory Management
-            </div>
-            <h1 className="text-3xl md:text-5xl font-bold mb-6">
-              Smart Inventory Management for Malaysian Retail Businesses
-            </h1>
-            <div className="flex flex-wrap items-center text-sm text-white/80">
-              <div className="flex items-center mr-6 mb-2">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>April 10, 2023</span>
-              </div>
-              <div className="flex items-center mr-6 mb-2">
-                <User className="h-4 w-4 mr-1" />
-                <span>Adam</span>
-              </div>
-              <div className="flex items-center mb-2">
-                <Clock className="h-4 w-4 mr-1" />
-                <span>8 min read</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Featured Image */}
-      <div className="container mx-auto px-4 -mt-10">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="rounded-lg overflow-hidden shadow-xl"
-          >
-            <figure className="m-0">
-              <Image
-                src="/blog/inventory-management.jpg"
-                alt="Inventory Management for Malaysian Retail"
-                width={1200}
-                height={630}
-                className="w-full h-auto"
-                onError={(e) => {
-                  e.currentTarget.src = "https://placehold.co/1200x630/02228F/ffffff?text=Inventory+Management";
-                }}
-              />
-            </figure>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <main className="container mx-auto px-4 py-16">
-        <div className="max-w-3xl mx-auto">
-          <ArticleContent>
+    <BlogPostLayout
+      title="Smart Inventory Management for Malaysian Retail Businesses"
+      category="Inventory Management"
+      date="April 10, 2023"
+      readTime="8 min read"
+      featuredImage="/blog/inventory-management.jpg"
+      imageAlt="Inventory Management for Malaysian Retail"
+      relatedPosts={relatedPosts}
+      ctaTitle="Ready to optimize your retail inventory?"
+      ctaDescription="Invo helps Malaysian retailers manage inventory, track sales, and generate reports all in one platform. Get started today and transform your inventory management."
+    >
+      <ArticleContent>
             <p className="lead">
               For retail businesses in Malaysia, effective inventory management is not just a back-office function—it's a critical competitive advantage. From traditional brick-and-mortar shops in shopping malls to growing e-commerce operations, managing stock efficiently can make the difference between thriving and barely surviving.
             </p>
@@ -242,16 +184,7 @@ export default function InventoryManagementRetailPost() {
             <Highlight>
               For Malaysian retailers, effective inventory management is no longer optional—it's essential for survival and growth in today's competitive market. The initial investment in time and resources to establish proper inventory management systems pays dividends through improved efficiency, better cash flow, and ultimately, increased profitability.
             </Highlight>
-          </ArticleContent>
-
-          <ArticleFooter 
-            author={author}
-            relatedPosts={relatedPosts}
-            ctaTitle="Ready to optimize your retail inventory?"
-            ctaDescription="Invo helps Malaysian retailers manage inventory, track sales, and generate reports all in one platform. Get started today and transform your inventory management."
-          />
-        </div>
-      </main>
-    </div>
+      </ArticleContent>
+    </BlogPostLayout>
   );
 }

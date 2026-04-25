@@ -270,12 +270,6 @@ export default function LandingPage() {
                   </Button>
                 </a>
               </div>
-              <p className="mt-4 text-sm text-muted-foreground line-through">
-                No credit card required. 14-day free trial.
-              </p>
-              <p className="mt-2 text-sm font-medium bg-green-100/50 text-green-800 px-4 py-1.5 rounded-full inline-block shadow-sm border border-green-200/50">
-                We're in beta! Enjoy all features free for a limited time
-              </p>
             </motion.div>
             
             <motion.div
@@ -1056,12 +1050,6 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:ml-3 transition-all duration-300" />
                 </Button>
               </Link>
-              <p className="mt-4 text-sm opacity-80 line-through">
-                No credit card required. 14-day free trial.
-              </p>
-              <p className="mt-2 text-sm font-medium bg-white/20 rounded-full px-4 py-1.5 inline-block shadow-md border border-white/10">
-                We're in beta! Enjoy all features free for a limited time
-              </p>
             </div>
           </motion.div>
         </div>

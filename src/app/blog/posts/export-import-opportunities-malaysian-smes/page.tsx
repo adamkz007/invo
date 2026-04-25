@@ -1,11 +1,9 @@
-'use client';
-
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, User, FileText } from 'lucide-react';
-import Image from 'next/image';
-import { ArticleFooter } from '@/components/blog/article-footer';
+import type { Metadata } from 'next';
+import { BlogPostLayout } from '@/components/blog/blog-post-layout';
 import { ArticleContent, Checklist, Highlight, HighlightBox } from '@/components/blog/article-content';
+import { getBlogPostMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = getBlogPostMetadata('export-import-opportunities-malaysian-smes');
 
 export default function ExportImportOpportunitiesMalaysianSMEsPost() {
   // Define related posts
@@ -45,75 +43,19 @@ export default function ExportImportOpportunitiesMalaysianSMEsPost() {
     }
   ];
 
-  // Author information
-  const author = {
-    role: 'Founder'
-  };
-
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-primary text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Link href="/blog" className="inline-flex items-center gap-1.5 text-white/90 hover:text-white mb-6 bg-white/10 px-2.5 py-1.5 rounded-md transition-colors hover:bg-white/20">
-              <ArrowLeft className="h-4 w-4" />
-              <FileText className="h-4 w-4" />
-              <span>Blog</span>
-            </Link>
-            <div className="inline-block px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium mb-4">
-              International Trade
-            </div>
-            <h1 className="text-3xl md:text-5xl font-bold mb-6">
-              Export & Import Opportunities for Malaysian SMEs: Your Gateway to Global Markets
-            </h1>
-            <div className="flex flex-wrap items-center text-sm text-white/80">
-              <div className="flex items-center mr-6 mb-2">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>June 12, 2023</span>
-              </div>
-              <div className="flex items-center mr-6 mb-2">
-                <User className="h-4 w-4 mr-1" />
-                <span>Adam</span>
-              </div>
-              <div className="flex items-center mb-2">
-                <Clock className="h-4 w-4 mr-1" />
-                <span>12 min read</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Featured Image */}
-      <div className="container mx-auto px-4 -mt-10">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="rounded-lg overflow-hidden shadow-xl"
-          >
-            <figure className="m-0">
-              <Image
-                src="/blog/export-import.jpg"
-                alt="Export & Import Opportunities for Malaysian SMEs"
-                width={1200}
-                height={630}
-                className="w-full h-auto"
-                onError={(e) => {
-                  e.currentTarget.src = "https://placehold.co/1200x630/02228F/ffffff?text=Export+Import+Opportunities";
-                }}
-              />
-            </figure>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <main className="container mx-auto px-4 py-16">
-        <div className="max-w-3xl mx-auto">
-          <ArticleContent>
+    <BlogPostLayout
+      title="Export & Import Opportunities for Malaysian SMEs: Your Gateway to Global Markets"
+      category="International Trade"
+      date="June 12, 2023"
+      readTime="12 min read"
+      featuredImage="/blog/export-import.jpg"
+      imageAlt="Export & Import Opportunities for Malaysian SMEs"
+      relatedPosts={relatedPosts}
+      ctaTitle="Ready to expand your business globally?"
+      ctaDescription="Invo helps Malaysian SMEs manage their international invoicing and finances with ease. Get started today and take your business to new markets with confidence."
+    >
+      <ArticleContent>
             <p className="lead">
               Malaysia's strategic location in the heart of Southeast Asia, combined with its robust trade agreements and export-oriented policies, creates exceptional opportunities for SMEs looking to expand beyond national borders. Whether you're considering your first international venture or seeking to optimize existing global operations, this guide will help you navigate the complexities of international trade.
             </p>
@@ -306,16 +248,7 @@ export default function ExportImportOpportunitiesMalaysianSMEsPost() {
             <Highlight>
               While challenges exist, they can be overcome with proper planning, partnerships, and persistence. The potential rewards—expanded market reach, increased revenue, and enhanced competitiveness—make international trade an endeavor well worth pursuing for growth-oriented Malaysian SMEs.
             </Highlight>
-          </ArticleContent>
-
-          <ArticleFooter 
-            author={author}
-            relatedPosts={relatedPosts}
-            ctaTitle="Ready to expand your business globally?"
-            ctaDescription="Invo helps Malaysian SMEs manage their international invoicing and finances with ease. Get started today and take your business to new markets with confidence."
-          />
-        </div>
-      </main>
-    </div>
+      </ArticleContent>
+    </BlogPostLayout>
   );
 }

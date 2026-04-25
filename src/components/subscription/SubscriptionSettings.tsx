@@ -80,7 +80,6 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlanKey | null>(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
-  const [isBetaLoading, setIsBetaLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | undefined>(user?.subscriptionStatus);
   const { showToast } = useToast();
   const searchParams = useSearchParams();
@@ -99,7 +98,6 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
 
   useEffect(() => {
     const success = searchParams.get('success');
-    const beta = searchParams.get('beta');
     const trial = searchParams.get('trial');
     const demo = searchParams.get('demo');
     const completedPlan = normalizeSubscriptionPlan(searchParams.get('plan'));
@@ -107,7 +105,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
     if (success === 'true') {
       if (trial === 'true') {
         showToast({
-          message: `Beta access activated! You now have ${TRIAL_DURATION_DAYS} days of unlimited features.`,
+          message: `Pro trial activated! You now have ${TRIAL_DURATION_DAYS} days of unlimited features.`,
           variant: 'success'
         });
         
@@ -115,11 +113,6 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
         if (onSubscriptionChange) {
           onSubscriptionChange();
         }
-      } else if (beta === 'true') {
-        showToast({
-          message: 'Beta upgrade successful! You now have premium features.',
-          variant: 'success'
-        });
       } else if (completedPlan === 'LIFETIME') {
         showToast({
           message: 'Lifetime plan activated! You now have Pro features forever.',
@@ -304,73 +297,14 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
       ? { name: 'Lifetime Plan', price: 'RM269 one-time' }
       : { name: 'Premium Plan', price: 'RM9/month' }
   ) : isInTrial ? {
-    name: 'Beta Access',
-    price: 'Free for now'
+    name: 'Pro Trial',
+    price: `Free for ${TRIAL_DURATION_DAYS} days`
   } : {
     name: 'Free Plan',
     price: 'Free'
   };
 
   const canManageSubscription = isSubscribed && !isLifetimePlan;
-
-  const handleBetaUpgrade = async () => {
-    setIsBetaLoading(true);
-    
-    try {
-      console.log('Initiating beta upgrade...');
-      const response = await fetch('/api/subscription/beta-upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to process beta upgrade');
-      }
-      
-      const data = await response.json();
-      console.log('Beta upgrade response:', data);
-      
-      // Show success toast
-      showToast({
-        message: `Beta access activated! You now have ${TRIAL_DURATION_DAYS} days of unlimited features.`,
-        variant: 'success'
-      });
-      
-      // Update local state if user data is returned
-      if (data.user) {
-        // Update subscription status directly without a full page reload
-        setSubscriptionStatus(data.user.subscriptionStatus);
-        
-        // Update the user object with new subscription details
-        if (user) {
-          user.subscriptionStatus = data.user.subscriptionStatus;
-          user.trialStartDate = data.user.trialStartDate;
-          user.trialEndDate = data.user.trialEndDate;
-          
-          // If onSubscriptionChange is provided, call it to update parent state
-          if (onSubscriptionChange) {
-            // Use setTimeout to prevent rapid state updates
-            setTimeout(() => {
-              onSubscriptionChange();
-            }, 500);
-          }
-        }
-      } else {
-        // Fall back to redirect if no user data is returned
-        window.location.href = data.redirectUrl;
-      }
-    } catch (err) {
-      console.error('Beta upgrade error:', err);
-      showToast({
-        message: 'Failed to activate beta subscription. Please try again or contact support if this persists.',
-        variant: 'error'
-      });
-    } finally {
-      setIsBetaLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -406,7 +340,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
             {isInTrial && (
               <div className="text-sm space-y-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
                 <div className="flex justify-between items-center">
-                  <p className="font-medium text-blue-700 dark:text-blue-300">Beta Access</p>
+                  <p className="font-medium text-blue-700 dark:text-blue-300">Pro Trial</p>
                   <p className="font-medium text-blue-700 dark:text-blue-300">Valid until: {formatDate(trialEndDate)}</p>
                 </div>
               </div>
@@ -465,25 +399,6 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
                   </div>
                 )}
               </Button>
-              
-              {!isInTrial && (
-                <div className="w-full text-center">
-                  <button 
-                    onClick={handleBetaUpgrade} 
-                    disabled={isBetaLoading}
-                    className="text-xs text-primary hover:underline focus:outline-none"
-                  >
-                    {isBetaLoading ? (
-                      <>
-                        <Loader2 className="inline mr-1 h-3 w-3 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      'Beta tester? Click here to activate'
-                    )}
-                  </button>
-                </div>
-              )}
             </>
           )}
           

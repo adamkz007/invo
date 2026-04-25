@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useState } from 'react';
 import { Facebook, Linkedin, Share2, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -36,23 +37,134 @@ export function ArticleFooter({
   ctaTitle = "Ready to streamline your business operations?",
   ctaDescription = "Invo makes it easy for Malaysian businesses of all sizes to manage invoicing, expenses, and stay compliant with regulations. Get started today.",
 }: ArticleFooterProps) {
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+
+  const getShareUrl = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+
+    return window.location.href;
+  }, []);
+
+  const getShareTitle = useCallback(() => {
+    if (typeof document === 'undefined') {
+      return 'Invo Blog';
+    }
+
+    return document.title;
+  }, []);
+
+  const openShareWindow = useCallback((url: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  const handleNativeShare = useCallback(async () => {
+    const shareUrl = getShareUrl();
+    const shareTitle = getShareTitle();
+
+    if (!shareUrl) {
+      setShareStatus('Unable to get this article link.');
+      return;
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: shareTitle,
+          url: shareUrl,
+        });
+        setShareStatus('Share dialog opened.');
+        return;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+    }
+
+    setShareStatus('Native sharing is unavailable here. Use the social buttons or copy the URL from the address bar.');
+  }, [getShareTitle, getShareUrl]);
+
+  const handleSocialShare = useCallback((platform: 'facebook' | 'twitter' | 'linkedin') => {
+    const shareUrl = getShareUrl();
+    const shareTitle = getShareTitle();
+
+    if (!shareUrl) {
+      setShareStatus('Unable to get this article link.');
+      return;
+    }
+
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedTitle = encodeURIComponent(shareTitle);
+
+    if (platform === 'facebook') {
+      openShareWindow(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`);
+      return;
+    }
+
+    if (platform === 'twitter') {
+      openShareWindow(`https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`);
+      return;
+    }
+
+    openShareWindow(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`);
+  }, [getShareTitle, getShareUrl, openShareWindow]);
+
   return (
     <>
       {/* Share Section */}
       <div className="border-t border-b py-6 my-8">
         <div className="flex flex-col sm:flex-row items-center justify-between">
-          <p className="font-medium mb-4 sm:mb-0">Share this article:</p>
+          <div className="mb-4 sm:mb-0">
+            <p className="font-medium">Share this article:</p>
+            {shareStatus ? (
+              <p className="mt-1 text-sm text-muted-foreground">{shareStatus}</p>
+            ) : null}
+          </div>
           <div className="flex space-x-4">
-            <Button variant="outline" size="icon" className="rounded-full">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              aria-label="Share on Facebook"
+              onClick={() => handleSocialShare('facebook')}
+            >
               <Facebook className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="rounded-full">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              aria-label="Share on X"
+              onClick={() => handleSocialShare('twitter')}
+            >
               <Twitter className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="rounded-full">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              aria-label="Share on LinkedIn"
+              onClick={() => handleSocialShare('linkedin')}
+            >
               <Linkedin className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="rounded-full">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              aria-label="Copy or share article link"
+              onClick={handleNativeShare}
+            >
               <Share2 className="h-4 w-4" />
             </Button>
           </div>

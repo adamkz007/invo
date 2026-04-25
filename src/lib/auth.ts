@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import * as jwt from 'jsonwebtoken';
 import { calculateTrialEndDate } from './stripe';
@@ -90,6 +91,9 @@ export async function register({
   }
 
   try {
+    const trialStartDate = new Date();
+    const trialEndDate = calculateTrialEndDate(trialStartDate);
+
     // Hash the password
     console.log('Hashing password');
     const passwordHash = await hashPassword(password);
@@ -118,6 +122,9 @@ export async function register({
         email,
         phoneNumber,
         passwordHash,
+        subscriptionStatus: 'TRIAL',
+        trialStartDate,
+        trialEndDate,
       },
     });
     console.log('User created successfully with ID:', user.id);
@@ -177,6 +184,9 @@ export async function loginWithTAC(phoneNumber: string, code: string) {
   
   // Auto-create account if user doesn't exist
   if (!user) {
+    const trialStartDate = new Date();
+    const trialEndDate = calculateTrialEndDate(trialStartDate);
+
     // Create a temporary name based on phone number
     const tempName = `User ${phoneNumber.substring(phoneNumber.length - 4)}`;
     // Create a random email to satisfy the unique constraint
@@ -190,7 +200,10 @@ export async function loginWithTAC(phoneNumber: string, code: string) {
         name: tempName,
         email: tempEmail,
         phoneNumber,
-        passwordHash: tempPasswordHash
+        passwordHash: tempPasswordHash,
+        subscriptionStatus: 'TRIAL',
+        trialStartDate,
+        trialEndDate
       }
     });
   }
@@ -258,6 +271,13 @@ interface JwtPayload {
   exp?: number;
 }
 
+function isPrismaAuthLookupError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientInitializationError ||
+    error instanceof Prisma.PrismaClientUnknownRequestError
+  );
+}
+
 // Verify a JWT token
 export async function verifyToken(token: string): Promise<{ id: string; email: string; name: string } | null> {
   try {
@@ -269,13 +289,22 @@ export async function verifyToken(token: string): Promise<{ id: string; email: s
     if (!decoded || !decoded.sub) {
       return null;
     }
-    
-    // Find the user
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.sub },
-      select: { id: true, email: true, name: true }
-    });
-    
+
+    let user: { id: string; email: string | null; name: string | null } | null = null;
+
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: decoded.sub },
+        select: { id: true, email: true, name: true }
+      });
+    } catch (error) {
+      if (isPrismaAuthLookupError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+
     if (!user || !user.email || !user.name) {
       return null;
     }

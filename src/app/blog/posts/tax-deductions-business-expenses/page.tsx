@@ -1,14 +1,11 @@
-'use client';
-
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, User, Share2, Facebook, Twitter, Linkedin, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import type { Metadata } from 'next';
+import { BlogPostLayout } from '@/components/blog/blog-post-layout';
 import { CaptionedImage } from '@/components/ui/captioned-image';
-import Image from 'next/image';
-import { ArticleContainer, DisclaimerBox, InfoBox, TipBox, CheckList, NumberedSteps, ShareSection, AuthorSection, CTASection } from '@/components/blog/formatting-components';
-import { RelatedPosts } from '@/components/blog/related-posts';
+import { DisclaimerBox, InfoBox, TipBox, NumberedSteps } from '@/components/blog/formatting-components';
 import { ArticleSchema } from '@/components/seo/structured-data';
+import { getBlogPostMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = getBlogPostMetadata('tax-deductions-business-expenses');
 
 export default function TaxDeductionsPost() {
   // Define related posts
@@ -59,78 +56,19 @@ export default function TaxDeductionsPost() {
   ];
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-primary text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Link href="/blog" className="inline-flex items-center gap-1.5 text-white/90 hover:text-white mb-6 bg-white/10 px-2.5 py-1.5 rounded-md transition-colors hover:bg-white/20">
-              <ArrowLeft className="h-4 w-4" />
-              <FileText className="h-4 w-4" />
-              <span>Blog</span>
-            </Link>
-            <div className="inline-block px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium mb-4">
-              Taxes
-            </div>
-            <h1 className="text-3xl md:text-5xl font-bold mb-6">
-              Tax Deductions: Business Expenses You Might Be Missing
-            </h1>
-            <div className="flex flex-wrap items-center text-sm text-white/80">
-              <div className="flex items-center mr-6 mb-2">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>January 30, 2023</span>
-              </div>
-              <div className="flex items-center mr-6 mb-2">
-                <User className="h-4 w-4 mr-1" />
-                <span>Adam</span>
-              </div>
-              <div className="flex items-center mb-2">
-                <Clock className="h-4 w-4 mr-1" />
-                <span>7 min read</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Featured Image */}
-      <div className="container mx-auto px-4 -mt-10">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="rounded-lg overflow-hidden shadow-xl"
-          >
-            <figure className="m-0">
-              <Image
-                src="/blog/tax-deductions.jpg"
-                alt="Tax Deductions for Business Expenses"
-                width={1200}
-                height={675}
-                className="w-full h-auto"
-                priority
-                onError={(e) => {
-                  e.currentTarget.src = "https://placehold.co/1200x675/02228F/ffffff?text=Tax+Deductions";
-                }}
-              />
-              <figcaption className="bg-muted/50 text-center p-3 text-sm text-muted-foreground italic">
-                Lobby at Doubletree by Hilton, Putrajaya Lakeside
-              </figcaption>
-            </figure>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Article Content */}
-      <article className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="prose prose-lg max-w-none prose-headings:text-primary prose-headings:font-bold prose-h2:text-2xl md:prose-h2:text-3xl prose-h3:text-xl md:prose-h3:text-2xl prose-p:text-base prose-p:leading-relaxed prose-li:text-base prose-li:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-primary prose-strong:font-bold"
-          >
+    <>
+      <BlogPostLayout
+        title="Tax Deductions: Business Expenses You Might Be Missing"
+        category="Taxes"
+        date="January 30, 2023"
+        readTime="7 min read"
+        featuredImage="/blog/tax-deductions.jpg"
+        imageAlt="Tax Deductions for Business Expenses"
+        imageCaption="Lobby at Doubletree by Hilton, Putrajaya Lakeside"
+        relatedPosts={relatedPosts}
+        ctaTitle="Ready to Maximize Your Tax Deductions?"
+        ctaDescription="Let our invoice management system help you track and organize all your business expenses for maximum tax savings."
+      >
             <h2 className="mt-0">The Hidden Value in Your Business Expenses</h2>
             <p>
               As a business owner in Malaysia, you're likely familiar with common tax deductions like office rent, employee salaries, and utilities. However, many SMEs leave money on the table by overlooking legitimate business expenses that qualify for tax deductions.
@@ -159,7 +97,8 @@ export default function TaxDeductionsPost() {
               <li><strong>Home office renovations:</strong> Modifications made specifically for business purposes</li>
             </ul>
             
-            <InfoBox title="Calculation Example">
+            <InfoBox>
+              <h4 className="mt-0 mb-3">Calculation Example</h4>
               <p>
                 If your home is 1,500 square feet and your home office occupies 150 square feet (10% of the total area), you can deduct 10% of eligible home expenses:
               </p>
@@ -325,9 +264,9 @@ export default function TaxDeductionsPost() {
             </p>
 
             <h2 className="mt-10">Maximizing Your Deductions: Best Practices</h2>
+            <h3 className="mt-8">Tips for Proper Documentation</h3>
             
             <NumberedSteps 
-              title="Tips for Proper Documentation"
               steps={[
                 {
                   title: "Separate business and personal expenses",
@@ -358,68 +297,8 @@ export default function TaxDeductionsPost() {
             <p className="text-lg font-medium text-primary">
               Start implementing better expense tracking today. With digital tools like Invo, you can easily capture, categorize, and store receipts and invoices, making tax time less stressful and potentially saving your business thousands of ringgit.
             </p>
-          </motion.div>
+      </BlogPostLayout>
 
-          <ShareSection />
-
-          <AuthorSection 
-            name="Adam"
-            role="Founder"
-            bio="Adam consults for both large organizations and SMEs to identify & optimize finance processes. Growing tired of clunky invoice tools available in the market, he sets out to build Invo."
-            image="/blog/authors/adam.jpg"
-          />
-
-          <RelatedPosts posts={[
-            {
-              id: "1",
-              title: "Small Business Accounting Best Practices",
-              excerpt: "Essential accounting practices every small business owner should know to stay organized and compliant.",
-              date: "December 15, 2024",
-              author: "Sarah Johnson",
-              readTime: "8 min read",
-              category: "Accounting",
-              image: "/images/blog/accounting-practices.jpg",
-              slug: "small-business-accounting-best-practices"
-            },
-            {
-              id: "2",
-              title: "Invoice Management for Tax Season",
-              excerpt: "How proper invoice management can save you time and money during tax preparation.",
-              date: "December 10, 2024",
-              author: "Mike Chen",
-              readTime: "6 min read",
-              category: "Tax Planning",
-              image: "/images/blog/invoice-management.jpg",
-              slug: "invoice-management-tax-season"
-            },
-            {
-              id: "3",
-              title: "Digital Receipt Organization Tips",
-              excerpt: "Modern strategies for organizing and storing digital receipts for your business.",
-              date: "December 5, 2024",
-              author: "Lisa Rodriguez",
-              readTime: "5 min read",
-              category: "Organization",
-              image: "/images/blog/digital-receipts.jpg",
-              slug: "digital-receipt-organization-tips"
-            }
-          ]} />
-
-          <CTASection
-            title="Ready to Maximize Your Tax Deductions?"
-            description="Let our invoice management system help you track and organize all your business expenses for maximum tax savings."
-            primaryButton={{
-              text: "Start Free Trial",
-              href: "/signup"
-            }}
-            secondaryButton={{
-              text: "Learn More",
-              href: "/features"
-            }}
-          />
-        </div>
-      </article>
-      
       <ArticleSchema 
         post={{
           title: "Tax Deductions: Business Expenses You Might Be Missing",
@@ -439,6 +318,6 @@ export default function TaxDeductionsPost() {
           readTime: 7
         }}
       />
-    </div>
+    </>
   );
 }

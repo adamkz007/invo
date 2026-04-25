@@ -131,6 +131,100 @@
   }
 }
 
+@layer components {
+  .blog-post-shell {
+    @apply min-h-screen bg-background;
+  }
+
+  .blog-post-header {
+    @apply bg-primary py-16 text-white;
+  }
+
+  .blog-post-back-link {
+    @apply mb-6 inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1.5 text-white/90 transition-colors hover:bg-white/20 hover:text-white;
+  }
+
+  .blog-post-hero {
+    @apply container mx-auto -mt-10 px-4;
+  }
+
+  .blog-post-hero-card {
+    @apply overflow-hidden rounded-lg shadow-xl;
+  }
+
+  .blog-post-content {
+    @apply container mx-auto px-4 py-12;
+  }
+
+  .blog-post-prose {
+    @apply max-w-none text-[1.0625rem] leading-8 text-foreground;
+  }
+
+  .blog-post-prose :where(.lead) {
+    @apply text-lg leading-8 text-foreground/80;
+  }
+
+  .blog-post-prose :where(h2, h3, h4) {
+    @apply font-bold text-primary;
+  }
+
+  .blog-post-prose :where(h2) {
+    @apply mt-10 text-2xl md:text-3xl;
+  }
+
+  .blog-post-prose :where(h2:first-child) {
+    @apply mt-0;
+  }
+
+  .blog-post-prose :where(h3) {
+    @apply mt-8 text-xl md:text-2xl;
+  }
+
+  .blog-post-prose :where(h4) {
+    @apply mt-6 text-lg md:text-xl;
+  }
+
+  .blog-post-prose :where(p, li) {
+    @apply text-base leading-relaxed text-foreground;
+  }
+
+  .blog-post-prose > :where(* + *) {
+    @apply mt-6;
+  }
+
+  .blog-post-prose :where(a) {
+    @apply font-medium text-primary no-underline transition-colors hover:underline;
+  }
+
+  .blog-post-prose :where(strong) {
+    @apply font-bold text-primary;
+  }
+
+  .blog-post-prose :where(ul, ol) {
+    @apply my-6;
+  }
+
+  .blog-post-prose :where(blockquote) {
+    @apply rounded-r-lg border-l-4 border-primary/30 bg-primary/5 px-5 py-4 italic text-foreground/80;
+  }
+
+  .blog-post-prose :where(table) {
+    @apply w-full border-collapse text-left text-sm;
+  }
+
+  .blog-post-prose :where(thead) {
+    @apply bg-muted/60;
+  }
+
+  .blog-post-prose :where(th, td) {
+    @apply border border-border px-4 py-3 align-top;
+  }
+
+  .blog-post-prose :where(figcaption) {
+    @apply text-center text-sm italic text-muted-foreground;
+  }
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(100%);

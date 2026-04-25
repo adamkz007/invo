@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, FileText, User } from 'lucide-react';
 import { ReactNode } from 'react';
 import { ArticleFooter } from './article-footer';
 import { DEFAULT_AUTHOR } from './author-bio';
@@ -53,14 +53,15 @@ export function BlogPostLayout({
   children
 }: BlogPostLayoutProps) {
   return (
-    <div className="min-h-screen">
+    <div className="blog-post-shell">
       {/* Header */}
-      <header className="bg-primary text-white py-16">
+      <header className="blog-post-header">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <Link href="/blog" className="inline-flex items-center text-white/90 hover:text-white mb-6">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Blog
+            <Link href="/blog" className="blog-post-back-link">
+              <ArrowLeft className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
+              <span>Blog</span>
             </Link>
             <div className="inline-block px-3 py-1 bg-white/20 text-white rounded-full text-sm font-medium mb-4">
               {category}
@@ -87,13 +88,13 @@ export function BlogPostLayout({
       </header>
 
       {/* Featured Image */}
-      <div className="container mx-auto px-4 -mt-10">
+      <div className="blog-post-hero">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="rounded-lg overflow-hidden shadow-xl"
+            className="blog-post-hero-card"
           >
             <figure className="m-0">
               <Image
@@ -118,13 +119,13 @@ export function BlogPostLayout({
       </div>
 
       {/* Article Content */}
-      <article className="container mx-auto px-4 py-12">
+      <article className="blog-post-content">
         <div className="max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="prose prose-lg max-w-none prose-headings:text-primary prose-headings:font-bold prose-h2:text-2xl md:prose-h2:text-3xl prose-h3:text-xl md:prose-h3:text-2xl prose-p:text-base prose-p:leading-relaxed prose-li:text-base prose-li:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-primary prose-strong:font-bold"
+            className="blog-post-prose"
           >
             {children}
           </motion.div>

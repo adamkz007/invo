@@ -228,14 +228,6 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
                     <ThemeToggle />
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="hidden md:flex" onClick={toggleSidebar}>
-                  {isSidebarCollapsed ? (
-                    <PanelLeftOpen className="mr-2 h-5 w-5" />
-                  ) : (
-                    <PanelLeftClose className="mr-2 h-5 w-5" />
-                  )}
-                  <span>{isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}</span>
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-5 w-5" />
                   <span>Logout</span>

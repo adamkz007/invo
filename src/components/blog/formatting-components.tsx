@@ -94,7 +94,7 @@ interface ArticleContainerProps {
 export const ArticleContainer: React.FC<ArticleContainerProps> = ({ children, className }) => (
   <article className={cn("container mx-auto px-4 py-12", className)}>
     <div className="max-w-3xl mx-auto">
-      <div className="prose prose-lg max-w-none prose-headings:text-primary prose-headings:font-bold prose-h2:text-2xl md:prose-h2:text-3xl prose-h3:text-xl md:prose-h3:text-2xl prose-p:text-base prose-p:leading-relaxed prose-li:text-base prose-li:leading-relaxed prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-primary prose-strong:font-bold">
+      <div className="blog-post-prose">
         {children}
       </div>
     </div>
@@ -205,38 +205,56 @@ export const ShareSection: React.FC<ShareSectionProps> = ({
 // Author Section Component
 interface AuthorSectionProps {
   name: string;
-  title: string;
+  title?: string;
+  role?: string;
   bio: string;
-  imageUrl: string;
+  imageUrl?: string | null;
+  image?: string | null;
   className?: string;
 }
 
 export const AuthorSection: React.FC<AuthorSectionProps> = ({ 
   name, 
   title, 
+  role,
   bio, 
   imageUrl, 
+  image,
   className 
-}) => (
-  <div className={cn("bg-muted/30 rounded-lg p-6 my-8", className)}>
-    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-      <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex-shrink-0">
-        <Image 
-          alt={name} 
-          width={64} 
-          height={64} 
-          className="w-full h-full object-cover" 
-          src={imageUrl}
-        />
-      </div>
-      <div className="text-center sm:text-left">
-        <h3 className="font-bold text-lg">{name}</h3>
-        <p className="text-sm text-muted-foreground mb-2">{title}</p>
-        <p className="text-sm">{bio}</p>
+}) => {
+  const resolvedTitle = title ?? role ?? '';
+  const resolvedImageSrc = (imageUrl ?? image ?? '').trim();
+  const fallbackInitial = name.trim().charAt(0).toUpperCase() || 'A';
+
+  return (
+    <div className={cn("bg-muted/30 rounded-lg p-6 my-8", className)}>
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+        <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex-shrink-0">
+          {resolvedImageSrc ? (
+            <Image 
+              alt={name} 
+              width={64} 
+              height={64} 
+              className="w-full h-full object-cover" 
+              src={resolvedImageSrc}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-primary">
+              {fallbackInitial}
+            </div>
+          )}
+        </div>
+        <div className="text-center sm:text-left">
+          <h3 className="font-bold text-lg">{name}</h3>
+          {resolvedTitle ? (
+            <p className="text-sm text-muted-foreground mb-2">{resolvedTitle}</p>
+          ) : null}
+          <p className="text-sm">{bio}</p>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // CTA Section Component
 interface CTASectionProps {

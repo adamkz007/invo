@@ -133,7 +133,7 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
     if (success === 'true') {
       showToast({
         message: trial === 'true' 
-          ? 'Beta features activated successfully! You now have access to premium features for the trial period.' 
+          ? 'Pro trial activated successfully! You now have access to premium features for the trial period.' 
           : 'Subscription updated successfully!',
         variant: 'success'
       });

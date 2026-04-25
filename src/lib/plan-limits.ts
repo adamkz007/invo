@@ -1,7 +1,7 @@
 // Plan limits and utility functions - separated from Stripe SDK to reduce bundle size
 
 // Duration of trial in days
-export const TRIAL_DURATION_DAYS = 100;
+export const TRIAL_DURATION_DAYS = 14;
 
 // Plan limits
 export const PLAN_LIMITS = {
