@@ -238,7 +238,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
       
       const completeInvoice = await response.json();
       // Pass complete invoice data with items to the PDF generator
-      downloadInvoicePDF(completeInvoice, companyDetails);
+      downloadInvoicePDF(completeInvoice, companyDetails, settings);
     } catch (error) {
       console.error('Error fetching invoice for PDF:', error);
       showToast({
@@ -247,7 +247,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
       });
       // Fall back to using the original invoice data
       const { downloadInvoicePDF: fallbackDownloadInvoicePDF } = await import('@/lib/pdf-generator');
-      fallbackDownloadInvoicePDF(invoice, companyDetails);
+      fallbackDownloadInvoicePDF(invoice, companyDetails, settings);
     }
   };
 

@@ -15,6 +15,7 @@ export interface AppSettings {
     code: string;
     locale: string;
   };
+  invoiceTemplate: 'default' | 'calm';
   enableReceiptsModule: boolean;
   enablePosModule: boolean;
   enableAccountingModule: boolean;
@@ -26,6 +27,7 @@ export const defaultSettings: AppSettings = {
     code: 'MYR',
     locale: 'en-MY'
   },
+  invoiceTemplate: 'default',
   enableReceiptsModule: false,
   enablePosModule: false,
   enableAccountingModule: false

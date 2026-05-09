@@ -19,6 +19,8 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
 import { normalizeSubscriptionPlan, type SubscriptionPlanKey } from '@/lib/subscription-plans';
+import { useSettings } from '@/contexts/settings-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SubscriptionSettingsProps {
   user: {
@@ -86,6 +88,7 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailInput, setEmailInput] = useState(user?.email || '');
   const [pendingCheckoutPlan, setPendingCheckoutPlan] = useState<SubscriptionPlanKey>('PRO_MONTHLY');
+  const { settings, updateSettings } = useSettings();
   
   console.log('SubscriptionSettings - Initial render with user:', user);
   console.log('SubscriptionSettings - subscriptionStatus:', user?.subscriptionStatus);
@@ -420,6 +423,35 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
             </Button>
           )}
         </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice Template</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="invoice-template">Design</Label>
+            <Select
+              value={settings.invoiceTemplate}
+              onValueChange={(value: 'default' | 'calm') => {
+                updateSettings({ ...settings, invoiceTemplate: value });
+                showToast({
+                  message: 'Invoice template updated',
+                  variant: 'success'
+                });
+              }}
+            >
+              <SelectTrigger id="invoice-template">
+                <SelectValue placeholder="Select template" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="calm">Calm</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
       </Card>
       
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>

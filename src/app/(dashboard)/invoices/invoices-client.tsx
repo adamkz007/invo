@@ -150,7 +150,7 @@ export function InvoicesClient({
     try {
       const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
       const completeInvoice = await fetchInvoiceDetails(invoice.id);
-      downloadInvoicePDF(completeInvoice, companyDetails);
+      downloadInvoicePDF(completeInvoice, companyDetails, settings);
     } catch (error) {
       console.error('Error fetching invoice for PDF:', error);
       showToast({
@@ -201,9 +201,9 @@ export function InvoicesClient({
   const handleDownloadPDFWithDetails = useCallback(
     async (invoice: InvoiceWithDetails) => {
       const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
-      downloadInvoicePDF(invoice, companyDetails);
+      downloadInvoicePDF(invoice, companyDetails, settings);
     },
-    [companyDetails],
+    [companyDetails, settings],
   );
 
   const handleCancelInvoice = async (invoice: InvoiceListItem) => {

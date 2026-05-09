@@ -11,6 +11,7 @@ const RELEASE_DATE_LABEL = '7 Mar 2026';
 const RELEASE_STORAGE_KEY = 'invo:release-popup:last-seen';
 const RELEASE_UPDATES = [
   'Updated invoice PDF layout',
+  'New Calm theme added; change your invoice look in Settings',
   'Filter dashboard by time range',
 ];
 

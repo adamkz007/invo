@@ -17,6 +17,7 @@ export default function ChangelogPage() {
             <h2 className="text-xl font-bold mb-2">7 Mar 2026</h2>
             <ul className="list-disc pl-6 space-y-2 text-base">
               <li>Updated invoice PDF layout</li>
+              <li>New Calm theme added; change your invoice look in Settings</li>
               <li>Filter dashboard by time range</li>
             </ul>
           </div>
