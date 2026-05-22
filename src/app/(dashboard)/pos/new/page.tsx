@@ -63,13 +63,13 @@ export default function NewOrderPage() {
   const fetchData = async () => {
     try {
       const [productsRes, settingsRes] = await Promise.all([
-        fetch('/api/product'),
+        fetch('/api/products?limit=100'),
         fetch('/api/pos/settings')
       ]);
 
       if (productsRes.ok) {
         const productsData = await productsRes.json();
-        setProducts((productsData.products || []).map(normalizeProduct));
+        setProducts((productsData.data || []).map(normalizeProduct));
       }
 
       if (settingsRes.ok) {

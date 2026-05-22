@@ -9,24 +9,6 @@ const tokenCache = new Map<string, { isValid: boolean; timestamp: number }>();
 const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 /**
- * Parse auth token from cookie string
- */
-function parseAuthTokenFromCookie(cookieString: string): string | null {
-  if (!cookieString) return null;
-  
-  // Parse the cookie string
-  const cookies = cookieString.split(';').reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split('=');
-    if (key && value) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, string>);
-  
-  return cookies.auth_token || null;
-}
-
-/**
  * Lightweight token verification for Edge Runtime with caching
  */
 function verifyTokenEdge(token: string): boolean {

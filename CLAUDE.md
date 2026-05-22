@@ -69,14 +69,15 @@ Invo is a Malaysian invoicing and POS application built for freelancers and SMEs
 **Code Patterns:**
 - Import via the `@/*` alias instead of deep relative paths
 - API routes use Next.js 15 App Router conventions (`route.ts` files)
-- API routes authenticate via `getUserFromRequest()` from `@/lib/auth`
-- Cache invalidation uses `revalidateTag()` with user-scoped tags (e.g., `invoices:${userId}`)
+- API routes authenticate via `getUserFromRequest()` from `@/lib/auth`; Server Components use `getAuthenticatedUser()` from `@/lib/server-auth` (reads cookies via `next/headers`)
+- API routes use `unstable_cache` with user-scoped tags for read queries; mutations call `revalidateTag()` on those tags (e.g., `invoices:${userId}`, `dashboard:${userId}`)
 - Client components are separated from server components (e.g., `dashboard-client.tsx`)
 - Forms use React Hook Form with Zod validation schemas
 - Database operations use Prisma with proper transaction handling in `prisma.$transaction()`
-- Audit logging is automatically handled for accounting models
+- Audit logging is automatically handled for accounting models (see `auditableModels` set in `src/lib/prisma.ts`)
 - Feature folders use kebab-case filenames (e.g., `invoice-form.tsx`), exported components use PascalCase
 - Use `src/lib/plan-limits.ts` for plan constants in client code to avoid loading server-only Stripe SDK
+- Build script uses `DATABASE_URL="file:./prisma/dev.db"` for Prisma generation; production DB is set via env var at runtime
 
 **UI/UX:**
 - Uses shadcn/ui component library with custom Tailwind theme

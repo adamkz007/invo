@@ -168,52 +168,6 @@ export async function register({
   }
 }
 
-// Login with phone number and TAC
-export async function loginWithTAC(phoneNumber: string, code: string) {
-  // Verify the TAC
-  const isValid = verifyTAC(phoneNumber, code);
-  
-  if (!isValid) {
-    throw new Error('Invalid or expired authentication code');
-  }
-  
-  // Find user by phone number
-  let user = await prisma.user.findUnique({
-    where: { phoneNumber }
-  });
-  
-  // Auto-create account if user doesn't exist
-  if (!user) {
-    const trialStartDate = new Date();
-    const trialEndDate = calculateTrialEndDate(trialStartDate);
-
-    // Create a temporary name based on phone number
-    const tempName = `User ${phoneNumber.substring(phoneNumber.length - 4)}`;
-    // Create a random email to satisfy the unique constraint
-    const tempEmail = `user_${phoneNumber.replace(/[^0-9]/g, '')}_${Date.now()}@example.com`;
-    // Create a random password hash
-    const tempPasswordHash = await hashPassword(Math.random().toString(36).slice(2));
-    
-    // Create the new user
-    user = await prisma.user.create({
-      data: {
-        name: tempName,
-        email: tempEmail,
-        phoneNumber,
-        passwordHash: tempPasswordHash,
-        subscriptionStatus: 'TRIAL',
-        trialStartDate,
-        trialEndDate
-      }
-    });
-  }
-  
-  // Generate token
-  const token = generateToken(user.id);
-  
-  return { user, token };
-}
-
 // Login with phone number and password
 export async function loginWithPassword(phoneNumber: string, password: string) {
   // Find the user by phone number

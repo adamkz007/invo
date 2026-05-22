@@ -6,13 +6,14 @@ import { Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const RELEASE_ID = '2026-03-07';
-const RELEASE_DATE_LABEL = '7 Mar 2026';
+const RELEASE_ID = '2026-05-09-v1.2.2';
+const RELEASE_DATE_LABEL = '9 May 2026';
+const RELEASE_VERSION_LABEL = 'v1.2.2';
 const RELEASE_STORAGE_KEY = 'invo:release-popup:last-seen';
 const RELEASE_UPDATES = [
-  'Updated invoice PDF layout',
-  'New Calm theme added; change your invoice look in Settings',
-  'Filter dashboard by time range',
+  'Improved codebase',
+  'Improved card view invoices',
+  'Preliminary Accounting module released',
 ];
 
 interface ReleaseChangelogPopupProps {
@@ -65,6 +66,7 @@ export function ReleaseChangelogPopup({ userId }: ReleaseChangelogPopupProps) {
                 What&apos;s New
               </CardTitle>
               <p className="text-xs text-muted-foreground">{RELEASE_DATE_LABEL}</p>
+              <p className="text-xs font-medium text-primary/80">{RELEASE_VERSION_LABEL}</p>
             </div>
             <Button
               type="button"

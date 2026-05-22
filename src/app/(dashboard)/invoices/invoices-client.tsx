@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Search } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, extractPaidAmount, getTodayDateString } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/whatsapp';
 import { InvoiceWithDetails } from '@/types';
 import { useToast } from '@/components/ui/toast';
@@ -54,25 +54,6 @@ const PaymentDialog = dynamic(
   }
 );
 
-// Helper function to extract paid amount from notes
-const extractPaidAmount = (invoice: { paidAmount?: number; notes?: string }): number => {
-  if (invoice?.paidAmount !== undefined) {
-    return invoice.paidAmount;
-  }
-  if (!invoice || !invoice.notes) return 0;
-  try {
-    const paymentRegex = /Payment of ([\d.]+) received/;
-    const matches = invoice.notes.match(paymentRegex);
-    if (matches && matches[1]) {
-      return parseFloat(matches[1]);
-    }
-  } catch (error) {
-    console.error('Error extracting payment amount:', error);
-  }
-  return 0;
-};
-
-const getTodayDateString = () => new Date().toISOString().slice(0, 10);
 
 export function InvoicesClient({
   initialInvoices,

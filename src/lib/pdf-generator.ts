@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { InvoiceWithDetails } from '@/types';
-import { formatCurrency, AppSettings, defaultSettings } from './utils';
+import { formatCurrency, AppSettings, defaultSettings, extractPaidAmount } from './utils';
 
 // Define company details interface
 interface CompanyDetails {
@@ -123,27 +123,6 @@ function createTextLogo(doc: jsPDF, pageWidth: number, y: number): void {
  */
 const FALLBACK_LOGO_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAABl0lEQVR4nO2UvUtCURjGf9dLF7W0xaVFXIOWoCFoaGjIJYKGoL/AJYKGoKEhaAgagoYIGoKGoEFoCBqChqAhaAgaIsharuV9ek/cbtdrej3deuDZzjnP+5zfOed8B/5rTJl9qFQq5oWFxb7X60XXXXieF9O0hWihUOiZJmi329NGo8GtVqtddrsiNpaLRqN0Op0nFyMmk0k2NDS8PD4+TgE4QDmZTPbm5+ckn8+TMYqurKzspdPpgcViQYzAPjs7S6vVIsCKLYFgMMjc3BwAa5qW8vl8yJiPD3I4HNzd3Y0CDPJutxvL2q45nU7q9TqAf2pqSubm5vB6vRwdHT3yYlwzEAigqiqFQoGlpSWWl5c5Pz8HwGaz8ZPkcjmq1SpXV1cuoOrxeGRsbIzh4WHC4TBer5fj42NisRiapsWBs263K8/PzzIyMiLAiMPh4Pb2lkQiQTwe5+DggJubGwDW19d5eHiQRCLB6emppFIpASbGx8dlampK1tfXqdVqMjExIYAK7NqAXcva/v5+rlAo/Mm+OhwODvn9/qjZP5ef6jUB3yB8LF/8kOgAAAAASUVORK5CYII=';
 
-/**
- * Extract paid amount from invoice notes
- */
-function extractPaidAmount(invoice: InvoiceWithDetails): number {
-  if ((invoice as any).paidAmount !== undefined) {
-    return (invoice as any).paidAmount;
-  }
-  
-  // If no notes, return 0
-  if (!(invoice as any).notes) return 0;
-  
-  // Try to extract payment information from notes
-  const paymentRegex = /Payment of ([\d.]+) received/;
-  const matches = ((invoice as any).notes as string).match(paymentRegex);
-  
-  if (matches && matches[1]) {
-    return parseFloat(matches[1]);
-  }
-  
-  return 0;
-}
 
 // Format the address from separate fields or use the single address field
 function formatCompanyAddress(companyDetails: any): string {

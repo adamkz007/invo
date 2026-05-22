@@ -1,12 +1,13 @@
 "use client"
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { FileText, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 import { useSettings } from '@/contexts/settings-context';
 import { formatCurrency } from '@/lib/utils';
+import { PeriodSelector, usePeriodDates, type PeriodOption } from '@/components/accounting/period-selector';
 
 type Metrics = { accountsReceivableTotal: number; revenueMonth: number; cashBalance: number; expensesMonth: number } | null;
 type Expense = { id: string; vendor: string; date: string; total: string; status: string };
@@ -30,55 +31,27 @@ export default function AccountingPage() {
   const { settings } = useSettings();
   const [metrics, setMetrics] = useState<Metrics>(null);
   const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
-  const [period, setPeriod] = useState<string>('MTD');
+  const [period, setPeriod] = useState<PeriodOption>('MTD');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [loading, setLoading] = useState(false);
   const [expensesLoading, setExpensesLoading] = useState(false);
-
-  const { start, end } = useMemo(() => {
-    const now = new Date();
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    if (period === 'MTD') {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { start, end };
-    }
-    if (period === 'QTD') {
-      const quarter = Math.floor(now.getMonth() / 3);
-      const startMonth = quarter * 3;
-      const start = new Date(now.getFullYear(), startMonth, 1);
-      return { start, end };
-    }
-    if (period === 'YTD') {
-      const start = new Date(now.getFullYear(), 0, 1);
-      return { start, end };
-    }
-    if (period === 'Last 30 Days') {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 29);
-      start.setHours(0, 0, 0, 0);
-      return { start, end };
-    }
-    return { start: undefined, end: undefined } as { start?: Date; end?: Date };
-  }, [period]);
-
-  async function loadMetrics() {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (start) params.set('start', start.toISOString());
-    if (end) params.set('end', end.toISOString());
-    try {
-      const res = await fetch(`/api/accounting/dashboard${params.toString() ? `?${params.toString()}` : ''}`, { cache: 'no-store' });
-      if (res.ok) {
-        setMetrics(await res.json());
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { start, end } = usePeriodDates(period, customFrom, customTo);
 
   useEffect(() => {
-    loadMetrics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period]);
+    (async () => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (start) params.set('start', start.toISOString());
+      if (end) params.set('end', end.toISOString());
+      try {
+        const res = await fetch(`/api/accounting/dashboard?${params.toString()}`, { cache: 'no-store' });
+        if (res.ok) setMetrics(await res.json());
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [start, end]);
 
   useEffect(() => {
     (async () => {
@@ -99,64 +72,61 @@ export default function AccountingPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Accounting</h1>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Timeframe" /></SelectTrigger>
-          <SelectContent>
-            {['MTD','QTD','YTD','Last 30 Days','All Time'].map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold">Overview</h1>
+        <PeriodSelector
+          period={period}
+          onPeriodChange={setPeriod}
+          customFrom={customFrom}
+          customTo={customTo}
+          onCustomFromChange={setCustomFrom}
+          onCustomToChange={setCustomTo}
+        />
       </div>
 
-      {/* KPI Cards (mobile-first grid) */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <MetricCard title="Accounts Receivable" value={formatCurrency(ar, settings)} hint="Unpaid invoice balance" icon={FileText} />
+      <div className="grid grid-cols-2 gap-3">
+        <MetricCard title="Accounts Receivable" value={formatCurrency(ar, settings)} hint="Unpaid invoices" icon={FileText} />
         <MetricCard title="Cash" value={formatCurrency(cash, settings)} hint="Bank & cash" icon={Wallet} />
-        <MetricCard title={`Sales${period === 'All Time' ? '' : ` (${period})`}`} value={formatCurrency(revenue, settings)} hint="Total invoiced" icon={TrendingUp} />
-        <MetricCard title={`Expenses${period === 'All Time' ? '' : ` (${period})`}`} value={formatCurrency(expenses, settings)} icon={TrendingDown} />
+        <MetricCard title="Revenue" value={formatCurrency(revenue, settings)} icon={TrendingUp} />
+        <MetricCard title="Expenses" value={formatCurrency(expenses, settings)} icon={TrendingDown} />
       </div>
 
-      {/* Quick actions (thumb-friendly) */}
       <div className="grid grid-cols-2 gap-2">
-        <Link href="/accounting/journals/new">
-          <Button className="w-full">New Journal</Button>
-        </Link>
         <Link href="/accounting/expenses/new">
           <Button variant="secondary" className="w-full">Record Expense</Button>
+        </Link>
+        <Link href="/accounting/reports">
+          <Button variant="outline" className="w-full">View Reports</Button>
         </Link>
       </div>
 
       <Card className="rounded-xl">
         <CardHeader className="p-3">
-          <CardTitle className="text-sm">Recent Expenses</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Recent Expenses</CardTitle>
+            <Link href="/accounting/expenses" className="text-xs text-primary">View all</Link>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
             {recentExpenses.map((expense) => (
-              <div key={expense.id} className="grid grid-cols-2 items-center p-3 text-sm sm:grid-cols-4">
-                <div className="font-medium">{expense.vendor}</div>
-                <div className="text-muted-foreground">{new Date(expense.date).toLocaleDateString()}</div>
-                <div className="font-mono">{formatCurrency(Number(expense.total), settings)}</div>
-                <div className="text-xs">{expense.status}</div>
+              <div key={expense.id} className="flex items-center justify-between p-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{expense.vendor}</div>
+                  <div className="text-xs text-muted-foreground">{new Date(expense.date).toLocaleDateString()}</div>
+                </div>
+                <div className="text-right shrink-0 ml-2">
+                  <div className="font-mono">{formatCurrency(Number(expense.total), settings)}</div>
+                  <div className="text-[10px] text-muted-foreground">{expense.status}</div>
+                </div>
               </div>
             ))}
-            {!expensesLoading && recentExpenses.length === 0 ? (
+            {!expensesLoading && recentExpenses.length === 0 && (
               <div className="p-3 text-sm text-muted-foreground">No expenses yet</div>
-            ) : null}
+            )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Shortcuts */}
-      <div className="grid grid-cols-1 gap-2">
-        <Link href="/accounting/ledger" className="text-sm text-primary">View Ledger</Link>
-        <Link href="/accounting/expenses" className="text-sm text-primary">View Expenses</Link>
-        <Link href="/accounting/reports/trial-balance" className="text-sm text-primary">Reports</Link>
-        <Link href="/accounting/accounts" className="text-sm text-primary">Chart of Accounts</Link>
-      </div>
     </div>
   );
 }

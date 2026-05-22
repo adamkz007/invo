@@ -31,7 +31,7 @@ import {
   Send,
   Receipt
 } from 'lucide-react';
-import { formatCurrency, format, calculateDueDays } from '@/lib/utils';
+import { formatCurrency, format, calculateDueDays, extractPaidAmount } from '@/lib/utils';
 import { useSettings } from '@/contexts/settings-context';
 import type { CompanyDetails } from '../dashboard/dashboard-types';
 import type { InvoiceListItem } from './invoices-types';
@@ -66,27 +66,6 @@ const getStatusBadge = (status: string, isCompact: boolean = false) => {
   }
 };
 
-// Helper function to extract paid amount from notes
-const extractPaidAmount = (invoice: { paidAmount?: number; notes?: string }): number => {
-  if (invoice?.paidAmount !== undefined) {
-    return invoice.paidAmount;
-  }
-
-  if (!invoice || !invoice.notes) return 0;
-
-  try {
-    const paymentRegex = /Payment of ([\d.]+) received/;
-    const matches = invoice.notes.match(paymentRegex);
-
-    if (matches && matches[1]) {
-      return parseFloat(matches[1]);
-    }
-  } catch (error) {
-    console.error('Error extracting payment amount:', error);
-  }
-
-  return 0;
-};
 
 export interface InvoicesListProps {
   initialInvoices: InvoiceListItem[];
@@ -217,72 +196,59 @@ export function InvoicesList({
       </div>
 
       {viewMode === 'card' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filteredInvoices?.map((invoice) => (
             <Card
               key={invoice.id}
-              className="overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br dark:from-slate-900 dark:to-slate-900/70"
+              className="border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:border-slate-800"
+              onClick={() => onViewInvoice(invoice)}
             >
-              <CardContent className="p-3 sm:p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-2xl flex items-center justify-center text-white shadow-inner ${getStatusTone(invoice.status).dot}`}>
-                      <FileText className="h-4 w-4" />
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">{invoice.customer.name}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">#{invoice.invoiceNumber}</span>
                     </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-wide text-muted-foreground">#{invoice.invoiceNumber}</div>
-                      <div className="text-base sm:text-lg font-semibold leading-tight">{invoice.customer.name}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-base font-bold">{formatCurrency(invoice.total, settings)}</span>
+                      {(invoice.status as string) === 'PARTIAL' && (
+                        <span className="text-[11px] text-green-600">
+                          ({formatCurrency(extractPaidAmount(invoice), settings)} paid)
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      {format(invoice.issueDate, 'PP')}
+                      {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (() => {
+                        const dueDays = calculateDueDays(invoice.dueDate);
+                        if (dueDays > 0) return <span> · due in {dueDays}d</span>;
+                        if (dueDays < 0) return <span className="text-red-600"> · {Math.abs(dueDays)}d overdue</span>;
+                        return <span className="text-amber-600"> · due today</span>;
+                      })()}
                     </div>
                   </div>
-                  <div className={getStatusTone(invoice.status).pill + " rounded-full px-2.5 py-1 text-[11px] font-semibold inline-flex items-center gap-1"}>
-                    <span className="h-2 w-2 rounded-full bg-current opacity-80" />
-                    {invoice.status}
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">
-                      {invoice.status === 'DRAFT' ? 'Estimated' : 'Total Amount'}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className={getStatusTone(invoice.status).pill + " rounded-full px-2 py-0.5 text-[10px] font-semibold inline-flex items-center gap-1"}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${getStatusTone(invoice.status).dot}`} />
+                      {invoice.status}
                     </div>
-                    <div className="text-xl sm:text-2xl font-extrabold tracking-tight">
-                      {formatCurrency(invoice.total, settings)}
-                    </div>
-                    {(invoice.status as string) === 'PARTIAL' && (
-                      <div className="text-xs text-green-600">
-                        Paid {formatCurrency(extractPaidAmount(invoice), settings)} so far
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end pt-2 border-t border-dashed border-slate-200">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onViewInvoice(invoice)}
-                      aria-label="View invoice"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onDownloadPDF(invoice)}
-                      aria-label="Download PDF"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          aria-label="More actions"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => onDownloadPDF(invoice)}>
+                          <Download className="mr-2 h-4 w-4" /> Download PDF
+                        </DropdownMenuItem>
                         {invoice.status === 'DRAFT' && (
                           <DropdownMenuItem onSelect={() => onMarkAsSent(invoice)}>
                             <Send className="mr-2 h-4 w-4" /> Mark as Sent

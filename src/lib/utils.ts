@@ -109,6 +109,19 @@ export function calculateInvoiceTotals(
   };
 }
 
+export function extractPaidAmount(invoice: { paidAmount?: number; notes?: string }): number {
+  if (invoice?.paidAmount !== undefined) {
+    return invoice.paidAmount;
+  }
+  if (!invoice || !invoice.notes) return 0;
+  const matches = invoice.notes.match(/Payment of ([\d.]+) received/);
+  return matches?.[1] ? parseFloat(matches[1]) : 0;
+}
+
+export function getTodayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 /**
  * Calculate the number of days between now and a due date
  * Returns a positive number for future dates (days remaining)

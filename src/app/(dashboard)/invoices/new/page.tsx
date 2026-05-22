@@ -33,7 +33,7 @@ export default function NewInvoicePage() {
           <FileText className="h-4 w-4" />
           <span>Invoices</span>
         </Link>
-        <h1 className="text-3xl font-bold">Create New Invoice</h1>
+        <h1 className="text-3xl font-bold">New Invoice</h1>
       </div>
       <Suspense fallback={<InlineLoading text="Loading form..." />}>
         <InvoiceFormEnhanced preSelectedCustomerId={customerId} />
