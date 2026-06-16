@@ -16,19 +16,42 @@ async function findAccountId(userId: string, code: string) {
   return acc.id;
 }
 
+export function invoiceIssuedMemo(customerName: string) {
+  return `Invoice to ${customerName} issued`;
+}
+
+function invoicePaymentMemo(invoiceNumber: string, amount: number) {
+  return `Invoice ${invoiceNumber} payment (${amount.toFixed(2)})`;
+}
+
 export async function postInvoiceIssued({
   userId,
   invoiceId,
+  customerName,
   total,
   taxAmount,
   accounts,
 }: {
   userId: string;
   invoiceId: string;
+  customerName: string;
   total: Prisma.Decimal | number;
   taxAmount: Prisma.Decimal | number;
   accounts: PostingAccounts;
 }) {
+  const existing = await prisma.journalEntry.findFirst({
+    where: {
+      userId,
+      source: 'invoice',
+      referenceId: invoiceId,
+      memo: { endsWith: ' issued' },
+    },
+    select: { id: true },
+  });
+  if (existing) {
+    return existing;
+  }
+
   const arId = await findAccountId(userId, accounts.arCode);
   const revenueId = await findAccountId(userId, accounts.revenueCode);
   const taxLiabId = accounts.taxLiabilityCode ? await findAccountId(userId, accounts.taxLiabilityCode) : null;
@@ -41,7 +64,7 @@ export async function postInvoiceIssued({
     data: {
       userId,
       date: new Date(),
-      memo: `Invoice ${invoiceId} issued`,
+      memo: invoiceIssuedMemo(customerName),
       source: 'invoice',
       referenceId: invoiceId,
       status: 'POSTED',
@@ -59,16 +82,31 @@ export async function postInvoiceIssued({
 
 export async function postInvoicePayment({
   userId,
-  invoiceId,
+  paymentId,
+  invoiceNumber,
   amount,
   accounts,
 }: {
   userId: string;
-  invoiceId: string;
+  paymentId: string;
+  invoiceNumber: string;
   amount: Prisma.Decimal | number;
   accounts: PostingAccounts;
 }) {
   if (!accounts.cashCode) throw new Error('cashCode required for payment posting');
+
+  const existing = await prisma.journalEntry.findFirst({
+    where: {
+      userId,
+      source: 'invoice',
+      referenceId: paymentId,
+    },
+    select: { id: true },
+  });
+  if (existing) {
+    return existing;
+  }
+
   const cashId = await findAccountId(userId, accounts.cashCode);
   const arId = await findAccountId(userId, accounts.arCode);
 
@@ -77,9 +115,9 @@ export async function postInvoicePayment({
     data: {
       userId,
       date: new Date(),
-      memo: `Invoice ${invoiceId} payment`,
+      memo: invoicePaymentMemo(invoiceNumber, amt),
       source: 'invoice',
-      referenceId: invoiceId,
+      referenceId: paymentId,
       status: 'POSTED',
       postedAt: new Date(),
       lines: {

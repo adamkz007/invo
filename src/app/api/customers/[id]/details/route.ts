@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -8,25 +8,14 @@ export async function GET(
 ) {
   try {
     const customerId = await Promise.resolve(params.id);
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const userId = user.id;
+
     // Find the customer by ID and ensure it belongs to the user
     const customer = await prisma.customer.findFirst({
       where: {

@@ -6,20 +6,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { AppSettings } from '@/lib/utils';
-import type { InvoiceWithDetails } from '@/types';
+import type { InvoiceDetailResponseDto } from '@/lib/dto/invoices';
 import type { CompanyDetails } from '../dashboard/dashboard-types';
 import { Calendar, Download, MessageCircle, Loader2 } from 'lucide-react';
 import { formatPhoneNumber, isValidWhatsAppNumber } from '@/lib/whatsapp';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { EInvoicePanel } from '@/components/invoices/einvoice-panel';
+import { toPdfInvoice } from './invoice-pdf-adapter';
 
 type Props = {
-  invoice: InvoiceWithDetails | null;
+  invoice: InvoiceDetailResponseDto | null;
   companyDetails: CompanyDetails | null;
   settings: AppSettings;
   onClose: () => void;
-  onDownloadPDF: (invoice: InvoiceWithDetails) => void;
+  onDownloadPDF: (invoice: InvoiceDetailResponseDto) => void;
 };
 
 export function InvoiceDetailsDialog({
@@ -31,7 +32,7 @@ export function InvoiceDetailsDialog({
 }: Props) {
   const [isShareLoading, setIsShareLoading] = useState(false);
 
-  const handleWhatsAppShare = async (inv: InvoiceWithDetails) => {
+  const handleWhatsAppShare = async (inv: InvoiceDetailResponseDto) => {
     const phone = formatPhoneNumber(inv.customer.phoneNumber!);
     const message = `Hello! Here's your invoice totalling RM${inv.total.toFixed(2)} from Invo`;
     
@@ -46,7 +47,7 @@ export function InvoiceDetailsDialog({
         
         // Dynamic import to reduce bundle size
         const { generateInvoicePDFBlob } = await import('@/lib/pdf-generator');
-        const { blob, filename } = await generateInvoicePDFBlob(inv, companyDetails, settings);
+        const { blob, filename } = await generateInvoicePDFBlob(toPdfInvoice(inv), companyDetails, settings);
         
         const file = new File([blob], filename, { type: 'application/pdf' });
         

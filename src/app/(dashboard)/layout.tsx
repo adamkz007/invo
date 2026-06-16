@@ -1,7 +1,5 @@
 'use client';
 
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import Link from 'next/link';
@@ -67,26 +65,6 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const pathname = usePathname();
   const { settings } = useSettings();
 
-  // TEMPORARILY BYPASSING AUTHENTICATION
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  useEffect(() => {
-    if (isInitialLoad) {
-      // Simulate a user for testing, but only on initial load
-      setUser({
-        id: 'test-user',
-        name: 'Test User',
-        email: 'test@example.com'
-      });
-      
-      // Fetch company details
-      fetchCompanyDetails();
-      
-      setIsInitialLoad(false);
-    }
-  }, [isInitialLoad]);
-  
-  // Fetch company details from the API - memoized to prevent recreation
   const fetchCompanyDetails = useCallback(async () => {
     try {
       const response = await fetch('/api/company');
@@ -98,10 +76,51 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
       }
     } catch (error) {
       console.error('Error fetching company details:', error);
-    } finally {
-      setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      try {
+        const response = await fetch('/api/user/me');
+        if (!response.ok) {
+          if (!cancelled) {
+            router.push('/login');
+          }
+          return;
+        }
+
+        const userData = await response.json();
+        if (cancelled) {
+          return;
+        }
+
+        setUser({
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+        });
+        await fetchCompanyDetails();
+      } catch (error) {
+        console.error('Error loading session:', error);
+        if (!cancelled) {
+          router.push('/login');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, fetchCompanyDetails]);
 
   const handleLogout = useCallback(async () => {
     try {

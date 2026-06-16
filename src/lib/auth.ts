@@ -200,12 +200,6 @@ export async function verifyPassword(password: string, hashedPassword: string | 
     return false;
   }
   
-  // For development purposes:
-  // Allow the password "password123" for testing in any environment 
-  if (password === "password123") {
-    return true;
-  }
-  
   // Hash the input password the same way as during registration
   const inputPasswordHash = await hashPassword(password);
   

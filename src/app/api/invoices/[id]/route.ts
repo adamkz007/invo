@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { postInvoicePayment } from '@/lib/accounting/posting';
 import { getUserFromRequest } from '@/lib/auth';
 import { toDecimal, toNumber } from '@/lib/decimal';
+import type { InvoiceDetailResponseDto } from '@/lib/dto/invoices';
 
 const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
 const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
@@ -13,7 +14,7 @@ const RECEIPTS_TAG = (userId: string) => `receipts:${userId}`;
 
 type InvoiceWithItems = Awaited<ReturnType<typeof fetchInvoice>>;
 
-function serialiseInvoice(invoice: InvoiceWithItems) {
+function serialiseInvoice(invoice: InvoiceWithItems): InvoiceDetailResponseDto {
   return {
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
@@ -154,6 +155,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { action, paymentAmount, paymentDate, paymentMethod } = await req.json();
 
   try {
+    let paymentJournalPayload: {
+      paymentId: string;
+      invoiceNumber: string;
+      amount: Prisma.Decimal;
+    } | null = null;
+
     const { updatedInvoice, receiptPayload } = await prisma.$transaction(async (tx) => {
       const invoice = await fetchInvoice(user.id, id, tx);
       let nextInvoice: InvoiceWithItems = invoice;
@@ -250,7 +257,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }) as InvoiceWithItems;
 
         // Create payment record
-        await tx.invoicePayment.create({
+        const payment = await tx.invoicePayment.create({
           data: {
             invoiceId: invoice.id,
             amount: paymentDecimal,
@@ -259,21 +266,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           },
         });
 
-        // Post accounting journal entry for payment (Cash/AR)
-        try {
-          await postInvoicePayment({
-            userId: user.id,
-            invoiceId: invoice.id,
-            amount: paymentDecimal,
-            accounts: {
-              arCode: '1100',
-              cashCode: '1000',
-              revenueCode: '4000',
-            },
-          });
-        } catch (e) {
-          console.warn('Accounting post (invoice payment) failed:', e);
-        }
+        paymentJournalPayload = {
+          paymentId: payment.id,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: paymentDecimal,
+        };
 
         if (nextStatus === InvoiceStatus.PAID) {
           receiptData = {
@@ -300,6 +297,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
       return { updatedInvoice: nextInvoice, receiptPayload: receiptData };
     });
+
+    if (paymentJournalPayload) {
+      try {
+        await postInvoicePayment({
+          userId: user.id,
+          paymentId: paymentJournalPayload.paymentId,
+          invoiceNumber: paymentJournalPayload.invoiceNumber,
+          amount: paymentJournalPayload.amount,
+          accounts: {
+            arCode: '1100',
+            cashCode: '1000',
+            revenueCode: '4000',
+          },
+        });
+      } catch (e) {
+        console.warn('Accounting post (invoice payment) failed:', e);
+      }
+    }
 
     revalidateTag(INVOICE_TAG(user.id));
     revalidateTag(DASHBOARD_TAG(user.id));

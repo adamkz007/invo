@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const entries = await prisma.journalEntry.findMany({
       where: { userId: user.id },
-      orderBy: { date: 'desc' },
+      orderBy: [{ date: 'desc' }, { id: 'desc' }],
       take: limit,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       include: {

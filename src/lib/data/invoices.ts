@@ -2,30 +2,14 @@ import { unstable_cache } from 'next/cache';
 import type { Prisma, InvoiceStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { toNumber } from '@/lib/decimal';
+import type { InvoiceListItemDto, InvoiceListResponseDto } from '@/lib/dto/invoices';
 
 export const MAX_PAGE_SIZE = 50;
 export const DEFAULT_PAGE_SIZE = 20;
 export const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
 
-export type InvoiceListItem = {
-  id: string;
-  invoiceNumber: string;
-  status: InvoiceStatus;
-  issueDate: string;
-  dueDate: string;
-  total: number;
-  paidAmount: number;
-  customer: {
-    id: string;
-    name: string;
-  } | null;
-};
-
-export type InvoiceListResponse = {
-  data: InvoiceListItem[];
-  nextCursor?: string;
-  totalCount: number;
-};
+export type InvoiceListItem = InvoiceListItemDto;
+export type InvoiceListResponse = InvoiceListResponseDto;
 
 export type InvoiceListOptions = {
   cursor?: string;

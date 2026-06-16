@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag, unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
 
 const PRODUCT_TAG = (userId: string) => `products:${userId}`;
 
@@ -70,24 +70,12 @@ const getProducts = (userId: string) =>
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = user.id;
     const options = parseQuery(request);
     const products = await getProducts(userId)(options);
 
@@ -108,26 +96,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const productData = await request.json();
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Use the provided user ID or default to a demo user ID if no token is found
-    let userId = productData.userId || '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const productData = await request.json();
+    const userId = user.id;
+
     // Extract the fields we need for product creation
     const {
       name,

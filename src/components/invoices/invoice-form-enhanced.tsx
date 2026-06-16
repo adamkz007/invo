@@ -261,20 +261,7 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
     setIsSubmitting(true);
     
     try {
-      // Get the auth token from cookies
-      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split('=');
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
-      
-      // Default user ID for demo purposes
-      let userId = '1';
-      
-      // If we have an auth token, we'll use it in the request
-      // The server will extract the user ID from the token
-      
-      // Add calculated totals and user ID to the form values
+      // Add calculated totals to the form values
       const subtotal =
         values.items?.reduce(
           (sum, item) => sum + (item?.quantity || 0) * (item?.unitPrice || 0),
@@ -294,7 +281,6 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
       const invoiceData = {
         ...values,
         discountRate: discountRateForApi,
-        userId,
         subtotal: totals.subtotal,
         taxAmount: totals.taxAmount,
         discountAmount: totals.discountAmount,

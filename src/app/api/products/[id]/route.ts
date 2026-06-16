@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
 
 const PRODUCT_TAG = (userId: string) => `products:${userId}`;
 
@@ -12,24 +12,13 @@ export async function GET(
   try {
     const productId = await Promise.resolve(params.id);
     
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const userId = user.id;
+
     // Find the product by ID and ensure it belongs to the user
     const product = await prisma.product.findFirst({
       where: {
@@ -60,25 +49,14 @@ export async function PUT(
   try {
     const productId = await Promise.resolve(params.id);
     const productData = await request.json();
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const userId = user.id;
+
     // Check if the product exists and belongs to the user
     const existingProduct = await prisma.product.findFirst({
       where: {
@@ -136,25 +114,14 @@ export async function DELETE(
 ) {
   try {
     const productId = await Promise.resolve(params.id);
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const userId = user.id;
+
     // Check if the product exists and belongs to the user
     const existingProduct = await prisma.product.findFirst({
       where: {
@@ -203,25 +170,14 @@ export async function PATCH(
   try {
     const productId = await Promise.resolve(params.id);
     const productData = await request.json();
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const userId = user.id;
+
     // Check if the product exists and belongs to the user
     const existingProduct = await prisma.product.findFirst({
       where: {

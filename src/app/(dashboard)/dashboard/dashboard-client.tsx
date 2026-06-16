@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 // import { downloadInvoicePDF } from '@/lib/pdf-generator';
 import { InvoiceWithDetails } from '@/types';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { DashboardStats, CompanyDetails } from './dashboard-types';
 
@@ -136,6 +137,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
   const { settings } = useSettings();
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
+  const showCardComparisonCaption = selectedPeriod !== 'allTime';
 
   const filteredPeriodMetrics = useMemo(() => {
     if (!stats?.periods) {
@@ -274,50 +276,62 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
       </div>
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in duration-500">
-        <Card className="bg-blue-50/80 dark:bg-blue-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-blue-100/80 dark:border-blue-900/40 py-4 gap-4">
-          <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-            <div className="rounded-full p-2 bg-primary/10 dark:bg-primary/20 shadow-sm">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pt-0 pb-2">
-            <div className="text-2xl font-bold">{filteredPeriodMetrics.invoices}</div>
-            <p className="text-xs text-muted-foreground">
-              {deltaData.invoiceDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/invoices" aria-label="Go to invoices page">
+          <Card className="bg-blue-50/80 dark:bg-blue-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-blue-100/80 dark:border-blue-900/40 py-4 gap-4 cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
+              <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+              <div className="rounded-full p-2 bg-primary/10 dark:bg-primary/20 shadow-sm">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pt-0 pb-2">
+              <div className="text-2xl font-bold">{filteredPeriodMetrics.invoices}</div>
+              {showCardComparisonCaption && (
+                <p className="text-xs text-muted-foreground">
+                  {deltaData.invoiceDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
         
-        <Card className="bg-orange-50/80 dark:bg-orange-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-orange-100/80 dark:border-orange-900/40 py-4 gap-4">
-          <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
-              <Users className="h-5 w-5 text-primary dark:text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pt-0 pb-2">
-            <div className="text-2xl font-bold">{filteredPeriodMetrics.customers}</div>
-            <p className="text-xs text-muted-foreground">
-              {deltaData.customerDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/customers" aria-label="Go to customers page">
+          <Card className="bg-orange-50/80 dark:bg-orange-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-orange-100/80 dark:border-orange-900/40 py-4 gap-4 cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
+              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
+                <Users className="h-5 w-5 text-primary dark:text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pt-0 pb-2">
+              <div className="text-2xl font-bold">{filteredPeriodMetrics.customers}</div>
+              {showCardComparisonCaption && (
+                <p className="text-xs text-muted-foreground">
+                  {deltaData.customerDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
         
-        <Card className="bg-white dark:bg-amber-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-amber-100/80 dark:border-amber-900/40 py-4 gap-4">
-          <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
-              <Package className="h-5 w-5 text-primary dark:text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pt-0 pb-2">
-            <div className="text-2xl font-bold">{filteredPeriodMetrics.products}</div>
-            <p className="text-xs text-muted-foreground">
-              {deltaData.productDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/inventory" aria-label="Go to inventory page">
+          <Card className="bg-white dark:bg-amber-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-amber-100/80 dark:border-amber-900/40 py-4 gap-4 cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
+              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <div className="rounded-full p-2 bg-accent/10 dark:bg-accent/20 shadow-sm">
+                <Package className="h-5 w-5 text-primary dark:text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pt-0 pb-2">
+              <div className="text-2xl font-bold">{filteredPeriodMetrics.products}</div>
+              {showCardComparisonCaption && (
+                <p className="text-xs text-muted-foreground">
+                  {deltaData.productDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
         
         <Card className="bg-green-50/80 dark:bg-green-900/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-green-100/80 dark:border-green-900/40 py-4 gap-4">
           <CardHeader className="flex flex-row items-center justify-between px-4 pb-1">
@@ -330,9 +344,11 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
             <div className="text-2xl font-bold break-words leading-tight max-w-full">
               {formatCurrency(filteredPeriodMetrics.revenue, settings)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {deltaData.revenueDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
-            </p>
+            {showCardComparisonCaption && (
+              <p className="text-xs text-muted-foreground">
+                {deltaData.revenueDelta} from {FILTER_PERIOD_LABELS[selectedPeriod]}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

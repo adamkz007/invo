@@ -12,10 +12,9 @@ import {
   MAX_PAGE_SIZE,
   countInvoicesCreatedThisMonth,
   listInvoices,
-  type InvoiceListItem,
   type InvoiceListOptions,
-  type InvoiceListResponse,
 } from '@/lib/data/invoices';
+import type { InvoiceListItemDto } from '@/lib/dto/invoices';
 
 const INVOICE_TAG = (userId: string) => `invoices:${userId}`;
 const DASHBOARD_TAG = (userId: string) => `dashboard:${userId}`;
@@ -58,7 +57,7 @@ function toInvoiceListItem(invoice: {
   total: Prisma.Decimal | number | string;
   paidAmount: Prisma.Decimal | number | string;
   customer: { id: string; name: string } | null;
-}): InvoiceListItem {
+}): InvoiceListItemDto {
   return {
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
@@ -281,6 +280,7 @@ export async function POST(req: NextRequest) {
           issueDate: true,
           dueDate: true,
           total: true,
+          taxAmount: true,
           paidAmount: true,
           customer: {
             select: { id: true, name: true },
@@ -299,25 +299,29 @@ export async function POST(req: NextRequest) {
           ),
       );
 
-      // Post accounting journal entry (AR/Revenue/Tax)
-      try {
-        await postInvoiceIssued({
-          userId: user.id,
-          invoiceId: invoice.id,
-          total: total,
-          taxAmount: taxAmount,
-          accounts: {
-            arCode: '1100',
-            revenueCode: '4000',
-            taxLiabilityCode: toNumber(taxAmount) > 0 ? '2100' : undefined,
-          },
-        });
-      } catch (e) {
-        console.warn('Accounting post (invoice issued) failed:', e);
-      }
-
       return invoice;
+    }, {
+      timeout: 15000,
+      maxWait: 10000,
     });
+
+    // Post accounting journal entry (AR/Revenue/Tax) after invoice commit
+    try {
+      await postInvoiceIssued({
+        userId: user.id,
+        invoiceId: createdInvoice.id,
+        customerName: createdInvoice.customer?.name ?? 'Customer',
+        total: createdInvoice.total,
+        taxAmount: createdInvoice.taxAmount,
+        accounts: {
+          arCode: '1100',
+          revenueCode: '4000',
+          taxLiabilityCode: toNumber(createdInvoice.taxAmount) > 0 ? '2100' : undefined,
+        },
+      });
+    } catch (e) {
+      console.warn('Accounting post (invoice issued) failed:', e);
+    }
 
     revalidateTag(INVOICE_TAG(user.id));
    revalidateTag(DASHBOARD_TAG(user.id));

@@ -1,38 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { getUserFromRequest } from '@/lib/auth';
 
-// In-memory storage for company details during development
-let mockCompanyStorage: Record<string, any> = {
-  // Default company for user ID '1'
-  '1': {
-    id: 'mock-company-1',
-    legalName: 'Demo Company LLC',
-    ownerName: 'Demo User',
-    registrationNumber: 'REG123456',
-    taxIdentificationNumber: 'TAX123456',
-    email: 'contact@democompany.com',
-    phoneNumber: '123-456-7890',
-    address: '123 Business Ave, Commerce City, Malaysia',
-    street: '123 Business Ave',
-    addressLine1: '123 Business Ave',
-    postcode: '50000',
-    city: 'Commerce City',
-    state: 'Kuala Lumpur',
-    country: 'Malaysia',
-    termsAndConditions: 'Full payment is due upon receipt of this invoice. Late payments may incur additional charges or interest as per the applicable laws.',
-    paymentMethod: 'bank',
-    bankAccountName: 'Demo Company LLC',
-    bankName: 'Demo Bank',
-    bankAccountNumber: '1234567890',
-    qrImageUrl: null,
-    logoUrl: null,
-    msicCode: '00000',
-    userId: '1',
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-};
+// In-memory storage for company details when the database is unavailable
+let mockCompanyStorage: Record<string, any> = {};
 
 // Maximum number of database connection retries
 const MAX_RETRIES = 5;
@@ -54,24 +25,13 @@ async function retryDatabaseOperation<T>(operation: () => Promise<T>, retries = 
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const userId = user.id;
+
     try {
       // Fetch company details for this user with retry logic
       const company = await retryDatabaseOperation(() =>
@@ -121,26 +81,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.json();
-    
-    // Get auth token from cookies
-    const token = request.cookies.get('auth_token')?.value;
-    
-    // Default to a demo user ID if no token is found
-    let userId = '1'; // Default user ID for demo purposes
-    
-    // If token exists, verify it and extract the user ID
-    if (token) {
-      try {
-        const decoded = await verifyToken(token);
-        if (decoded && decoded.id) {
-          userId = decoded.id;
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-      }
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    const data = await request.json();
+    const userId = user.id;
+
     // Format address from separate fields if they exist
     const combinedAddress = formatAddress(data);
     

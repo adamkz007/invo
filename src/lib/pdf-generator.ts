@@ -807,15 +807,23 @@ export async function downloadInvoicePDF(
       
       // Get item details for calculations
       const itemNameForCalc = item.product?.name || item.description || 'Item';
+      const itemDescriptionForCalc =
+        item.description && item.description !== itemNameForCalc ? item.description : '';
       const maxWidthForCalc = colWidths.description - (cellPadding * 2);
       
-      // Calculate row height based on text wrapping (item name only)
+      // Calculate row height based on text wrapping for name + description.
       let additionalHeight = 0;
       
       doc.setFontSize(9);
       if (doc.getTextWidth(itemNameForCalc) > maxWidthForCalc) {
         const textLines = doc.splitTextToSize(itemNameForCalc, maxWidthForCalc);
         additionalHeight += (textLines.length - 1) * 4;
+      }
+      if (itemDescriptionForCalc) {
+        doc.setFontSize(8);
+        const descriptionLines = doc.splitTextToSize(itemDescriptionForCalc, maxWidthForCalc);
+        additionalHeight += 3; // Spacing from item name to description
+        additionalHeight += descriptionLines.length * 4;
       }
       
       rowHeight += additionalHeight;
@@ -862,6 +870,19 @@ export async function downloadInvoicePDF(
         }
       } else {
         doc.text(itemNameForCalc, colPositions.description + cellPadding, descYPos);
+      }
+
+      // Render line-item description under the item name when present.
+      if (itemDescriptionForCalc) {
+        const descriptionLines = doc.splitTextToSize(itemDescriptionForCalc, maxWidthForCalc);
+        descYPos += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        descriptionLines.forEach((line: string) => {
+          doc.text(line, colPositions.description + cellPadding, descYPos);
+          descYPos += 4;
+        });
       }
       
       // Quantity - centered
@@ -1401,11 +1422,33 @@ export async function generateInvoicePDFBlob(
   doc.setFont('helvetica', 'normal');
   
   invoice.items?.forEach((item) => {
-    doc.text(item.product.name, margin + 2, currentY);
+    const itemName = item.product?.name || item.description || 'Item';
+    const itemDescription = item.description && item.description !== itemName ? item.description : '';
+    const itemColumnStartX = margin + 2;
+    const itemColumnEndX = pageWidth - margin - 72;
+    const itemColumnWidth = Math.max(itemColumnEndX - itemColumnStartX, 20);
+    const nameLines = doc.splitTextToSize(itemName, itemColumnWidth);
+    const descriptionLines = itemDescription ? doc.splitTextToSize(itemDescription, itemColumnWidth) : [];
+    const descriptionStartY = currentY + (nameLines.length * 4);
+    const totalTextLines = nameLines.length + descriptionLines.length;
+    const rowHeight = Math.max(8, (Math.max(totalTextLines, 1) * 4) + (descriptionLines.length > 0 ? 1 : 0));
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    doc.text(nameLines, itemColumnStartX, currentY);
+
+    if (descriptionLines.length > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(descriptionLines, itemColumnStartX, descriptionStartY + 1);
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(50, 50, 50);
     doc.text(String(item.quantity), pageWidth - margin - 70, currentY, { align: 'right' });
     doc.text(formatCurrency(item.unitPrice, settings), pageWidth - margin - 40, currentY, { align: 'right' });
     doc.text(formatCurrency(item.quantity * item.unitPrice, settings), pageWidth - margin - 2, currentY, { align: 'right' });
-    currentY += 8;
+    currentY += rowHeight;
   });
   
   // Totals section

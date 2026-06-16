@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,15 +13,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Search } from 'lucide-react';
-import { formatCurrency, extractPaidAmount, getTodayDateString } from '@/lib/utils';
-import { formatPhoneNumber } from '@/lib/whatsapp';
-import { InvoiceWithDetails } from '@/types';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
 // Import from plan-limits instead of stripe to avoid loading Stripe SDK on client
 import { PLAN_LIMITS } from '@/lib/plan-limits';
+import type { InvoiceDetailResponseDto } from '@/lib/dto/invoices';
 import type { CompanyDetails } from '../dashboard/dashboard-types';
 import type { InvoicesClientProps, InvoiceListItem } from './invoices-types';
+import { useInvoiceDetailsCache } from './use-invoice-details-cache';
+import { useInvoiceActions } from './use-invoice-actions';
+import { toPdfInvoice } from './invoice-pdf-adapter';
+import { emitInvoiceMetric } from './invoice-performance';
 
 // Dynamic imports to reduce initial bundle size
 const InvoicesList = dynamic(
@@ -61,62 +62,53 @@ export function InvoicesClient({
   initialSubscription,
   initialInvoicesThisMonth,
 }: InvoicesClientProps) {
+  const [invoices, setInvoices] = useState<InvoiceListItem[]>(initialInvoices);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithDetails | null>(null);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceListItem | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentDate, setPaymentDate] = useState(getTodayDateString);
-  const [paymentMethod, setPaymentMethod] = useState<'BANK' | 'CASH'>('BANK');
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetailResponseDto | null>(null);
   const [invoicesThisMonth, setInvoicesThisMonth] = useState<number>(initialInvoicesThisMonth);
-  const invoiceDetailsRef = useRef<Record<string, InvoiceWithDetails>>({});
   const companyDetails = initialCompany;
   const userSubscription = initialSubscription;
   const { showToast } = useToast();
-  const router = useRouter();
   const { settings } = useSettings();
-
-  const selectedInvoiceWhatsAppDetails = useMemo(() => {
-    if (!selectedInvoice) return null;
-
-    const phoneNumber = formatPhoneNumber(selectedInvoice.customer.phoneNumber || '');
-    if (!phoneNumber) return null;
-
-    const formattedTotal = formatCurrency(selectedInvoice.total, settings);
-    const businessName = companyDetails?.legalName || 'your business';
-    const message = `Hello ${selectedInvoice.customer.name}! Here's your invoice totalling ${formattedTotal} from ${businessName}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
-
-    return { phoneNumber, whatsappUrl };
-  }, [companyDetails?.legalName, selectedInvoice, settings]);
-
-  const invalidateInvoiceDetails = useCallback((invoiceId: string) => {
-    delete invoiceDetailsRef.current[invoiceId];
+  const { fetchInvoiceDetails, invalidateInvoiceDetails } = useInvoiceDetailsCache();
+  const patchInvoiceInList = useCallback((invoiceId: string, patch: Partial<InvoiceListItem>) => {
+    setInvoices((current) =>
+      current.map((invoice) => (invoice.id === invoiceId ? { ...invoice, ...patch } : invoice)),
+    );
   }, []);
 
-  const fetchInvoiceDetails = useCallback(
-    async (invoiceId: string) => {
-      const cached = invoiceDetailsRef.current[invoiceId];
-      if (cached) {
-        return cached;
-      }
-
-      const response = await fetch(`/api/invoices/${invoiceId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch complete invoice details');
-      }
-
-      const data: InvoiceWithDetails = await response.json();
-      invoiceDetailsRef.current[invoiceId] = data;
-      return data;
-    },
-    [],
-  );
+  const {
+    paymentDialogOpen,
+    setPaymentDialogOpen,
+    selectedInvoiceForPayment,
+    paymentAmount,
+    setPaymentAmount,
+    paymentDate,
+    setPaymentDate,
+    paymentMethod,
+    setPaymentMethod,
+    handleCancelInvoice,
+    handleMarkAsSent,
+    handleOpenPaymentDialog,
+    handleApplyPayment,
+  } = useInvoiceActions({
+    showToast,
+    invalidateInvoiceDetails,
+    onInvoicePatched: patchInvoiceInList,
+  });
 
   const handleViewInvoice = async (invoice: InvoiceListItem) => {
+    const start = performance.now();
     try {
       const data = await fetchInvoiceDetails(invoice.id);
+      emitInvoiceMetric({
+        name: 'invoice_detail_fetch_ms',
+        value: Number((performance.now() - start).toFixed(1)),
+        id: invoice.id,
+        startTime: Date.now(),
+        label: 'invoice-details',
+      });
       setSelectedInvoice(data);
     } catch (error) {
       console.error('Error fetching complete invoice:', error);
@@ -128,10 +120,18 @@ export function InvoicesClient({
   };
 
   const handleDownloadPDF = async (invoice: InvoiceListItem) => {
+    const start = performance.now();
     try {
       const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
       const completeInvoice = await fetchInvoiceDetails(invoice.id);
-      downloadInvoicePDF(completeInvoice, companyDetails, settings);
+      downloadInvoicePDF(toPdfInvoice(completeInvoice), companyDetails, settings);
+      emitInvoiceMetric({
+        name: 'invoice_pdf_trigger_ms',
+        value: Number((performance.now() - start).toFixed(1)),
+        id: invoice.id,
+        startTime: Date.now(),
+        label: 'invoice-list',
+      });
     } catch (error) {
       console.error('Error fetching invoice for PDF:', error);
       showToast({
@@ -169,7 +169,7 @@ export function InvoicesClient({
 
       const { downloadReceiptPDF } = await import('@/lib/pdf-generator');
       const completeInvoice = await fetchInvoiceDetails(invoice.id);
-      downloadReceiptPDF(completeInvoice, companyDetails, settings);
+      downloadReceiptPDF(toPdfInvoice(completeInvoice), companyDetails, settings);
     } catch (error) {
       console.error('Error fetching invoice for receipt:', error);
       showToast({
@@ -180,171 +180,20 @@ export function InvoicesClient({
   };
 
   const handleDownloadPDFWithDetails = useCallback(
-    async (invoice: InvoiceWithDetails) => {
+    async (invoice: InvoiceDetailResponseDto) => {
+      const start = performance.now();
       const { downloadInvoicePDF } = await import('@/lib/pdf-generator');
-      downloadInvoicePDF(invoice, companyDetails, settings);
+      downloadInvoicePDF(toPdfInvoice(invoice), companyDetails, settings);
+      emitInvoiceMetric({
+        name: 'invoice_pdf_trigger_ms',
+        value: Number((performance.now() - start).toFixed(1)),
+        id: invoice.id,
+        startTime: Date.now(),
+        label: 'invoice-dialog',
+      });
     },
     [companyDetails, settings],
   );
-
-  const handleCancelInvoice = async (invoice: InvoiceListItem) => {
-    try {
-      const response = await fetch(`/api/invoices/${invoice.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'cancel'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to cancel invoice');
-      }
-
-      invalidateInvoiceDetails(invoice.id);
-      router.refresh();
-
-      showToast({
-        variant: 'success',
-        message: 'Invoice cancelled successfully'
-      });
-    } catch (error) {
-      console.error('Error cancelling invoice:', error);
-      showToast({
-        variant: 'error',
-        message: 'Failed to cancel invoice'
-      });
-    }
-  };
-
-  const handleOpenPaymentDialog = (invoice: InvoiceListItem) => {
-    if (invoice.status === 'DRAFT') {
-      showToast({
-        variant: 'error',
-        message: 'Mark the invoice as sent before applying a payment.',
-      });
-      return;
-    }
-
-    const invoicePaidAmount = extractPaidAmount(invoice);
-    const outstandingAmount = Math.max(invoice.total - invoicePaidAmount, 0);
-
-    setSelectedInvoiceForPayment(invoice);
-    setPaymentAmount(outstandingAmount > 0 ? outstandingAmount.toFixed(2) : '');
-    setPaymentDate(getTodayDateString());
-    setPaymentMethod('BANK');
-    setPaymentDialogOpen(true);
-  };
-
-  const handleApplyPayment = async () => {
-    if (!selectedInvoiceForPayment) return;
-
-    const invoicePaidAmount = extractPaidAmount(selectedInvoiceForPayment);
-    const outstandingAmount = Math.max(selectedInvoiceForPayment.total - invoicePaidAmount, 0);
-    const parsedAmount = parseFloat(paymentAmount);
-
-    if (outstandingAmount <= 0) {
-      showToast({
-        variant: 'error',
-        message: 'This invoice has no outstanding balance.'
-      });
-      return;
-    }
-
-    if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
-      showToast({
-        variant: 'error',
-        message: 'Enter a valid payment amount greater than zero.'
-      });
-      return;
-    }
-
-    if (parsedAmount > outstandingAmount) {
-      showToast({
-        variant: 'error',
-        message: 'Payment amount cannot exceed the outstanding balance.'
-      });
-      return;
-    }
-
-    const normalizedAmount = Number(parsedAmount.toFixed(2));
-
-    try {
-      const response = await fetch(`/api/invoices/${selectedInvoiceForPayment.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'payment',
-          paymentAmount: normalizedAmount,
-          paymentDate,
-          paymentMethod,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const errorMessage = (errorData as { error?: string } | null)?.error || 'Failed to apply payment';
-        throw new Error(errorMessage);
-      }
-
-      setPaymentDialogOpen(false);
-      setSelectedInvoiceForPayment(null);
-      setPaymentAmount('');
-      setPaymentDate(getTodayDateString());
-      setPaymentMethod('BANK');
-
-      router.refresh();
-      invalidateInvoiceDetails(selectedInvoiceForPayment.id);
-
-      showToast({
-        variant: 'success',
-        message: 'Payment applied successfully'
-      });
-    } catch (error) {
-      console.error('Error applying payment:', error);
-      const message = error instanceof Error ? error.message : 'Failed to apply payment';
-      showToast({
-        variant: 'error',
-        message,
-      });
-    }
-  };
-
-  const handleMarkAsSent = async (invoice: InvoiceListItem) => {
-    try {
-      const response = await fetch(`/api/invoices/${invoice.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'mark_sent'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to mark invoice as sent');
-      }
-
-      invalidateInvoiceDetails(invoice.id);
-      router.refresh();
-
-      showToast({
-        variant: 'success',
-        message: 'Invoice marked as sent'
-      });
-    } catch (error) {
-      console.error('Error marking invoice as sent:', error);
-      showToast({
-        variant: 'error',
-        message: 'Failed to mark invoice as sent'
-      });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -400,7 +249,7 @@ export function InvoicesClient({
       <InvoicesList
         searchTerm={searchTerm}
         statusFilter={statusFilter}
-        initialInvoices={initialInvoices}
+        initialInvoices={invoices}
         onViewInvoice={handleViewInvoice}
         onDownloadPDF={handleDownloadPDF}
         onCancelInvoice={handleCancelInvoice}
