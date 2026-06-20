@@ -10,7 +10,7 @@ type TransactionEntry = {
   memo: string | null;
 };
 
-function enrichInvoiceIssuedMemos<T extends TransactionEntry>(
+async function enrichInvoiceIssuedMemos<T extends TransactionEntry>(
   userId: string,
   entries: T[],
 ): Promise<T[]> {
