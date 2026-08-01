@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { receiptCreateSchema } from '@/lib/schemas/receipt';
+import { safeErrorResponse } from '@/lib/api-error';
 import { toDecimal, toNumber } from '@/lib/decimal';
 
 const RECEIPTS_TAG = (userId: string) => `receipts:${userId}`;
@@ -145,7 +147,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const payload = await req.json();
+    const payload = receiptCreateSchema.parse(await req.json());
 
     if (!Array.isArray(payload.items) || payload.items.length === 0) {
       return NextResponse.json({ error: 'Receipt must contain at least one item' }, { status: 400 });
@@ -160,7 +162,13 @@ export async function POST(req: NextRequest) {
           receiptDate: payload.receiptDate ? new Date(payload.receiptDate) : new Date(),
           paymentMethod: payload.paymentMethod || 'CASH',
           notes: payload.notes ?? null,
-          total: toDecimal(payload.total),
+          total: toDecimal(
+            payload.total ??
+              payload.items.reduce(
+                (sum, item) => sum + item.quantity * item.unitPrice,
+                0,
+              ),
+          ),
           userId: user.id,
           items: {
             create: payload.items.map((item: any) => ({
@@ -184,7 +192,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(serialiseReceipt(receipt), { status: 201 });
   } catch (error) {
-    console.error('Failed to create receipt', error);
-    return NextResponse.json({ error: 'Failed to create receipt' }, { status: 500 });
+    return safeErrorResponse(error, 'Failed to create receipt');
   }
 }

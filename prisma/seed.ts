@@ -1,27 +1,11 @@
 import { PrismaClient } from '@prisma/client';
-import * as crypto from 'crypto';
-
-// Define InvoiceStatus as a simple object
-const InvoiceStatus = {
-  DRAFT: 'DRAFT',
-  SENT: 'SENT',
-  PAID: 'PAID',
-  PARTIAL: 'PARTIAL',
-  OVERDUE: 'OVERDUE',
-  CANCELLED: 'CANCELLED'
-} as const;
-
-// Define hashPassword function directly
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
+import { hashPassword } from '@/lib/password';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create a demo user
   const passwordHash = await hashPassword('password123');
-  
+
   const user = await prisma.user.create({
     data: {
       name: 'Demo User',
@@ -31,7 +15,6 @@ async function main() {
     },
   });
 
-  // Create some customers
   const customers = await Promise.all([
     prisma.customer.create({
       data: {
@@ -77,7 +60,6 @@ async function main() {
     }),
   ]);
 
-  // Create some products
   const products = await Promise.all([
     prisma.product.create({
       data: {
@@ -136,14 +118,13 @@ async function main() {
     }),
   ]);
 
-  // Create some invoices
-  const invoices = await Promise.all([
+  await Promise.all([
     prisma.invoice.create({
       data: {
         invoiceNumber: 'INV-0001-1234',
         issueDate: new Date('2023-01-15'),
         dueDate: new Date('2023-02-15'),
-        status: InvoiceStatus.PAID,
+        status: 'PAID',
         subtotal: 1200,
         taxRate: 10,
         taxAmount: 120,
@@ -171,7 +152,7 @@ async function main() {
         invoiceNumber: 'INV-0002-2345',
         issueDate: new Date('2023-02-01'),
         dueDate: new Date('2023-03-01'),
-        status: InvoiceStatus.SENT,
+        status: 'SENT',
         subtotal: 3300,
         taxRate: 10,
         taxAmount: 330,
@@ -204,7 +185,7 @@ async function main() {
         invoiceNumber: 'INV-0003-3456',
         issueDate: new Date('2023-03-10'),
         dueDate: new Date('2023-04-10'),
-        status: InvoiceStatus.PARTIAL,
+        status: 'PARTIAL',
         subtotal: 1300,
         taxRate: 10,
         taxAmount: 130,
@@ -235,8 +216,7 @@ async function main() {
     }),
   ]);
 
-  // Create company profile
-  const company = await prisma.company.create({
+  await prisma.company.create({
     data: {
       legalName: 'Demo Company LLC',
       ownerName: 'Demo User',

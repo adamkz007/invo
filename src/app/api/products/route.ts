@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag, unstable_cache } from 'next/cache';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { productSchema } from '@/lib/schemas/product';
+import { safeErrorResponse } from '@/lib/api-error';
 
 const PRODUCT_TAG = (userId: string) => `products:${userId}`;
 
@@ -101,17 +104,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const productData = await request.json();
+    let productData: z.infer<typeof productSchema>;
+    try {
+      productData = productSchema.parse(await request.json());
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: 'Validation error', details: error.errors },
+          { status: 400 },
+        );
+      }
+      throw error;
+    }
     const userId = user.id;
 
-    // Extract the fields we need for product creation
     const {
       name,
       description,
       price,
       quantity,
       sku,
-      disableStockManagement = false, // Default to false if not provided
+      disableStockManagement,
       imageUrl,
     } = productData;
     
@@ -134,21 +147,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ product: newProduct }, { status: 201 });
   } catch (error) {
-    console.error('Error creating product:', error);
-    
-    // Check for specific Prisma errors
-    if (error instanceof Error) {
-      return NextResponse.json({ 
-        error: `Failed to create product: ${error.message}` 
-      }, { 
-        status: 500 
-      });
-    }
-    
-    return NextResponse.json({ 
-      error: 'Failed to create product' 
-    }, { 
-      status: 500 
-    });
+    return safeErrorResponse(error, 'Failed to create product');
   }
 }

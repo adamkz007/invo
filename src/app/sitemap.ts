@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { blogSitemapEntries } from '@/lib/seo';
+import { allDocPages } from '@/lib/docs';
 
 const baseUrl = 'https://invo.my';
 
@@ -49,6 +50,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    {
+      url: `${baseUrl}/docs`,
+      lastModified,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    ...allDocPages.map((page) => ({
+      url: `${baseUrl}/docs/${page.slug}`,
+      lastModified,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    })),
     {
       url: `${baseUrl}/terms`,
       lastModified,

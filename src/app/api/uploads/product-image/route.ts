@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { getProductImageStore } from '@/lib/product-image-store';
+import {
+  isBlockedImageExtension,
+  validateImageMagicBytes,
+} from '@/lib/image-validation';
+import { safeErrorResponse } from '@/lib/api-error';
 
 export const runtime = 'nodejs';
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-const ALLOWED_MIME_PREFIX = 'image/';
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]);
 
 export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
@@ -20,8 +30,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Image file is required' }, { status: 400 });
   }
 
-  if (!file.type?.startsWith(ALLOWED_MIME_PREFIX)) {
-    return NextResponse.json({ error: 'Only image uploads are allowed' }, { status: 400 });
+  if (!file.type || !ALLOWED_MIME_TYPES.has(file.type)) {
+    return NextResponse.json({ error: 'Only JPEG, PNG, GIF, and WebP uploads are allowed' }, { status: 400 });
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -30,26 +40,25 @@ export async function POST(request: NextRequest) {
 
   const fileName = file instanceof File ? file.name : 'upload.jpg';
   const extension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+
+  if (isBlockedImageExtension(extension)) {
+    return NextResponse.json({ error: 'SVG uploads are not allowed' }, { status: 400 });
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  if (!validateImageMagicBytes(arrayBuffer)) {
+    return NextResponse.json({ error: 'File content does not match a supported image format' }, { status: 400 });
+  }
+
   const objectKey = `products/${user.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
 
   try {
     const store = getProductImageStore();
-    const arrayBuffer = await file.arrayBuffer();
-
-    // Store the image (metadata stored separately in key for simplicity)
     await store.set(objectKey, arrayBuffer);
 
-    // Return the URL to access the image via our GET endpoint
     const url = `/api/uploads/product-image/${encodeURIComponent(objectKey)}`;
-
     return NextResponse.json({ url, path: objectKey });
   } catch (error: unknown) {
-    console.error('Error uploading product image to Netlify Blob:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json(
-      { error: `Failed to upload image: ${message}` },
-      { status: 500 },
-    );
+    return safeErrorResponse(error, 'Failed to upload image');
   }
 }
-

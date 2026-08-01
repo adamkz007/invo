@@ -1,90 +1,47 @@
 import { NextResponse } from 'next/server';
-
-// Define a Receipt type to match the mock data structure
-interface ReceiptItem {
-  id: string;
-  productId: string;
-  product: {
-    name: string;
-    description: string;
-  };
-  quantity: number;
-  unitPrice: number;
-  description: string;
-}
-
-interface Receipt {
-  id: string;
-  receiptNumber: string;
-  customerName: string;
-  customerPhone: string | null;
-  receiptDate: Date;
-  paymentMethod: string;
-  total: number;
-  notes: string;
-  items: ReceiptItem[];
-  createdAt: Date;
-}
-
-// Import Prisma client for database operations
 import { prisma } from '@/lib/prisma';
+import { getUserFromRequest } from '@/lib/auth';
+import { safeErrorResponse } from '@/lib/api-error';
 
-/**
- * GET /api/receipts/[id] - Get a single receipt by ID from the database
- */
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
-    // Check for module status header
     const headers = new Headers(request.headers);
     const moduleEnabled = headers.get('x-receipts-module-enabled');
-    
-    // If the header explicitly says the module is disabled, return 404
+
     if (moduleEnabled === 'false') {
       return NextResponse.json(
         { error: 'Receipt not found or module disabled' },
-        { status: 404 }
+        { status: 404 },
       );
     }
-    
-    // Get the receipt ID from the route parameters - using await to fix the warning
-    const params = await context.params;
-    const id = params.id;
-    
-    // Find the receipt with the given ID from the database
-    const receipt = await prisma.receipt.findUnique({
-      where: { id },
+
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await context.params;
+
+    const receipt = await prisma.receipt.findFirst({
+      where: { id, userId: user.id },
       include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
+        items: { include: { product: true } },
+      },
     });
-    
+
     if (!receipt) {
-      return NextResponse.json(
-        { error: 'Receipt not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Receipt not found' }, { status: 404 });
     }
-    
-    // Add any fields needed for backward compatibility
-    const enhancedReceipt = {
+
+    return NextResponse.json({
       ...receipt,
-      invoiceId: null, // These fields aren't in the database schema
-      orderNumber: null // but might be expected by the client
-    };
-    
-    return NextResponse.json(enhancedReceipt);
+      invoiceId: null,
+      orderNumber: null,
+    });
   } catch (error) {
-    console.error('Error fetching receipt:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch receipt' },
-      { status: 500 }
-    );
+    return safeErrorResponse(error, 'Failed to fetch receipt');
   }
 }

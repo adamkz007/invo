@@ -561,6 +561,14 @@ model EInvoiceConfig {
   @@map("einvoice_config")
 }
 
+model ProcessedWebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  processedAt DateTime @default(now())
+
+  @@map("processed_webhook_events")
+}
+
 model EInvoiceDocument {
   id                   String               @id @default(cuid())
   invoiceId            String

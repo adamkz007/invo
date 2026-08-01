@@ -8,7 +8,6 @@ import { ArrowLeft, CheckCircle2, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useTheme } from 'next-themes';
 import RequestTACForm from '@/components/auth/request-tac-form';
 import LoginVerificationForm from '@/components/auth/login-verification-form';
 import LoginPasswordForm from '@/components/auth/login-password-form';
@@ -23,13 +22,9 @@ function LoginContent() {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const searchParams = useSearchParams();
   
-  // Add theme hook to detect dark mode
-  const { theme } = useTheme();
-  const isDarkMode = theme === 'dark';
-  
   useEffect(() => {
-    console.log('LoginContent - Current state:', { step, phoneNumber, theme: isDarkMode ? 'dark' : 'light' });
-  }, [step, phoneNumber, isDarkMode]);
+    console.log('LoginContent - Current state:', { step, phoneNumber });
+  }, [step, phoneNumber]);
   
   useEffect(() => {
     // Check if redirected from successful signup or password reset
@@ -87,17 +82,13 @@ function LoginContent() {
           <span>Home</span>
         </Link>
         
-        <div className="mb-6 text-center">
-          <div className="flex justify-center items-center">
-            <Image 
-              src="/icons/Invo_Logo_Transparent.png" 
-              alt="Invo Logo" 
-              width={40} 
-              height={40} 
-              className="mr-2"
-            />
-            <h1 className={`text-3xl font-bold ${isDarkMode ? "text-white" : ""}`}>Invo</h1>
-          </div>
+        <div className="mb-6 flex justify-center">
+          <Image 
+            src="/icons/Invo_Logo_Transparent.png" 
+            alt="Invo Logo" 
+            width={40} 
+            height={40} 
+          />
         </div>
         
         {showSuccessMessage && (

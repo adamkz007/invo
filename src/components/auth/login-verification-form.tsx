@@ -40,8 +40,6 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
         tac: values.tac,
       };
 
-      console.log('Sending login request with data:', loginData);
-
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -50,33 +48,15 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
         body: JSON.stringify(loginData),
       });
 
-      console.log('Login response status:', response.status);
-
-      // Log the full response body for debugging
-      const responseText = await response.text();
-      console.log('Full response body:', responseText);
-
-      // Try to parse the response text as JSON
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        throw new Error('Invalid server response');
-      }
+      const data = await response.json();
 
       if (!data.success) {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      // Redirect to dashboard on successful login
-      console.log('Login successful, redirecting to dashboard...');
-      
-      // Use router.push for consistent navigation with password login
       router.push('/dashboard');
-    } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'An error occurred');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -112,9 +92,7 @@ export default function LoginVerificationForm({ phoneNumber, onBack }: LoginVeri
             )}
           />
 
-          {error && (
-            <div className="text-sm text-red-500">{error}</div>
-          )}
+          {error && <div className="text-sm text-red-500">{error}</div>}
 
           <div className="flex flex-col space-y-2">
             <Button type="submit" className="w-full" disabled={isLoading}>

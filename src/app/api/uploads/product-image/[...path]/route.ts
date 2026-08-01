@@ -1,15 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth';
 import { getProductImageStore } from '@/lib/product-image-store';
 
 export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { path } = await params;
     const objectKey = path.join('/');
+
+    const expectedPrefix = `products/${user.id}/`;
+    if (!objectKey.startsWith(expectedPrefix)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const ext = objectKey.split('.').pop()?.toLowerCase();
+    if (ext === 'svg' || ext === 'svgz') {
+      return NextResponse.json({ error: 'SVG images are not allowed' }, { status: 403 });
+    }
 
     const store = getProductImageStore();
     const blob = await store.get(objectKey, { type: 'arrayBuffer' });
@@ -18,15 +34,12 @@ export async function GET(
       return NextResponse.json({ error: 'Image not found' }, { status: 404 });
     }
 
-    // Determine content type from extension
-    const ext = objectKey.split('.').pop()?.toLowerCase();
     const contentTypeMap: Record<string, string> = {
       jpg: 'image/jpeg',
       jpeg: 'image/jpeg',
       png: 'image/png',
       gif: 'image/gif',
       webp: 'image/webp',
-      svg: 'image/svg+xml',
     };
     const contentType = contentTypeMap[ext || ''] || 'image/jpeg';
 
@@ -34,7 +47,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': 'private, max-age=31536000, immutable',
       },
     });
   } catch (error) {

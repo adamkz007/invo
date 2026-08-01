@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag, unstable_cache } from 'next/cache';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
 import { User } from '@prisma/client';
+import { customerSchema } from '@/lib/schemas/customer';
+import { safeErrorResponse } from '@/lib/api-error';
 
 const CUSTOMERS_TAG = (userId: string) => `customers:${userId}`;
 
@@ -152,7 +155,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Proceed with creating customer
-    const data = await req.json();
+    const body = await req.json();
+    let data: z.infer<typeof customerSchema>;
+    try {
+      data = customerSchema.parse(body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: 'Validation error', details: error.errors },
+          { status: 400 },
+        );
+      }
+      throw error;
+    }
     
     // Check if a customer with the same phone number already exists
     const existingCustomer = await prisma.customer.findFirst({
@@ -175,7 +190,10 @@ export async function POST(req: NextRequest) {
     // Create the customer
     const customer = await prisma.customer.create({
       data: {
-        ...data,
+        name: data.name,
+        email: data.email || null,
+        phoneNumber: data.phoneNumber,
+        notes: data.notes || null,
         userId: user.id,
       },
     });
@@ -186,6 +204,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(customer);
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 });
+    return safeErrorResponse(error, 'Failed to create customer');
   }
 }

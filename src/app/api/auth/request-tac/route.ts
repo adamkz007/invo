@@ -1,47 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAndStoreTAC } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import {
+  AUTH_RATE_LIMITS,
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from '@/lib/rate-limit';
 
-// Local method that doesn't rely on database
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    
-    // Validate the request
+
     if (!body.phoneNumber) {
       return NextResponse.json(
         { success: false, error: 'Phone number is required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     const phoneNumber = body.phoneNumber;
-    
-    // Generate TAC without checking database
-    const tac = await generateAndStoreTAC(phoneNumber);
-    
-    // In a real application, this would send an SMS
-    console.log(`TAC for ${phoneNumber}: ${tac}`);
-    
-    // For development, return the TAC directly in the response
+
+    const ip = getClientIp(req);
+    const ipLimit = checkRateLimit(`request-tac:${ip}`, AUTH_RATE_LIMITS.requestTac);
+    if (!ipLimit.allowed) {
+      return rateLimitResponse(ipLimit.retryAfterSeconds);
+    }
+
+    const phoneLimit = checkRateLimit(
+      `request-tac:phone:${phoneNumber}`,
+      AUTH_RATE_LIMITS.requestTac,
+    );
+    if (!phoneLimit.allowed) {
+      return rateLimitResponse(phoneLimit.retryAfterSeconds);
+    }
+
+    const user = await prisma.user.findUnique({ where: { phoneNumber } });
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Phone number is not registered' },
+        { status: 404 },
+      );
+    }
+
+    await generateAndStoreTAC(phoneNumber);
+
     return NextResponse.json({
       success: true,
       data: {
         message: 'TAC sent successfully',
-        // In development mode, return the TAC code directly
-        ...(process.env.NODE_ENV !== 'production' && { tac }),
-        // Always assume user exists to bypass database check
-        userExists: true
-      }
+        userExists: true,
+      },
     });
   } catch (error) {
     console.error('Error requesting TAC:', error);
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to send TAC'
-      },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error && error.message.includes('Too many failed attempts')
+        ? error.message
+        : 'Failed to send TAC';
+
+    return NextResponse.json({ success: false, error: message }, { status: 429 });
   }
 }

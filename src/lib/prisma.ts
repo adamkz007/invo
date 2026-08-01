@@ -69,9 +69,9 @@ type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
 const globalForPrisma = global as unknown as { prisma?: ExtendedPrismaClient };
 
 // Create a new PrismaClient using the DATABASE_URL from environment variables
-export const prisma = globalForPrisma.prisma || createPrismaClient();
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+globalForPrisma.prisma = prisma;
 
 // Add a connection test function
 export async function testConnection() {

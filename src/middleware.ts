@@ -1,9 +1,10 @@
 import { jwtVerify } from 'jose';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getJwtSecret } from '@/lib/env';
+import { validateCsrfOrigin } from '@/lib/csrf';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const jwtSecretKey = new TextEncoder().encode(JWT_SECRET);
+const jwtSecretKey = new TextEncoder().encode(getJwtSecret());
 
 const PROTECTED_ROUTE_PREFIXES = [
   '/dashboard',
@@ -16,7 +17,6 @@ const PROTECTED_ROUTE_PREFIXES = [
   '/settings',
 ] as const;
 
-// Cache for token verification results to avoid repeated verification
 const tokenCache = new Map<string, { isValid: boolean; timestamp: number }>();
 const TOKEN_CACHE_TTL = 5 * 60 * 1000;
 
@@ -26,7 +26,6 @@ function isProtectedRoute(path: string): boolean {
 
 async function verifyTokenEdge(token: string): Promise<boolean> {
   const cleanToken = token.trim().split(';')[0];
-
   const now = Date.now();
   const cachedResult = tokenCache.get(cleanToken);
 
@@ -35,10 +34,7 @@ async function verifyTokenEdge(token: string): Promise<boolean> {
   }
 
   try {
-    await jwtVerify(cleanToken, jwtSecretKey, {
-      algorithms: ['HS256'],
-    });
-
+    await jwtVerify(cleanToken, jwtSecretKey, { algorithms: ['HS256'] });
     tokenCache.set(cleanToken, { isValid: true, timestamp: now });
     return true;
   } catch {
@@ -63,6 +59,14 @@ if (typeof setInterval !== 'undefined') {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  if (path.startsWith('/api/')) {
+    const csrfError = validateCsrfOrigin(request);
+    if (csrfError) {
+      return csrfError;
+    }
+    return NextResponse.next();
+  }
+
   if (path === '/landing' || path === '/home') {
     return NextResponse.next();
   }
@@ -82,7 +86,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { productSchema, updateProductSchema } from '@/lib/schemas/product';
+import { safeErrorResponse } from '@/lib/api-error';
 
 const PRODUCT_TAG = (userId: string) => `products:${userId}`;
 
@@ -48,7 +51,7 @@ export async function PUT(
 ) {
   try {
     const productId = await Promise.resolve(params.id);
-    const productData = await request.json();
+    const productData = productSchema.parse(await request.json());
 
     const user = await getUserFromRequest(request);
     if (!user) {
@@ -89,22 +92,7 @@ export async function PUT(
     revalidateTag(PRODUCT_TAG(userId));
     return NextResponse.json({ product: updatedProduct });
   } catch (error) {
-    console.error('Error updating product:', error);
-    
-    // Check for specific Prisma errors
-    if (error instanceof Error) {
-      return NextResponse.json({ 
-        error: `Failed to update product: ${error.message}` 
-      }, { 
-        status: 500 
-      });
-    }
-    
-    return NextResponse.json({ 
-      error: 'Failed to update product' 
-    }, { 
-      status: 500 
-    });
+    return safeErrorResponse(error, 'Failed to update product');
   }
 }
 
@@ -144,22 +132,7 @@ export async function DELETE(
     revalidateTag(PRODUCT_TAG(userId));
     return NextResponse.json({ message: 'Product deleted successfully', product: deletedProduct });
   } catch (error) {
-    console.error('Error deleting product:', error);
-    
-    // Check for specific Prisma errors
-    if (error instanceof Error) {
-      return NextResponse.json({ 
-        error: `Failed to delete product: ${error.message}` 
-      }, { 
-        status: 500 
-      });
-    }
-    
-    return NextResponse.json({ 
-      error: 'Failed to delete product' 
-    }, { 
-      status: 500 
-    });
+    return safeErrorResponse(error, 'Failed to delete product');
   }
 }
 
@@ -169,7 +142,18 @@ export async function PATCH(
 ) {
   try {
     const productId = await Promise.resolve(params.id);
-    const productData = await request.json();
+    let productData: z.infer<typeof updateProductSchema>;
+    try {
+      productData = updateProductSchema.parse(await request.json());
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: 'Validation error', details: error.errors },
+          { status: 400 },
+        );
+      }
+      throw error;
+    }
 
     const user = await getUserFromRequest(request);
     if (!user) {
@@ -211,21 +195,6 @@ export async function PATCH(
     
     return NextResponse.json({ product: updatedProduct });
   } catch (error) {
-    console.error('Error updating product:', error);
-    
-    // Check for specific Prisma errors
-    if (error instanceof Error) {
-      return NextResponse.json({ 
-        error: `Failed to update product: ${error.message}` 
-      }, { 
-        status: 500 
-      });
-    }
-    
-    return NextResponse.json({ 
-      error: 'Failed to update product' 
-    }, { 
-      status: 500 
-    });
+    return safeErrorResponse(error, 'Failed to update product');
   }
 }

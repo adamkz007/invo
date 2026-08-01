@@ -4,8 +4,20 @@ import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 import { normalizeSubscriptionPlan } from '@/lib/subscription-plans';
 
-// This is your Stripe webhook secret for testing
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+async function isProcessedEvent(eventId: string): Promise<boolean> {
+  const existing = await prisma.processedWebhookEvent.findUnique({
+    where: { eventId },
+  });
+  return Boolean(existing);
+}
+
+async function markEventProcessed(eventId: string): Promise<void> {
+  await prisma.processedWebhookEvent.create({
+    data: { eventId },
+  });
+}
 
 export async function POST(req: NextRequest) {
   if (!stripe) {
@@ -18,14 +30,17 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    // Verify webhook signature
     event = stripe.webhooks.constructEvent(payload, signature, endpointSecret);
-  } catch (err: any) {
-    console.error(`Webhook signature verification failed: ${err.message}`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'verification failed';
+    console.error(`Webhook signature verification failed: ${message}`);
     return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 });
   }
 
-  // Handle the event
+  if (await isProcessedEvent(event.id)) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -35,7 +50,6 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // Find the user with the stripeCustomerId
       const user = await prisma.user.findFirst({
         where: {
           stripeCustomerId: customerId,
@@ -48,8 +62,7 @@ export async function POST(req: NextRequest) {
 
       const planFromMetadata = normalizeSubscriptionPlan(session.metadata?.plan);
       const isLifetimeCheckout = session.mode === 'payment' || planFromMetadata === 'LIFETIME';
-      
-      // Lifetime one-time payment
+
       if (isLifetimeCheckout) {
         let paidPriceId = session.metadata?.priceId || null;
 
@@ -72,7 +85,6 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // Recurring subscription checkout
       if (session.subscription) {
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
@@ -95,7 +107,6 @@ export async function POST(req: NextRequest) {
         const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
         const customerId = invoice.customer as string;
 
-        // Find the user
         const user = await prisma.user.findFirst({
           where: {
             stripeCustomerId: customerId,
@@ -103,7 +114,6 @@ export async function POST(req: NextRequest) {
         });
 
         if (user) {
-          // Update subscription details
           await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -118,8 +128,7 @@ export async function POST(req: NextRequest) {
 
     case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
-      
-      // Find the user
+
       const user = await prisma.user.findFirst({
         where: {
           stripeSubscriptionId: subscription.id,
@@ -127,7 +136,6 @@ export async function POST(req: NextRequest) {
       });
 
       if (user) {
-        // Update user subscription status
         await prisma.user.update({
           where: { id: user.id },
           data: {
@@ -144,5 +152,6 @@ export async function POST(req: NextRequest) {
       console.log(`Unhandled event type: ${event.type}`);
   }
 
+  await markEventProcessed(event.id);
   return NextResponse.json({ received: true });
-} 
+}

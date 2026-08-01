@@ -107,13 +107,50 @@ function coerceDecimal(value: Prisma.Decimal | number | string | null | undefine
   return toNumber(value ?? 0);
 }
 
+interface EntityCountRow {
+  invoices: bigint;
+  customers: bigint;
+  products: bigint;
+}
+
+interface InvoicePeriodRow {
+  currentMonthCount: number;
+  currentMonthRevenue: Prisma.Decimal;
+  previousMonthCount: number;
+  previousMonthRevenue: Prisma.Decimal;
+  currentYearCount: number;
+  currentYearRevenue: Prisma.Decimal;
+  previousYearCount: number;
+  previousYearRevenue: Prisma.Decimal;
+}
+
+interface EntityPeriodCountRow {
+  currentMonth: number;
+  previousMonth: number;
+  currentYear: number;
+  previousYear: number;
+}
+
+interface ReceiptPeriodRow {
+  currentMonth: Prisma.Decimal;
+  previousMonth: Prisma.Decimal;
+  currentYear: Prisma.Decimal;
+  previousYear: Prisma.Decimal;
+}
+
 async function computeDashboardOverview(userId: string): Promise<DashboardOverview> {
-  const [totals, products, invoiceTotals, invoiceGroups, recentInvoices, receiptTotals] = await Promise.all([
-    Promise.all([
-      prisma.invoice.count({ where: { userId } }),
-      prisma.customer.count({ where: { userId } }),
-      prisma.product.count({ where: { userId } }),
-    ]),
+  const { start: currentStart, end: currentEnd } = getMonthRange(0);
+  const { start: previousStart, end: previousEnd } = getMonthRange(-1);
+  const { start: currentYearStart, end: currentYearEnd } = getYearRange(0);
+  const { start: previousYearStart, end: previousYearEnd } = getYearRange(-1);
+
+  const [totalsRow, products, invoiceTotals, invoiceGroups, recentInvoices, receiptTotals] = await Promise.all([
+    prisma.$queryRaw<EntityCountRow[]>`
+      SELECT
+        (SELECT COUNT(*)::bigint FROM "Invoice" WHERE "userId" = ${userId}) AS invoices,
+        (SELECT COUNT(*)::bigint FROM "Customer" WHERE "userId" = ${userId}) AS customers,
+        (SELECT COUNT(*)::bigint FROM "Product" WHERE "userId" = ${userId}) AS products
+    `,
     prisma.product.findMany({
       where: { userId },
       select: { id: true, price: true, quantity: true, disableStockManagement: true },
@@ -186,6 +223,12 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
     { overdue: 0, pending: 0, outstanding: 0 },
   );
 
+  const totals = [
+    Number(totalsRow[0]?.invoices ?? 0),
+    Number(totalsRow[0]?.customers ?? 0),
+    Number(totalsRow[0]?.products ?? 0),
+  ];
+
   const monthlyRevenueRows = await prisma.$queryRaw<
     Array<{
       month: string;
@@ -224,197 +267,87 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
     LIMIT 6
   `;
 
-  const { start: currentStart, end: currentEnd } = getMonthRange(0);
-  const { start: previousStart, end: previousEnd } = getMonthRange(-1);
-
-  const { start: currentYearStart, end: currentYearEnd } = getYearRange(0);
-  const { start: previousYearStart, end: previousYearEnd } = getYearRange(-1);
-
-  const [
-    currentMonthInvoices,
-    previousMonthInvoices,
-    currentYearInvoices,
-    previousYearInvoices,
-    currentMonthCustomers,
-    previousMonthCustomers,
-    currentYearCustomers,
-    previousYearCustomers,
-    currentMonthProducts,
-    previousMonthProducts,
-    currentYearProducts,
-    previousYearProducts,
-    currentMonthReceipts,
-    previousMonthReceipts,
-    currentYearReceipts,
-    previousYearReceipts,
-  ] = await Promise.all([
-    prisma.invoice.aggregate({
-      where: {
-        userId,
-        issueDate: {
-          gte: currentStart,
-          lt: currentEnd,
-        },
-      },
-      _count: { _all: true },
-      _sum: { total: true },
-    }),
-    prisma.invoice.aggregate({
-      where: {
-        userId,
-        issueDate: {
-          gte: previousStart,
-          lt: previousEnd,
-        },
-      },
-      _count: { _all: true },
-      _sum: { total: true },
-    }),
-    prisma.invoice.aggregate({
-      where: {
-        userId,
-        issueDate: {
-          gte: currentYearStart,
-          lt: currentYearEnd,
-        },
-      },
-      _count: { _all: true },
-      _sum: { total: true },
-    }),
-    prisma.invoice.aggregate({
-      where: {
-        userId,
-        issueDate: {
-          gte: previousYearStart,
-          lt: previousYearEnd,
-        },
-      },
-      _count: { _all: true },
-      _sum: { total: true },
-    }),
-    prisma.customer.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: currentStart,
-          lt: currentEnd,
-        },
-      },
-    }),
-    prisma.customer.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: previousStart,
-          lt: previousEnd,
-        },
-      },
-    }),
-    prisma.customer.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: currentYearStart,
-          lt: currentYearEnd,
-        },
-      },
-    }),
-    prisma.customer.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: previousYearStart,
-          lt: previousYearEnd,
-        },
-      },
-    }),
-    prisma.product.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: currentStart,
-          lt: currentEnd,
-        },
-      },
-    }),
-    prisma.product.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: previousStart,
-          lt: previousEnd,
-        },
-      },
-    }),
-    prisma.product.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: currentYearStart,
-          lt: currentYearEnd,
-        },
-      },
-    }),
-    prisma.product.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: previousYearStart,
-          lt: previousYearEnd,
-        },
-      },
-    }),
-    prisma.receipt.aggregate({
-      where: {
-        userId,
-        receiptDate: {
-          gte: currentStart,
-          lt: currentEnd,
-        },
-      },
-      _sum: { total: true },
-    }),
-    prisma.receipt.aggregate({
-      where: {
-        userId,
-        receiptDate: {
-          gte: previousStart,
-          lt: previousEnd,
-        },
-      },
-      _sum: { total: true },
-    }),
-    prisma.receipt.aggregate({
-      where: {
-        userId,
-        receiptDate: {
-          gte: currentYearStart,
-          lt: currentYearEnd,
-        },
-      },
-      _sum: { total: true },
-    }),
-    prisma.receipt.aggregate({
-      where: {
-        userId,
-        receiptDate: {
-          gte: previousYearStart,
-          lt: previousYearEnd,
-        },
-      },
-      _sum: { total: true },
-    }),
+  const [invoicePeriods, customerPeriods, productPeriods, receiptPeriods] = await Promise.all([
+    prisma.$queryRaw<InvoicePeriodRow[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "issueDate" >= ${currentStart} AND "issueDate" < ${currentEnd})::int AS "currentMonthCount",
+        COALESCE(SUM("total") FILTER (WHERE "issueDate" >= ${currentStart} AND "issueDate" < ${currentEnd}), 0) AS "currentMonthRevenue",
+        COUNT(*) FILTER (WHERE "issueDate" >= ${previousStart} AND "issueDate" < ${previousEnd})::int AS "previousMonthCount",
+        COALESCE(SUM("total") FILTER (WHERE "issueDate" >= ${previousStart} AND "issueDate" < ${previousEnd}), 0) AS "previousMonthRevenue",
+        COUNT(*) FILTER (WHERE "issueDate" >= ${currentYearStart} AND "issueDate" < ${currentYearEnd})::int AS "currentYearCount",
+        COALESCE(SUM("total") FILTER (WHERE "issueDate" >= ${currentYearStart} AND "issueDate" < ${currentYearEnd}), 0) AS "currentYearRevenue",
+        COUNT(*) FILTER (WHERE "issueDate" >= ${previousYearStart} AND "issueDate" < ${previousYearEnd})::int AS "previousYearCount",
+        COALESCE(SUM("total") FILTER (WHERE "issueDate" >= ${previousYearStart} AND "issueDate" < ${previousYearEnd}), 0) AS "previousYearRevenue"
+      FROM "Invoice"
+      WHERE "userId" = ${userId}
+    `,
+    prisma.$queryRaw<EntityPeriodCountRow[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "createdAt" >= ${currentStart} AND "createdAt" < ${currentEnd})::int AS "currentMonth",
+        COUNT(*) FILTER (WHERE "createdAt" >= ${previousStart} AND "createdAt" < ${previousEnd})::int AS "previousMonth",
+        COUNT(*) FILTER (WHERE "createdAt" >= ${currentYearStart} AND "createdAt" < ${currentYearEnd})::int AS "currentYear",
+        COUNT(*) FILTER (WHERE "createdAt" >= ${previousYearStart} AND "createdAt" < ${previousYearEnd})::int AS "previousYear"
+      FROM "Customer"
+      WHERE "userId" = ${userId}
+    `,
+    prisma.$queryRaw<EntityPeriodCountRow[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "createdAt" >= ${currentStart} AND "createdAt" < ${currentEnd})::int AS "currentMonth",
+        COUNT(*) FILTER (WHERE "createdAt" >= ${previousStart} AND "createdAt" < ${previousEnd})::int AS "previousMonth",
+        COUNT(*) FILTER (WHERE "createdAt" >= ${currentYearStart} AND "createdAt" < ${currentYearEnd})::int AS "currentYear",
+        COUNT(*) FILTER (WHERE "createdAt" >= ${previousYearStart} AND "createdAt" < ${previousYearEnd})::int AS "previousYear"
+      FROM "Product"
+      WHERE "userId" = ${userId}
+    `,
+    prisma.$queryRaw<ReceiptPeriodRow[]>`
+      SELECT
+        COALESCE(SUM("total") FILTER (WHERE "receiptDate" >= ${currentStart} AND "receiptDate" < ${currentEnd}), 0) AS "currentMonth",
+        COALESCE(SUM("total") FILTER (WHERE "receiptDate" >= ${previousStart} AND "receiptDate" < ${previousEnd}), 0) AS "previousMonth",
+        COALESCE(SUM("total") FILTER (WHERE "receiptDate" >= ${currentYearStart} AND "receiptDate" < ${currentYearEnd}), 0) AS "currentYear",
+        COALESCE(SUM("total") FILTER (WHERE "receiptDate" >= ${previousYearStart} AND "receiptDate" < ${previousYearEnd}), 0) AS "previousYear"
+      FROM "Receipt"
+      WHERE "userId" = ${userId}
+    `,
   ]);
+
+  const invoicePeriod = invoicePeriods[0] ?? {
+    currentMonthCount: 0,
+    currentMonthRevenue: new Prisma.Decimal(0),
+    previousMonthCount: 0,
+    previousMonthRevenue: new Prisma.Decimal(0),
+    currentYearCount: 0,
+    currentYearRevenue: new Prisma.Decimal(0),
+    previousYearCount: 0,
+    previousYearRevenue: new Prisma.Decimal(0),
+  };
+  const customerPeriod = customerPeriods[0] ?? {
+    currentMonth: 0,
+    previousMonth: 0,
+    currentYear: 0,
+    previousYear: 0,
+  };
+  const productPeriod = productPeriods[0] ?? {
+    currentMonth: 0,
+    previousMonth: 0,
+    currentYear: 0,
+    previousYear: 0,
+  };
+  const receiptPeriod = receiptPeriods[0] ?? {
+    currentMonth: new Prisma.Decimal(0),
+    previousMonth: new Prisma.Decimal(0),
+    currentYear: new Prisma.Decimal(0),
+    previousYear: new Prisma.Decimal(0),
+  };
 
   const allTimeRevenue = coerceDecimal(invoiceTotals._sum.total) + coerceDecimal(receiptTotals._sum.total);
   const currentMonthRevenue =
-    coerceDecimal(currentMonthInvoices._sum.total) + coerceDecimal(currentMonthReceipts._sum.total);
+    coerceDecimal(invoicePeriod.currentMonthRevenue) + coerceDecimal(receiptPeriod.currentMonth);
   const previousMonthRevenue =
-    coerceDecimal(previousMonthInvoices._sum.total) + coerceDecimal(previousMonthReceipts._sum.total);
+    coerceDecimal(invoicePeriod.previousMonthRevenue) + coerceDecimal(receiptPeriod.previousMonth);
   const currentYearRevenue =
-    coerceDecimal(currentYearInvoices._sum.total) + coerceDecimal(currentYearReceipts._sum.total);
+    coerceDecimal(invoicePeriod.currentYearRevenue) + coerceDecimal(receiptPeriod.currentYear);
   const previousYearRevenue =
-    coerceDecimal(previousYearInvoices._sum.total) + coerceDecimal(previousYearReceipts._sum.total);
+    coerceDecimal(invoicePeriod.previousYearRevenue) + coerceDecimal(receiptPeriod.previousYear);
 
   return {
     periods: {
@@ -425,29 +358,29 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
         revenue: allTimeRevenue,
       },
       currentMonth: {
-        invoices: currentMonthInvoices._count?._all ?? 0,
-        customers: currentMonthCustomers,
-        products: currentMonthProducts,
+        invoices: invoicePeriod.currentMonthCount,
+        customers: customerPeriod.currentMonth,
+        products: productPeriod.currentMonth,
         revenue: currentMonthRevenue,
       },
       currentYear: {
-        invoices: currentYearInvoices._count?._all ?? 0,
-        customers: currentYearCustomers,
-        products: currentYearProducts,
+        invoices: invoicePeriod.currentYearCount,
+        customers: customerPeriod.currentYear,
+        products: productPeriod.currentYear,
         revenue: currentYearRevenue,
       },
     },
     comparisons: {
       previousMonth: {
-        invoices: previousMonthInvoices._count?._all ?? 0,
-        customers: previousMonthCustomers,
-        products: previousMonthProducts,
+        invoices: invoicePeriod.previousMonthCount,
+        customers: customerPeriod.previousMonth,
+        products: productPeriod.previousMonth,
         revenue: previousMonthRevenue,
       },
       previousYear: {
-        invoices: previousYearInvoices._count?._all ?? 0,
-        customers: previousYearCustomers,
-        products: previousYearProducts,
+        invoices: invoicePeriod.previousYearCount,
+        customers: customerPeriod.previousYear,
+        products: productPeriod.previousYear,
         revenue: previousYearRevenue,
       },
     },
@@ -486,15 +419,15 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
     },
     growth: {
       currentMonth: {
-        invoices: currentMonthInvoices._count?._all ?? 0,
-        customers: currentMonthCustomers,
-        products: currentMonthProducts,
+        invoices: invoicePeriod.currentMonthCount,
+        customers: customerPeriod.currentMonth,
+        products: productPeriod.currentMonth,
         revenue: currentMonthRevenue,
       },
       previousMonth: {
-        invoices: previousMonthInvoices._count?._all ?? 0,
-        customers: previousMonthCustomers,
-        products: previousMonthProducts,
+        invoices: invoicePeriod.previousMonthCount,
+        customers: customerPeriod.previousMonth,
+        products: productPeriod.previousMonth,
         revenue: previousMonthRevenue,
       },
     },

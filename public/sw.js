@@ -110,7 +110,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For API requests or other dynamic content - Network first with timeout
+  // API requests — network only, never cache authenticated data
+  if (event.request.url.includes('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // For other dynamic content - Network first with timeout
   event.respondWith(
     fetch(event.request)
       .then(response => {

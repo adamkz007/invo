@@ -66,6 +66,10 @@ export async function POST(req: NextRequest) {
     
     // Check for simulated customer ID (format cus_sim_*)
     if (customerId && customerId.startsWith('cus_sim_')) {
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
       console.log(`Detected simulated customer ID: ${customerId}. Using demo subscription flow.`);
       
       // For simulated customers, set the subscription status to active in the database

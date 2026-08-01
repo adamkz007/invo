@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { decrementProductStock } from '@/lib/pos-inventory';
 import { posModuleMiddleware } from '../../middleware';
 
 // GET /api/pos/orders/[id] - Get a specific POS order
@@ -99,20 +100,7 @@ export async function PATCH(
 
     // If completing the order, update inventory
     if (status === 'COMPLETED' && existingOrder.status !== 'COMPLETED') {
-      for (const item of existingOrder.items) {
-        if (!item.product.disableStockManagement) {
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: {
-              quantity: {
-                decrement: item.quantity,
-              },
-            },
-          });
-        }
-      }
-
-      // Create receipt if order is completed
+      await decrementProductStock(existingOrder.items, user.id);
       await createReceiptFromOrder(existingOrder, user.id);
     }
 

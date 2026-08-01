@@ -267,10 +267,11 @@ function renderCalmInvoicePDF(
   doc.setLineWidth(0.8);
   doc.circle(leftX + 5, 15, 5.5);
 
-  // Main rounded panel
+  // Main rounded panel (white fill on grey outer background)
+  doc.setFillColor(255, 255, 255);
   doc.setDrawColor(230, 234, 241);
   doc.setLineWidth(0.4);
-  doc.roundedRect(panelX, panelY, panelWidth, panelBottom - panelY, 5, 5, 'S');
+  doc.roundedRect(panelX, panelY, panelWidth, panelBottom - panelY, 5, 5, 'FD');
 
   // Top invoice metadata row
   const sectionY = panelY + 12;
@@ -364,6 +365,7 @@ function renderCalmInvoicePDF(
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
 
+  const detailColWidth = Math.max(qtyX - firstColX - 4, 20);
   const items = Array.isArray(invoice.items) ? invoice.items : [];
   if (items.length === 0) {
     doc.setFont('helvetica', 'italic');
@@ -373,15 +375,29 @@ function renderCalmInvoicePDF(
   } else {
     items.forEach((item) => {
       const itemName = item.product?.name || item.description || 'Item';
+      const itemDescription =
+        item.description && item.description !== itemName ? item.description : '';
+
+      doc.setFontSize(11);
+      const nameLines = doc.splitTextToSize(itemName, detailColWidth);
+      doc.setFontSize(9);
+      const descriptionLines = itemDescription
+        ? doc.splitTextToSize(itemDescription, detailColWidth)
+        : [];
+      const descriptionStartY = rowsY + nameLines.length * 4;
+      const totalTextLines = nameLines.length + descriptionLines.length;
+      const rowHeight = Math.max(10, totalTextLines * 4 + (descriptionLines.length > 0 ? 2 : 0));
+
       doc.setTextColor(35, 45, 60);
       doc.setFont('helvetica', 'bold');
-      doc.text(itemName, firstColX, rowsY);
+      doc.setFontSize(11);
+      doc.text(nameLines, firstColX, rowsY);
 
-      if (item.description && item.description !== itemName) {
+      if (descriptionLines.length > 0) {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(135, 145, 160);
         doc.setFontSize(9);
-        doc.text(item.description, firstColX, rowsY + 5);
+        doc.text(descriptionLines, firstColX, descriptionStartY + 1);
       }
 
       doc.setFont('helvetica', 'normal');
@@ -390,7 +406,7 @@ function renderCalmInvoicePDF(
       doc.text(String(item.quantity), qtyX, rowsY, { align: 'right' });
       doc.text(formatCurrency(item.unitPrice, settings), rateX, rowsY, { align: 'right' });
       doc.text(formatCurrency(item.quantity * item.unitPrice, settings), amountX, rowsY, { align: 'right' });
-      rowsY += item.description && item.description !== itemName ? 13 : 10;
+      rowsY += rowHeight;
     });
   }
 

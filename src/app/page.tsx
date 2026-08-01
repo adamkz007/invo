@@ -1073,6 +1073,7 @@ export default function LandingPage() {
                 <li><Link href="/about" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">About</Link></li>
                 <li><Link href="/blog" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Blog</Link></li>
                 <li><Link href="/contact" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Contact</Link></li>
+                <li><Link href="/docs" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Documentation</Link></li>
                 <li><Link href="/changelog" className="text-sm text-muted-foreground hover:text-primary hover:translate-x-1 inline-block transition-all duration-200">Changelog</Link></li>
               </ul>
             </div>

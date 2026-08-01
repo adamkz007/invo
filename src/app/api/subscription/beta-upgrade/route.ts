@@ -4,6 +4,10 @@ import { getUserFromRequest } from '@/lib/auth';
 import { calculateTrialEndDate, TRIAL_DURATION_DAYS } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // Get the authenticated user
     const user = await getUserFromRequest(req);

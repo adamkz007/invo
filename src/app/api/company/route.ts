@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
+import { companySchema } from '@/lib/schemas/company';
+import { safeErrorResponse } from '@/lib/api-error';
 
 // In-memory storage for company details when the database is unavailable
 let mockCompanyStorage: Record<string, any> = {};
@@ -86,7 +89,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const data = await request.json();
+    const data = companySchema.partial().parse(await request.json());
     const userId = user.id;
 
     // Format address from separate fields if they exist

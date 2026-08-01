@@ -1,74 +1,113 @@
+import { randomInt } from 'crypto';
 import { Prisma } from '@prisma/client';
-import { prisma } from './prisma';
 import * as jwt from 'jsonwebtoken';
+import { prisma } from './prisma';
 import { calculateTrialEndDate } from './stripe';
+import { getJwtSecret } from './env';
+import {
+  hashPassword,
+  verifyPassword,
+  upgradePasswordHashIfNeeded,
+} from './password';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = getJwtSecret();
 const JWT_EXPIRES_IN = '7d';
+const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
+const TAC_MAX_ATTEMPTS = 5;
+const TAC_LOCKOUT_MS = 15 * 60 * 1000;
 
-// Store TAC codes in a global variable to persist between requests
-// In production, use Redis or a database
 declare global {
   var tacCodes: Record<string, { code: string; expiresAt: Date }>;
+  var tacAttempts: Record<string, { count: number; lockedUntil?: Date }>;
 }
 
-// Initialize the global TAC storage if it doesn't exist
 if (!global.tacCodes) {
   global.tacCodes = {};
 }
 
-// Generate a Time-based Authentication Code and store it
-export async function generateAndStoreTAC(phoneNumber: string): Promise<string> {
-  // Generate a 6-digit code
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  // Store the code with expiration (15 minutes)
-  const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 15);
-  
-  global.tacCodes[phoneNumber] = {
-    code,
-    expiresAt
-  };
-  
-  console.log(`Generated TAC for ${phoneNumber}: ${code} (expires at ${expiresAt})`);
-  console.log(`Updated TAC storage:`, global.tacCodes);
-  
-  return code;
+if (!global.tacAttempts) {
+  global.tacAttempts = {};
 }
 
-// Verify the TAC code for a phone number
-export function verifyTAC(phoneNumber: string, code: string): boolean {
-  console.log(`Verifying TAC for ${phoneNumber} with code: ${code}`);
-  
-  console.log(`Current stored TACs:`, global.tacCodes);
-  
-  const storedData = global.tacCodes[phoneNumber];
-  
-  if (!storedData) {
-    console.log(`No TAC found for ${phoneNumber}`);
+function debugLog(...args: unknown[]) {
+  if (DEBUG_AUTH) {
+    console.log(...args);
+  }
+}
+
+function isPhoneLocked(phoneNumber: string): boolean {
+  const attempts = global.tacAttempts[phoneNumber];
+  if (!attempts?.lockedUntil) {
     return false;
   }
-  
-  if (new Date() > storedData.expiresAt) {
-    // Code has expired
-    console.log(`TAC for ${phoneNumber} has expired`);
-    delete global.tacCodes[phoneNumber];
+  if (new Date() > attempts.lockedUntil) {
+    delete global.tacAttempts[phoneNumber];
     return false;
   }
-  
-  if (storedData.code !== code) {
-    console.log(`TAC mismatch for ${phoneNumber}: expected ${storedData.code}, got ${code}`);
-    return false;
-  }
-  
-  // Code is valid - clean up after successful verification
-  console.log(`TAC verification successful for ${phoneNumber}`);
-  delete global.tacCodes[phoneNumber];
   return true;
 }
 
-// Register a new user
+function recordFailedTacAttempt(phoneNumber: string): void {
+  const existing = global.tacAttempts[phoneNumber] ?? { count: 0 };
+  const count = existing.count + 1;
+
+  if (count >= TAC_MAX_ATTEMPTS) {
+    global.tacAttempts[phoneNumber] = {
+      count,
+      lockedUntil: new Date(Date.now() + TAC_LOCKOUT_MS),
+    };
+    return;
+  }
+
+  global.tacAttempts[phoneNumber] = { count };
+}
+
+function clearTacAttempts(phoneNumber: string): void {
+  delete global.tacAttempts[phoneNumber];
+}
+
+export async function generateAndStoreTAC(phoneNumber: string): Promise<string> {
+  if (isPhoneLocked(phoneNumber)) {
+    throw new Error('Too many failed attempts. Please try again later.');
+  }
+
+  const code = randomInt(100000, 1000000).toString();
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+  global.tacCodes[phoneNumber] = { code, expiresAt };
+  debugLog(`TAC generated for ${phoneNumber} (expires at ${expiresAt.toISOString()})`);
+
+  return code;
+}
+
+export function verifyTAC(phoneNumber: string, code: string): boolean {
+  if (isPhoneLocked(phoneNumber)) {
+    return false;
+  }
+
+  const storedData = global.tacCodes[phoneNumber];
+  if (!storedData) {
+    recordFailedTacAttempt(phoneNumber);
+    return false;
+  }
+
+  if (new Date() > storedData.expiresAt) {
+    delete global.tacCodes[phoneNumber];
+    recordFailedTacAttempt(phoneNumber);
+    return false;
+  }
+
+  if (storedData.code !== code) {
+    recordFailedTacAttempt(phoneNumber);
+    return false;
+  }
+
+  delete global.tacCodes[phoneNumber];
+  clearTacAttempts(phoneNumber);
+  return true;
+}
+
 export async function register({
   name,
   email,
@@ -80,42 +119,26 @@ export async function register({
   phoneNumber: string;
   password: string;
 }): Promise<{ success: boolean; error?: string; userId?: string }> {
-  console.log('Starting registration process for:', { name, email, phoneNumber });
-  
   if (!name || !email || !phoneNumber || !password) {
-    console.log('Registration validation failed: Missing required fields');
-    return {
-      success: false,
-      error: 'Missing required fields',
-    };
+    return { success: false, error: 'Missing required fields' };
   }
 
   try {
     const trialStartDate = new Date();
     const trialEndDate = calculateTrialEndDate(trialStartDate);
-
-    // Hash the password
-    console.log('Hashing password');
     const passwordHash = await hashPassword(password);
 
-    // Check if user exists
-    console.log('Checking if user already exists');
     const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { phoneNumber }],
-      },
+      where: { OR: [{ email }, { phoneNumber }] },
     });
 
     if (existingUser) {
-      console.log('User already exists:', { email, phoneNumber });
       return {
         success: false,
         error: 'User with this email or phone number already exists',
       };
     }
 
-    // Create the user
-    console.log('Creating new user');
     const user = await prisma.user.create({
       data: {
         name,
@@ -127,92 +150,62 @@ export async function register({
         trialEndDate,
       },
     });
-    console.log('User created successfully with ID:', user.id);
 
-    // Create a basic company record for the user with their email and phone number
-    console.log('Creating company record for user');
     await prisma.company.create({
       data: {
-        legalName: name, // Default to user's name initially
+        legalName: name,
         ownerName: name,
-        email: email,    // Use the user's email
-        phoneNumber: phoneNumber, // Use the user's phone number
+        email,
+        phoneNumber,
         userId: user.id,
       },
     });
-    console.log('Company record created successfully');
 
-    return {
-      success: true,
-      userId: user.id,
-    };
+    return { success: true, userId: user.id };
   } catch (error) {
     console.error('Error registering user:', error);
-    // Check if it's a Prisma error
     if (error instanceof Error) {
       if (error.message.includes('connect') || error.message.includes('database')) {
-        return {
-          success: false,
-          error: 'Database connection error. Please try again later.',
-        };
+        return { success: false, error: 'Database connection error. Please try again later.' };
       }
-      return {
-        success: false,
-        error: `Registration failed: ${error.message}`,
-      };
+      if (process.env.NODE_ENV !== 'production') {
+        return { success: false, error: `Registration failed: ${error.message}` };
+      }
     }
-    return {
-      success: false,
-      error: 'Failed to register user',
-    };
+    return { success: false, error: 'Failed to register user' };
   }
 }
 
-// Login with phone number and password
 export async function loginWithPassword(phoneNumber: string, password: string) {
-  // Find the user by phone number
-  const user = await prisma.user.findUnique({
-    where: { phoneNumber }
-  });
-  
-  // Check if user exists
+  const user = await prisma.user.findUnique({ where: { phoneNumber } });
   if (!user) {
     throw new Error('Invalid phone number or password');
   }
-  
-  // Verify password
+
   const isPasswordValid = await verifyPassword(password, user.passwordHash);
-  
   if (!isPasswordValid) {
     throw new Error('Invalid phone number or password');
   }
-  
-  // Generate token
+
+  await upgradePasswordHashIfNeeded(
+    user.id,
+    password,
+    user.passwordHash,
+    async (userId, passwordHash) => {
+      await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    },
+  );
+
   const token = generateToken(user.id);
-  
   return { user, token };
 }
 
-// Verify password
-export async function verifyPassword(password: string, hashedPassword: string | null): Promise<boolean> {
-  // Handle case where hashedPassword is null
-  if (hashedPassword === null) {
-    return false;
-  }
-  
-  // Hash the input password the same way as during registration
-  const inputPasswordHash = await hashPassword(password);
-  
-  // Compare the hashed input against the stored hash
-  return hashedPassword === inputPasswordHash;
-}
+export { verifyPassword, hashPassword, upgradePasswordHashIfNeeded } from './password';
 
-// Generate JWT token
 export function generateToken(userId: string): string {
   return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
-// Define a type for our JWT payload
 interface JwtPayload {
   sub: string;
   iat?: number;
@@ -226,97 +219,75 @@ function isPrismaAuthLookupError(error: unknown): boolean {
   );
 }
 
-// Verify a JWT token
-export async function verifyToken(token: string): Promise<{ id: string; email: string; name: string } | null> {
+export async function verifyToken(
+  token: string,
+): Promise<{ id: string; email: string; name: string; phoneNumber: string | null } | null> {
   try {
     if (!token) return null;
-    
-    // Verify the token
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    
-    if (!decoded || !decoded.sub) {
-      return null;
-    }
 
-    let user: { id: string; email: string | null; name: string | null } | null = null;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    if (!decoded?.sub) return null;
+
+    let user: {
+      id: string;
+      email: string | null;
+      name: string | null;
+      phoneNumber: string | null;
+    } | null = null;
 
     try {
       user = await prisma.user.findUnique({
         where: { id: decoded.sub },
-        select: { id: true, email: true, name: true }
+        select: { id: true, email: true, name: true, phoneNumber: true },
       });
     } catch (error) {
-      if (isPrismaAuthLookupError(error)) {
-        return null;
-      }
-
+      if (isPrismaAuthLookupError(error)) return null;
       throw error;
     }
 
-    if (!user || !user.email || !user.name) {
-      return null;
-    }
-    
+    if (!user?.email || !user.name) return null;
+
     return {
       id: user.id,
       email: user.email,
-      name: user.name
+      name: user.name,
+      phoneNumber: user.phoneNumber,
     };
   } catch (error) {
-    console.error('Token verification error:', error);
+    debugLog('Token verification error:', error);
     return null;
   }
 }
 
-// Parse auth token from cookie string
 export function parseAuthTokenFromCookie(cookieString: string): string | null {
   if (!cookieString) return null;
-  
-  // Log the cookie for debugging
-  console.log('Cookie Header:', cookieString);
-  
-  // Parse the cookie string
-  const cookies = cookieString.split(';').reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split('=');
-    if (key && value) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, string>);
-  
-  // Log the parsed cookies for debugging
-  console.log('Parsed Cookie Object:', cookies);
-  
+
+  const cookies = cookieString.split(';').reduce(
+    (acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      if (key && value) acc[key] = value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+
   return cookies.auth_token || null;
 }
 
-// Get the authenticated user from a request
-export async function getUserFromRequest(request: Request): Promise<{ id: string; email: string; name: string } | null> {
+export async function getUserFromRequest(
+  request: Request,
+): Promise<{ id: string; email: string; name: string } | null> {
   try {
-    // Get the auth token from cookies
     const cookies = request.headers.get('cookie') || '';
     const token = parseAuthTokenFromCookie(cookies);
-    
-    if (!token) {
-      return null;
-    }
+    if (!token) return null;
 
-    // Verify the token
     const user = await verifyToken(token);
-    if (!user) {
-      return null;
-    }
+    if (!user) return null;
 
-    return user;
+    return { id: user.id, email: user.email, name: user.name };
   } catch (error) {
     console.error('Error getting user from request:', error);
     return null;
   }
-}
-
-// Hash password
-export async function hashPassword(password: string): Promise<string> {
-  // Use Node.js native crypto module properly
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(password).digest('hex');
 }

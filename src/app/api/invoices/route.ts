@@ -4,9 +4,10 @@ import { Prisma, InvoiceStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { postInvoiceIssued } from '@/lib/accounting/posting';
 import { getUserFromRequest } from '@/lib/auth';
+import { invoiceCreateSchema } from '@/lib/schemas/invoice';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
-import type { InvoiceFormValues } from '@/types';
 import { toDecimal, toNumber } from '@/lib/decimal';
+import { safeErrorResponse } from '@/lib/api-error';
 import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
@@ -183,13 +184,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const payload = (await req.json()) as InvoiceFormValues & {
-      items: Array<
-        InvoiceFormValues['items'][number] & {
-          disableStockManagement?: boolean;
-        }
-      >;
-    };
+    const payload = invoiceCreateSchema.parse(await req.json());
 
     if (!Array.isArray(payload.items) || payload.items.length === 0) {
       return NextResponse.json({ error: 'Invoice must contain at least one item' }, { status: 400 });
@@ -328,10 +323,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(toInvoiceListItem(createdInvoice), { status: 201 });
   } catch (error) {
-    console.error('Failed to create invoice', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create invoice' },
-      { status: 500 },
-    );
+    return safeErrorResponse(error, 'Failed to create invoice');
   }
 }
