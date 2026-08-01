@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { PrismaClient } from '@prisma/client';
 
 // Fix EventEmitter memory leak by increasing the max listeners
@@ -9,17 +10,50 @@ const auditableModels = new Set([
   'Account', 'JournalEntry', 'JournalLine', 'Expense', 'TaxRate', 'BankAccount', 'BankTransaction', 'Invoice'
 ]);
 
+// Audit middleware uses the root client for before/after snapshots. Skip it inside
+// interactive transactions to avoid blocking when connection_limit is low.
+const inInteractiveTransaction = new AsyncLocalStorage<boolean>();
+
+function getDatabaseUrl(): string | undefined {
+  const url = process.env.DATABASE_URL;
+  if (!url || url.startsWith('file:')) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has('connection_limit')) {
+      parsed.searchParams.set('connection_limit', '1');
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 function createPrismaClient() {
+  const databaseUrl = getDatabaseUrl();
   const client = new PrismaClient({
+    ...(databaseUrl
+      ? {
+          datasources: {
+            db: { url: databaseUrl },
+          },
+        }
+      : {}),
     log: process.env.NODE_ENV === 'development'
       ? ['error', 'warn']
       : ['error']
   });
 
-  return client.$extends({
+  const auditedClient = client.$extends({
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
+          if (inInteractiveTransaction.getStore()) {
+            return query(args);
+          }
+
           const modelName = typeof model === 'string' ? model : null;
           const isAuditable = modelName !== null && auditableModels.has(modelName);
           let before: any = null;
@@ -58,6 +92,20 @@ function createPrismaClient() {
 
           return result;
         },
+      },
+    },
+  });
+
+  return auditedClient.$extends({
+    client: {
+      $transaction(...args: Parameters<typeof auditedClient.$transaction>) {
+        const [input, options] = args;
+        if (typeof input === 'function') {
+          return inInteractiveTransaction.run(true, () =>
+            auditedClient.$transaction(input, options),
+          );
+        }
+        return auditedClient.$transaction(...args);
       },
     },
   });

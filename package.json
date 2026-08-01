@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "DATABASE_URL=\"file:./prisma/dev.db\" prisma generate && next build",
+    "build": "DATABASE_URL=\"file:./prisma/dev.db\" DIRECT_URL=\"file:./prisma/dev.db\" prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "DATABASE_URL=\"file:./prisma/dev.db\" npx prisma db push && ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
-    "postinstall": "DATABASE_URL=\"file:./prisma/dev.db\" prisma generate",
+    "postinstall": "DATABASE_URL=\"file:./prisma/dev.db\" DIRECT_URL=\"file:./prisma/dev.db\" prisma generate",
     "db:deploy": "node prisma/deploy.js",
     "test:db": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' src/scripts/test-db.ts",
     "test:api": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' src/scripts/test-api.ts",
