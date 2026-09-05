@@ -70,7 +70,7 @@ const getStatusBadge = (status: string, isCompact: boolean = false) => {
 export interface InvoicesListProps {
   initialInvoices: InvoiceListItem[];
   searchTerm: string;
-  statusFilter: string;
+  statusFilter: string[];
   onViewInvoice: (invoice: InvoiceListItem) => void;
   onDownloadPDF: (invoice: InvoiceListItem) => void;
   onCancelInvoice: (invoice: InvoiceListItem) => void;
@@ -143,14 +143,14 @@ export function InvoicesList({
         if (!matchesSearch) return false;
       }
 
-      if (statusFilter !== 'ALL' && invoice.status !== statusFilter) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(invoice.status)) return false;
 
       return true;
     });
   }, [invoices, searchTerm, statusFilter]);
 
   if (filteredInvoices.length === 0) {
-    const hasAnyFilter = Boolean(searchTerm) || statusFilter !== 'ALL';
+    const hasAnyFilter = Boolean(searchTerm) || statusFilter.length > 0;
     return (
       <div className="text-center py-12 border rounded-lg">
         <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

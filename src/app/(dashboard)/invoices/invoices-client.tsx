@@ -5,14 +5,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Plus, Search } from 'lucide-react';
+import { InvoiceStatusFilter } from './invoice-status-filter';
 import { useToast } from '@/components/ui/toast';
 import { useSettings } from '@/contexts/settings-context';
 // Import from plan-limits instead of stripe to avoid loading Stripe SDK on client
@@ -64,7 +58,7 @@ export function InvoicesClient({
 }: InvoicesClientProps) {
   const [invoices, setInvoices] = useState<InvoiceListItem[]>(initialInvoices);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetailResponseDto | null>(null);
   const [invoicesThisMonth, setInvoicesThisMonth] = useState<number>(initialInvoicesThisMonth);
   const companyDetails = initialCompany;
@@ -230,20 +224,7 @@ export function InvoicesClient({
           />
         </div>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All statuses</SelectItem>
-            <SelectItem value="DRAFT">Draft</SelectItem>
-            <SelectItem value="SENT">Sent</SelectItem>
-            <SelectItem value="PARTIAL">Partial</SelectItem>
-            <SelectItem value="PAID">Paid</SelectItem>
-            <SelectItem value="OVERDUE">Overdue</SelectItem>
-            <SelectItem value="CANCELLED">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
+        <InvoiceStatusFilter selected={statusFilter} onChange={setStatusFilter} />
       </div>
 
       <InvoicesList
