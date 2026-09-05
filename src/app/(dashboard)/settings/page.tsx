@@ -337,7 +337,12 @@ export default function SettingsPage({ onSubscriptionChange }: SettingsPageProps
     <div className="container py-6 space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Manage your account settings and business preferences.</p>
+        <p className="text-muted-foreground">
+          need help? reach out to{' '}
+          <a href="mailto:hello@invo.my" className="underline underline-offset-2 hover:text-foreground">
+            hello@invo.my
+          </a>
+        </p>
       </div>
 
       <Tabs defaultValue="subscription" className="space-y-6">
