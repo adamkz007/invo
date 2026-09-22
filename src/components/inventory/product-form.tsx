@@ -90,9 +90,10 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
       
       const method = isEditing ? 'PUT' : 'POST';
       
+      const { userId: _userId, ...productValues } = values;
       const payload = {
-        ...values,
-        imageUrl: values.imageUrl || null,
+        ...productValues,
+        imageUrl: productValues.imageUrl || undefined,
       };
 
       const response = await fetch(endpoint, {
