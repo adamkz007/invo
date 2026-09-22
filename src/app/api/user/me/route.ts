@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import type { SubscriptionPlanKey } from '@/lib/subscription-plans';
+import {
+  isLifetimeUser,
+  resolveBillingPlan,
+  resolveEffectiveSubscriptionStatus,
+} from '@/lib/subscription-status';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,14 +32,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Return user data with subscription info, ensuring email is included
-    let billingPlan: SubscriptionPlanKey = 'PRO_MONTHLY';
-    if (
-      userData.stripePriceId &&
-      process.env.STRIPE_LIFETIME_PRICE_ID &&
-      userData.stripePriceId === process.env.STRIPE_LIFETIME_PRICE_ID
-    ) {
-      billingPlan = 'LIFETIME';
+    const billingPlan = resolveBillingPlan(userData);
+
+    if (isLifetimeUser(userData) && userData.subscriptionStatus !== 'ACTIVE') {
+      await prisma.user.update({
+        where: { id: userData.id },
+        data: {
+          subscriptionStatus: 'ACTIVE',
+          stripeSubscriptionId: null,
+          currentPeriodEnd: null,
+        },
+      });
     }
 
     const publicUserData = {
@@ -43,12 +50,12 @@ export async function GET(req: NextRequest) {
       name: userData.name,
       email: userData.email,
       phoneNumber: userData.phoneNumber,
-      subscriptionStatus: userData.subscriptionStatus || 'FREE',
+      subscriptionStatus: resolveEffectiveSubscriptionStatus(userData),
       trialStartDate: userData.trialStartDate,
       trialEndDate: userData.trialEndDate,
       currentPeriodEnd: userData.currentPeriodEnd,
       stripeCustomerId: userData.stripeCustomerId,
-      billingPlan
+      billingPlan,
     };
 
     console.log('API: Returning user data with subscription info');

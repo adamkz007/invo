@@ -151,9 +151,9 @@ export function SubscriptionSettings({ user, onSubscriptionChange }: Subscriptio
   
   // Handle case sensitivity in subscription status
   const normalizedStatus = subscriptionStatus?.toUpperCase();
-  const isInTrial = normalizedStatus === 'TRIAL' && trialStartDate && trialEndDate && new Date() < trialEndDate;
-  const isSubscribed = normalizedStatus === 'ACTIVE';
-  const isLifetimePlan = isSubscribed && user?.billingPlan === 'LIFETIME';
+  const isLifetimePlan = user?.billingPlan === 'LIFETIME';
+  const isInTrial = !isLifetimePlan && normalizedStatus === 'TRIAL' && trialStartDate && trialEndDate && new Date() < trialEndDate;
+  const isSubscribed = normalizedStatus === 'ACTIVE' || isLifetimePlan;
   
   const planType = isSubscribed ? 'PREMIUM' : isInTrial ? 'TRIAL' : 'FREE';
   

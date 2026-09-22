@@ -4,7 +4,12 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
-import { User } from '@prisma/client';
+import {
+  isPremiumUser,
+  normalizeSubscriptionStatus,
+  resolveEffectiveSubscriptionStatus,
+  shouldExpireTrial,
+} from '@/lib/subscription-status';
 import { customerSchema } from '@/lib/schemas/customer';
 import { safeErrorResponse } from '@/lib/api-error';
 
@@ -110,21 +115,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Cast the user to include subscription fields and use fallbacks
-    const fullUser = dbUser as User & { 
-      subscriptionStatus?: string | null;
-      trialEndDate?: Date | null;
+    const subscriptionUser = {
+      subscriptionStatus: dbUser.subscriptionStatus,
+      stripePriceId: dbUser.stripePriceId,
+      stripeSubscriptionId: dbUser.stripeSubscriptionId,
+      trialEndDate: dbUser.trialEndDate,
     };
+    const isTrialExpired = hasTrialExpired(subscriptionUser.trialEndDate);
 
-    // Check subscription status
-    const subscriptionStatus = fullUser.subscriptionStatus || 'FREE';
-    const isTrialExpired = hasTrialExpired(fullUser.trialEndDate);
-    
     // If trial has expired and user is still on trial, set to FREE
-    if (isTrialExpired && subscriptionStatus === 'TRIAL') {
+    if (shouldExpireTrial(subscriptionUser, isTrialExpired)) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { subscriptionStatus: 'FREE' } as any
+        data: { subscriptionStatus: 'FREE' },
       });
     }
 
@@ -133,8 +136,11 @@ export async function POST(req: NextRequest) {
       where: { userId: user.id }
     });
 
+    const subscriptionStatus = resolveEffectiveSubscriptionStatus(subscriptionUser);
+    const normalizedStatus = normalizeSubscriptionStatus(subscriptionUser.subscriptionStatus);
+
     // Check if user has reached limit (if not on trial and not premium)
-    if (subscriptionStatus !== 'ACTIVE' && (isTrialExpired || subscriptionStatus === 'FREE')) {
+    if (!isPremiumUser(subscriptionUser) && (isTrialExpired || normalizedStatus === 'FREE')) {
       const hasReachedCustomerLimit = hasReachedLimit(
         subscriptionStatus,
         'customers',

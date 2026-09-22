@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 import { normalizeSubscriptionPlan } from '@/lib/subscription-plans';
+import { isLifetimeUser } from '@/lib/subscription-status';
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      if (user) {
+      if (user && !isLifetimeUser(user)) {
         await prisma.user.update({
           where: { id: user.id },
           data: {

@@ -6,6 +6,12 @@ import { postInvoiceIssued } from '@/lib/accounting/posting';
 import { getUserFromRequest } from '@/lib/auth';
 import { invoiceCreateSchema } from '@/lib/schemas/invoice';
 import { hasReachedLimit, hasTrialExpired, PLAN_LIMITS } from '@/lib/stripe';
+import {
+  getSubscriptionUserSelect,
+  isPremiumUser,
+  resolveEffectiveSubscriptionStatus,
+  shouldExpireTrial,
+} from '@/lib/subscription-status';
 import { toDecimal, toNumber } from '@/lib/decimal';
 import { safeErrorResponse } from '@/lib/api-error';
 import {
@@ -74,30 +80,27 @@ function toInvoiceListItem(invoice: {
 async function ensureUsageWithinLimits(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      subscriptionStatus: true,
-      trialEndDate: true,
-    },
+    select: getSubscriptionUserSelect(),
   });
 
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  const subscriptionStatus = user.subscriptionStatus || 'FREE';
   const trialExpired = hasTrialExpired(user.trialEndDate);
 
-  if (trialExpired && subscriptionStatus === 'TRIAL') {
+  if (shouldExpireTrial(user, trialExpired)) {
     await prisma.user.update({
       where: { id: userId },
       data: { subscriptionStatus: 'FREE' },
     });
   }
 
-  if (subscriptionStatus === 'ACTIVE') {
+  if (isPremiumUser(user)) {
     return null;
   }
 
+  const subscriptionStatus = resolveEffectiveSubscriptionStatus(user);
   const invoiceCount = await countInvoicesCreatedThisMonth(userId);
 
   const reachedLimit = hasReachedLimit(

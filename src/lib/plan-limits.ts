@@ -26,16 +26,30 @@ export function hasTrialExpired(trialEndDate: Date | null | undefined): boolean 
   return now > trialEndDate;
 }
 
+type PlanLimitTier = keyof typeof PLAN_LIMITS;
+
+function resolvePlanLimitTier(subscriptionStatus: string): PlanLimitTier {
+  const normalizedStatus = subscriptionStatus.toUpperCase();
+
+  if (normalizedStatus === 'ACTIVE') {
+    return 'PREMIUM';
+  }
+
+  if (normalizedStatus === 'TRIAL') {
+    return 'TRIAL';
+  }
+
+  return 'FREE';
+}
+
 // Check if a user has reached their limit for customers or invoices
 export function hasReachedLimit(
   subscriptionStatus: string,
   resourceType: 'customers' | 'invoicesPerMonth',
   currentCount: number
 ): boolean {
-  const planType = subscriptionStatus === 'ACTIVE' ? 'PREMIUM' :
-                  subscriptionStatus === 'TRIAL' ? 'TRIAL' : 'FREE';
-
-  const limit = PLAN_LIMITS[planType as keyof typeof PLAN_LIMITS][resourceType];
+  const planType = resolvePlanLimitTier(subscriptionStatus);
+  const limit = PLAN_LIMITS[planType][resourceType];
   return currentCount >= limit;
 }
 
