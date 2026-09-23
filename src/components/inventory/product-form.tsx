@@ -61,6 +61,9 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
   const [quantityValue, setQuantityValue] = useState<string>(
     defaultValues ? defaultValues.quantity.toString() : "0"
   );
+  const [priceValue, setPriceValue] = useState<string>(
+    defaultValues ? defaultValues.price.toString() : '0',
+  );
 
   // Initialize form with default values or empty product
   const form = useForm<ProductFormValues>({
@@ -327,9 +330,23 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
                       placeholder="0.00"
                       step="0.01"
                       min="0"
-                      className="rounded-l-none"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      className={`rounded-l-none ${priceValue === '0' ? 'text-gray-400' : ''}`}
+                      value={priceValue}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setPriceValue(value);
+                        field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                      }}
+                      onFocus={(e) => {
+                        if (e.target.value === '0') {
+                          setPriceValue('');
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          setPriceValue('0');
+                        }
+                      }}
                       disabled={isSubmitting}
                     />
                   </div>

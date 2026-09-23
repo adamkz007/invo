@@ -49,6 +49,7 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [quantityValue, setQuantityValue] = React.useState('0');
+  const [priceValue, setPriceValue] = React.useState('0');
   const { showToast } = useToast();
   const { settings } = useSettings();
 
@@ -94,6 +95,8 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
       onProductCreated(newProduct);
       setOpen(false);
       form.reset();
+      setQuantityValue('0');
+      setPriceValue('0');
       showToast({
         message: 'Product created successfully',
         variant: 'success',
@@ -186,9 +189,23 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
                           step="0.01" 
                           min="0" 
                           placeholder="0.00" 
-                          className="rounded-l-none"
-                          {...field} 
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          className={`rounded-l-none ${priceValue === '0' ? 'text-gray-400' : ''}`}
+                          value={priceValue}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setPriceValue(value);
+                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                          }}
+                          onFocus={(e) => {
+                            if (e.target.value === '0') {
+                              setPriceValue('');
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === '') {
+                              setPriceValue('0');
+                            }
+                          }}
                         />
                       </div>
                     </FormControl>

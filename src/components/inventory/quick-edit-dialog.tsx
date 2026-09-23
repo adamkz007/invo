@@ -58,6 +58,9 @@ export function QuickEditDialog({
   const { showToast } = useToast();
   const { settings } = useSettings();
   const [quantityValue, setQuantityValue] = useState<string>(product.quantity.toString());
+  const [priceValue, setPriceValue] = useState<string>(
+    product.price !== undefined && product.price !== null ? product.price.toString() : '0',
+  );
 
   // Initialize form with product values
   const form = useForm<QuickEditFormValues>({
@@ -161,9 +164,23 @@ export function QuickEditDialog({
                         placeholder="0.00"
                         step="0.01"
                         min="0"
-                        className="rounded-l-none"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        className={`rounded-l-none ${priceValue === '0' ? 'text-gray-400' : ''}`}
+                        value={priceValue}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setPriceValue(value);
+                          field.onChange(value === '' ? 0 : parseFloat(value) || 0);
+                        }}
+                        onFocus={(e) => {
+                          if (e.target.value === '0') {
+                            setPriceValue('');
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            setPriceValue('0');
+                          }
+                        }}
                         disabled={isSubmitting}
                       />
                     </div>
