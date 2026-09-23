@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ZeroClearNumberInput } from '@/components/ui/zero-clear-number-input';
 import {
   Form,
   FormControl,
@@ -155,13 +156,13 @@ export default function PosSettingsPage() {
                       <FormLabel>Tax Rate (%)</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input
-                            type="number"
+                          <ZeroClearNumberInput
                             step="0.01"
                             min="0"
                             max="100"
                             placeholder="0"
-                            {...field}
+                            value={field.value}
+                            onChange={field.onChange}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                             %
@@ -184,13 +185,13 @@ export default function PosSettingsPage() {
                       <FormLabel>Service Charge (%)</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input
-                            type="number"
+                          <ZeroClearNumberInput
                             step="0.01"
                             min="0"
                             max="100"
                             placeholder="0"
-                            {...field}
+                            value={field.value}
+                            onChange={field.onChange}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                             %

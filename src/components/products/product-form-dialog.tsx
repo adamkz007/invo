@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { ZeroClearNumberInput } from '@/components/ui/zero-clear-number-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
@@ -48,8 +49,6 @@ interface ProductFormDialogProps {
 export default function ProductFormDialog({ userId, onProductCreated }: ProductFormDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [quantityValue, setQuantityValue] = React.useState('0');
-  const [priceValue, setPriceValue] = React.useState('0');
   const { showToast } = useToast();
   const { settings } = useSettings();
 
@@ -95,8 +94,6 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
       onProductCreated(newProduct);
       setOpen(false);
       form.reset();
-      setQuantityValue('0');
-      setPriceValue('0');
       showToast({
         message: 'Product created successfully',
         variant: 'success',
@@ -184,28 +181,13 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
                         >
                           {settings.currency.code}
                         </Button>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          placeholder="0.00" 
-                          className={`rounded-l-none ${priceValue === '0' ? 'text-gray-400' : ''}`}
-                          value={priceValue}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setPriceValue(value);
-                            field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                          }}
-                          onFocus={(e) => {
-                            if (e.target.value === '0') {
-                              setPriceValue('');
-                            }
-                          }}
-                          onBlur={(e) => {
-                            if (e.target.value === '') {
-                              setPriceValue('0');
-                            }
-                          }}
+                        <ZeroClearNumberInput
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          className="rounded-l-none"
+                          value={field.value}
+                          onChange={field.onChange}
                         />
                       </div>
                     </FormControl>
@@ -220,27 +202,12 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
                   <FormItem>
                     <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0" 
-                        placeholder="0" 
-                        value={quantityValue}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setQuantityValue(value);
-                          field.onChange(value === '' ? 0 : parseInt(value, 10));
-                        }}
-                        onFocus={(e) => {
-                          if (e.target.value === '0') {
-                            setQuantityValue('');
-                          }
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === '') {
-                            setQuantityValue('0');
-                          }
-                        }}
-                        className={quantityValue === '0' ? 'text-gray-400' : ''}
+                      <ZeroClearNumberInput
+                        min="0"
+                        placeholder="0"
+                        integer
+                        value={field.value}
+                        onChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />

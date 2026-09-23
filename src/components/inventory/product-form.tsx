@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ZeroClearNumberInput } from '@/components/ui/zero-clear-number-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -58,13 +59,6 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
   const router = useRouter();
   const { showToast } = useToast();
   const { settings } = useSettings();
-  const [quantityValue, setQuantityValue] = useState<string>(
-    defaultValues ? defaultValues.quantity.toString() : "0"
-  );
-  const [priceValue, setPriceValue] = useState<string>(
-    defaultValues ? defaultValues.price.toString() : '0',
-  );
-
   // Initialize form with default values or empty product
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -325,28 +319,13 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
                     >
                       {settings.currency.code}
                     </Button>
-                    <Input
-                      type="number"
+                    <ZeroClearNumberInput
                       placeholder="0.00"
                       step="0.01"
                       min="0"
-                      className={`rounded-l-none ${priceValue === '0' ? 'text-gray-400' : ''}`}
-                      value={priceValue}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setPriceValue(value);
-                        field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                      }}
-                      onFocus={(e) => {
-                        if (e.target.value === '0') {
-                          setPriceValue('');
-                        }
-                      }}
-                      onBlur={(e) => {
-                        if (e.target.value === '') {
-                          setPriceValue('0');
-                        }
-                      }}
+                      className="rounded-l-none"
+                      value={field.value}
+                      onChange={field.onChange}
                       disabled={isSubmitting}
                     />
                   </div>
@@ -367,28 +346,13 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
               <FormItem>
                 <FormLabel>Quantity</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
+                  <ZeroClearNumberInput
                     placeholder="0"
                     step="1"
                     min="0"
-                    value={quantityValue}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setQuantityValue(value);
-                      field.onChange(value === '' ? 0 : parseInt(value, 10));
-                    }}
-                    onFocus={(e) => {
-                      if (e.target.value === '0') {
-                        setQuantityValue('');
-                      }
-                    }}
-                    onBlur={(e) => {
-                      if (e.target.value === '') {
-                        setQuantityValue('0');
-                      }
-                    }}
-                    className={quantityValue === '0' ? 'text-gray-400' : ''}
+                    integer
+                    value={field.value}
+                    onChange={field.onChange}
                     disabled={isSubmitting || disableStockManagement}
                   />
                 </FormControl>
@@ -415,7 +379,6 @@ export default function ProductForm({ defaultValues, isEditing = false, productI
                     if (checked) {
                       // If disabling stock management, set quantity to a high number
                       form.setValue('quantity', 999);
-                      setQuantityValue('999');
                     }
                   }}
                 />
