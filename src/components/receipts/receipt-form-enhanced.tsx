@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ZeroClearNumberInput } from '@/components/ui/zero-clear-number-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -399,10 +400,13 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
                         <FormItem>
                           <FormLabel>Qty</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
+                            <ZeroClearNumberInput
                               min="1"
-                              {...field}
+                              integer
+                              emptyNumeric={1}
+                              emptyDisplay="1"
+                              value={field.value}
+                              onChange={field.onChange}
                               disabled={isSubmitting}
                             />
                           </FormControl>
@@ -419,11 +423,11 @@ function ReceiptFormEnhanced({ defaultValues }: ReceiptFormProps) {
                         <FormItem>
                           <FormLabel>Price</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
+                            <ZeroClearNumberInput
                               step="0.01"
                               min="0"
-                              {...field}
+                              value={field.value}
+                              onChange={field.onChange}
                               disabled={isSubmitting}
                             />
                           </FormControl>

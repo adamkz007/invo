@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { ZeroClearNumberInput } from '@/components/ui/zero-clear-number-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
@@ -48,7 +49,6 @@ interface ProductFormDialogProps {
 export default function ProductFormDialog({ userId, onProductCreated }: ProductFormDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [quantityValue, setQuantityValue] = React.useState('0');
   const { showToast } = useToast();
   const { settings } = useSettings();
 
@@ -181,14 +181,13 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
                         >
                           {settings.currency.code}
                         </Button>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          placeholder="0.00" 
+                        <ZeroClearNumberInput
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
                           className="rounded-l-none"
-                          {...field} 
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value}
+                          onChange={field.onChange}
                         />
                       </div>
                     </FormControl>
@@ -203,27 +202,12 @@ export default function ProductFormDialog({ userId, onProductCreated }: ProductF
                   <FormItem>
                     <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0" 
-                        placeholder="0" 
-                        value={quantityValue}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setQuantityValue(value);
-                          field.onChange(value === '' ? 0 : parseInt(value, 10));
-                        }}
-                        onFocus={(e) => {
-                          if (e.target.value === '0') {
-                            setQuantityValue('');
-                          }
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === '') {
-                            setQuantityValue('0');
-                          }
-                        }}
-                        className={quantityValue === '0' ? 'text-gray-400' : ''}
+                      <ZeroClearNumberInput
+                        min="0"
+                        placeholder="0"
+                        integer
+                        value={field.value}
+                        onChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ZeroClearNumberInput } from '@/components/ui/zero-clear-number-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
@@ -626,10 +627,13 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
+                              <ZeroClearNumberInput
                                 min="1"
-                                {...field}
+                                integer
+                                emptyNumeric={1}
+                                emptyDisplay="1"
+                                value={field.value}
+                                onChange={field.onChange}
                                 disabled={isSubmitting || form.watch(`items.${index}.disableStockManagement`)}
                               />
                             </FormControl>
@@ -646,11 +650,11 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                           <FormItem>
                             <FormLabel>Price</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
+                              <ZeroClearNumberInput
                                 step="0.01"
                                 min="0"
-                                {...field}
+                                value={field.value}
+                                onChange={field.onChange}
                                 disabled={isSubmitting}
                               />
                             </FormControl>
@@ -739,13 +743,13 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base">Tax Rate (%)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <ZeroClearNumberInput
                         min="0"
                         max="100"
                         step="0.01"
                         className="h-8 sm:h-10 text-xs sm:text-sm"
-                        {...field}
+                        value={field.value}
+                        onChange={field.onChange}
                         disabled={isSubmitting}
                       />
                     </FormControl>
@@ -812,13 +816,13 @@ const InvoiceFormEnhanced = memo(function InvoiceFormEnhanced({
                       {discountType === 'FIXED' ? 'Discount Amount' : 'Discount Rate (%)'}
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <ZeroClearNumberInput
                         min="0"
                         max={discountType === 'FIXED' ? undefined : '100'}
                         step="0.01"
                         className="h-8 sm:h-10 text-xs sm:text-sm"
-                        {...field}
+                        value={field.value}
+                        onChange={field.onChange}
                         disabled={isSubmitting}
                       />
                     </FormControl>

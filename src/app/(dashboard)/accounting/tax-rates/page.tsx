@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ZeroClearNumberInput } from '@/components/ui/zero-clear-number-input';
 
 type Rate = { id: string; name: string; rate: string };
 
 export default function TaxRatesPage() {
   const [rates, setRates] = useState<Rate[]>([]);
   const [name, setName] = useState('');
-  const [rate, setRate] = useState('0');
+  const [rate, setRate] = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -25,14 +26,14 @@ export default function TaxRatesPage() {
     const res = await fetch('/api/accounting/tax-rates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, rate: Number(rate) }),
+      body: JSON.stringify({ name, rate }),
     });
     setLoading(false);
     if (res.ok) {
       const created = await res.json();
       setRates((prev) => [created, ...prev]);
       setName('');
-      setRate('0');
+      setRate(0);
     }
   }
 
@@ -45,7 +46,7 @@ export default function TaxRatesPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-2 p-4">
           <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input type="number" placeholder="Rate (%)" value={rate} onChange={(e) => setRate(e.target.value)} />
+          <ZeroClearNumberInput placeholder="Rate (%)" step="0.01" min="0" value={rate} onChange={setRate} />
           <Button onClick={addRate} disabled={loading} className="w-full">{loading ? 'Saving…' : 'Save'}</Button>
         </CardContent>
       </Card>
