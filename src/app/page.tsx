@@ -16,7 +16,9 @@ import {
   ChevronRight, 
   Check,
   ArrowRight,
-  Calendar
+  Calendar,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
@@ -27,8 +29,21 @@ export default function LandingPage() {
   const [dashboardImageError, setDashboardImageError] = useState(false);
 
   // Add theme hook to detect dark mode
-  const { theme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const isDarkMode = theme === 'dark';
+
+  const themeToggle = (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label="Toggle theme"
+      onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+    >
+      {mounted && resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </Button>
+  );
 
   // Handle scroll event for navbar styling
   useEffect(() => {
@@ -213,12 +228,14 @@ export default function LandingPage() {
             <a href="#testimonials" className="text-sm font-medium hover:text-primary transition-colors">Testimonials</a>
             <Link href="/blog" className="text-sm font-medium hover:text-primary transition-colors">Blog</Link>
             <Link href="/login" className="text-sm font-medium hover:text-primary transition-colors">Login</Link>
+            {themeToggle}
             <Link href="/signup">
               <Button size="sm" className="shadow-md hover:shadow-lg transition-shadow">Sign Up Free</Button>
             </Link>
           </div>
           
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            {themeToggle}
             <Link href="/signup">
               <Button size="sm" className="shadow-md hover:shadow-lg transition-shadow">Get Started</Button>
             </Link>
@@ -243,9 +260,6 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="text-center md:text-left"
             >
-              <div className="inline-block mb-4 px-4 py-1.5 bg-primary/15 rounded-full shadow-sm">
-                <span className="text-sm font-medium text-primary">Made for Malaysian freelancers & SMEs</span>
-              </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
                 Invoicing that <span className="text-primary relative">
                   works for you
@@ -255,7 +269,7 @@ export default function LandingPage() {
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-lg mx-auto md:mx-0">
-                No complicated software. Just practical tools that help your business get paid faster.
+                Made for Malaysian freelancers and SMEs. Send an invoice in seconds, see who&apos;s paid, and get your money sooner — no accounting degree needed.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <Link href="/signup">
@@ -278,48 +292,88 @@ export default function LandingPage() {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="relative"
             >
-              <div className="relative rounded-xl overflow-hidden shadow-xl border border-primary/20">
-                <div className="bg-gradient-to-br from-primary/15 to-primary/5 absolute inset-0"></div>
-                {/* Desktop image */}
-                <div className="hidden md:block relative z-10">
-                  <Image 
+              {/* Glow */}
+              <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-primary/30 via-sky-400/20 to-violet-400/30 blur-3xl opacity-70" />
+
+              {/* Desktop: browser window */}
+              <div className="hidden md:block [perspective:1800px]">
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                  className="rounded-2xl border border-border/60 bg-background/80 shadow-2xl shadow-primary/20 ring-1 ring-black/5 backdrop-blur overflow-hidden [transform:rotateY(-6deg)_rotateX(2deg)] transition-transform duration-500 hover:[transform:rotateY(0deg)_rotateX(0deg)]"
+                >
+                  <div className="flex items-center gap-2 border-b border-border/60 bg-muted/60 px-4 py-2.5">
+                    <span className="h-3 w-3 rounded-full bg-red-400/90" />
+                    <span className="h-3 w-3 rounded-full bg-amber-400/90" />
+                    <span className="h-3 w-3 rounded-full bg-green-400/90" />
+                    <div className="mx-auto flex h-6 w-2/3 items-center justify-center rounded-md bg-background/80 text-[11px] text-muted-foreground">
+                      app.invo.my/dashboard
+                    </div>
+                  </div>
+                  <Image
                     src={dashboardImage}
-                    alt="Invo Dashboard" 
+                    alt="Invo Dashboard"
                     className="w-full h-auto"
                     sizes="(min-width: 1024px) 640px, 90vw"
                     priority
                     placeholder="blur"
                     quality={85}
                   />
-                </div>
-                {/* Mobile image with frame */}
-                <div className="relative mx-auto max-w-[340px] md:hidden p-0 my-0">
-                  <Image 
-                    src="/mobile-dashboard-preview.png" 
-                    alt="Invo Mobile Dashboard" 
-                    width={340}
-                    height={650}
-                    className="w-full h-auto relative z-10 shadow-lg"
-                    sizes="90vw"
-                    quality={80}
-                    onError={(e) => {
-                      // Fallback if image doesn't exist
-                      e.currentTarget.src = "https://placehold.co/340x650/02228F/ffffff?text=Invo+Mobile";
-                    }}
-                  />
+                </motion.div>
+              </div>
+
+              {/* Mobile: phone frame */}
+              <div className="relative mx-auto max-w-[280px] md:hidden">
+                <div className="rounded-[2.25rem] bg-slate-900 p-2 shadow-2xl shadow-primary/30 ring-1 ring-white/10">
+                  <div className="relative overflow-hidden rounded-[1.75rem] bg-background">
+                    <div className="absolute left-1/2 top-2 z-20 h-4 w-20 -translate-x-1/2 rounded-full bg-slate-900" />
+                    <div className="max-h-[480px] overflow-hidden">
+                      <Image
+                        src="/mobile-dashboard-preview.png"
+                        alt="Invo Mobile Dashboard"
+                        width={893}
+                        height={1548}
+                        className="w-full h-auto"
+                        sizes="280px"
+                        quality={80}
+                        priority
+                      />
+                    </div>
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent" />
+                  </div>
                 </div>
               </div>
-              
-              {/* Floating elements for visual interest */}
-              <div className="absolute -top-6 -right-6 h-12 w-12 rounded-full bg-primary/30 animate-pulse shadow-md"></div>
-              <div className="absolute -bottom-4 -left-4 h-8 w-8 rounded-full bg-primary/40 animate-pulse shadow-md" style={{ animationDelay: '1s' }}></div>
+
+              {/* Floating chips */}
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute -left-2 top-16 z-20 flex items-center gap-2 rounded-xl border border-border/60 bg-background/95 px-3 py-2 shadow-lg backdrop-blur md:-left-8 md:top-24"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500/15 text-green-600"><Check className="h-4 w-4" /></span>
+                <div className="leading-tight">
+                  <p className="text-xs font-semibold">Invoice paid</p>
+                  <p className="text-[11px] text-muted-foreground">+ RM 2,450.00</p>
+                </div>
+              </motion.div>
+              <motion.div
+                animate={{ y: [0, 6, 0] }}
+                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+                className="absolute -right-2 bottom-24 z-20 flex items-center gap-2 rounded-xl border border-border/60 bg-background/95 px-3 py-2 shadow-lg backdrop-blur md:-right-6 md:bottom-12"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-primary"><BarChart3 className="h-4 w-4" /></span>
+                <div className="leading-tight">
+                  <p className="text-xs font-semibold">Revenue</p>
+                  <p className="text-[11px] text-green-600">+15% this month</p>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Trusted By Section */}
-      <section className="py-12 md:py-16 bg-muted/40 border-y border-muted/60">
+      <section className="py-12 md:py-16 bg-muted/40 dark:bg-slate-900/60 border-y border-muted/60">
         <div className="container mx-auto px-4">
           <p className="text-center text-sm font-medium text-muted-foreground mb-10">
             TRUSTED BY BUSINESSES LIKE YOURS
@@ -333,7 +387,7 @@ export default function LandingPage() {
               whileHover={{ opacity: 1 }}
               className="group"
             >
-              <div className="p-4 bg-white/50 rounded-xl shadow-sm border border-muted/40 group-hover:border-primary/30 group-hover:shadow-md transition-all">
+              <div className="p-4 bg-card/60 rounded-xl shadow-sm border border-muted/40 group-hover:border-primary/30 group-hover:shadow-md transition-all">
                 <Image 
                   src="/logos/yspoa.jpg" 
                   alt="YSPOA" 
@@ -352,7 +406,7 @@ export default function LandingPage() {
                 whileHover={{ opacity: 1 }}
                 className="text-xl font-bold text-muted-foreground group-hover:text-foreground transition-colors group"
               >
-                <div className="p-4 bg-white/50 rounded-xl shadow-sm border border-muted/40 group-hover:border-primary/30 group-hover:shadow-md transition-all">
+                <div className="p-4 bg-card/60 rounded-xl shadow-sm border border-muted/40 group-hover:border-primary/30 group-hover:shadow-md transition-all">
                   {company}
                 </div>
               </motion.div>
@@ -417,7 +471,7 @@ export default function LandingPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
                 <div>
-                  <div className="p-3 bg-white rounded-full w-fit mb-6 shadow-md border border-primary/20">
+                  <div className="p-3 bg-card rounded-full w-fit mb-6 shadow-md border border-primary/20">
                     <FileText className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="text-2xl md:text-3xl font-bold mb-4 text-primary">Simple Invoicing</h3>
@@ -443,7 +497,7 @@ export default function LandingPage() {
                     </li>
                   </ul>
                   <Link href="/signup">
-                    <Button className="group bg-white text-primary hover:bg-primary hover:text-white shadow-md hover:shadow-lg transition-all">
+                    <Button className="group bg-white text-[#02228F] hover:bg-primary hover:text-white shadow-md hover:shadow-lg transition-all">
                       Try Simple Invoicing
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
@@ -454,15 +508,15 @@ export default function LandingPage() {
                 <div className="relative">
                   <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/20 blur-xl hidden md:block"></div>
                   {/* Stacked background card */}
-                  <div className="absolute top-6 left-6 w-full h-full rounded-lg bg-white/70 shadow-lg border border-primary/20 z-0 scale-95"></div>
+                  <div className="absolute top-6 left-6 w-full h-full rounded-lg bg-card/70 shadow-lg border border-primary/20 z-0 scale-95"></div>
                   {/* Main invoice card */}
-                  <div className="rounded-lg bg-white/90 backdrop-blur-sm p-6 shadow-xl border border-primary/30 relative z-10 mt-8 md:mt-0">
+                  <div className="rounded-lg bg-card/95 backdrop-blur-sm p-6 shadow-xl border border-primary/30 relative z-10 mt-8 md:mt-0">
                     <div className="flex justify-between items-center mb-4 pb-4 border-b border-primary/20">
                       <div>
                         <h4 className="font-bold">Invoice #INV-2023-001</h4>
                         <p className="text-sm text-muted-foreground">Due: Mar 15, 2025</p>
                       </div>
-                      <div className="bg-primary/15 text-primary rounded-full px-3 py-1.5 text-xs font-medium border border-primary/20 shadow-sm">
+                      <div className="bg-primary/15 text-primary dark:text-blue-300 rounded-full px-3 py-1.5 text-xs font-medium border border-primary/20 shadow-sm">
                         Pending
                       </div>
                     </div>
@@ -608,7 +662,7 @@ export default function LandingPage() {
               transition={{ delay: 0.6, duration: 0.5 }}
               className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg p-6 shadow-md border border-primary/30 flex flex-col items-center justify-center text-center"
             >
-              <div className="mb-4 p-3 bg-white rounded-full">
+              <div className="mb-4 p-3 bg-card rounded-full">
                 <Shield className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">Try It Risk-Free</h3>
@@ -627,7 +681,7 @@ export default function LandingPage() {
       </section>
 
       {/* Roadmap/Timeline Section */}
-      <section id="timeline" className="py-20 bg-muted/30">
+      <section id="timeline" className="py-20 bg-muted/30 dark:bg-slate-900/60">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -679,17 +733,17 @@ export default function LandingPage() {
                     
                     {/* Content */}
                     <div className={`md:w-1/2 ${index % 2 === 0 ? 'md:pr-12' : 'md:pl-12'} pl-8 md:pl-0 border-l md:border-0 border-primary/30`}>
-                      <div className="bg-white rounded-lg p-6 shadow-lg border border-primary/20 relative hover:shadow-xl transition-all hover:border-primary/30">
+                      <div className="bg-card rounded-lg p-6 shadow-lg border border-primary/20 relative hover:shadow-xl transition-all hover:border-primary/30">
                         <div className="absolute top-0 right-0 mt-4 mr-4">
                           <span className={`text-xs font-bold px-3 py-1.5 rounded-full shadow-sm border ${
-                            item.status === 'Coming Soon' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            item.status === 'In Development' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                            'bg-gray-100 text-gray-800 border-gray-200'
+                            item.status === 'Coming Soon' ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-400/15 dark:text-yellow-200 dark:border-yellow-400/30' :
+                            item.status === 'In Development' ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-400/15 dark:text-blue-200 dark:border-blue-400/30' :
+                            'bg-gray-100 text-gray-800 border-gray-200 dark:bg-slate-400/15 dark:text-slate-200 dark:border-slate-400/30'
                           }`}>
                             {item.status}
                           </span>
                         </div>
-                        <div className="text-sm font-bold text-primary mb-2 bg-primary/10 inline-block px-3 py-1 rounded-md">{item.date}</div>
+                        <div className="text-sm font-bold text-primary dark:text-blue-300 mb-2 bg-primary/10 inline-block px-3 py-1 rounded-md">{item.date}</div>
                         <h3 className="text-xl font-bold mb-3 border-b border-primary/10 pb-2">{item.title}</h3>
                         <p className="text-muted-foreground">{item.description}</p>
                       </div>
@@ -703,7 +757,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 bg-gradient-to-b from-muted/30 to-background">
+      <section className="py-20 bg-gradient-to-b from-muted/30 to-background dark:from-slate-900/60">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -761,8 +815,8 @@ export default function LandingPage() {
                 transition={{ delay: index * 0.2, duration: 0.5 }}
                 className="relative"
               >
-                <div className="bg-white rounded-lg p-8 shadow-lg border border-primary/20 relative z-10 hover:shadow-xl transition-all hover:border-primary/30 group">
-                  <div className="flex items-center justify-center h-14 w-14 rounded-full bg-primary/15 text-primary font-bold text-lg mb-5 shadow-sm border border-primary/20 group-hover:bg-primary/25 transition-colors">
+                <div className="bg-card rounded-lg p-8 shadow-lg border border-primary/20 relative z-10 hover:shadow-xl transition-all hover:border-primary/30 group">
+                  <div className="flex items-center justify-center h-14 w-14 rounded-full bg-primary/15 text-primary dark:text-blue-300 font-bold text-lg mb-5 shadow-sm border border-primary/20 group-hover:bg-primary/25 transition-colors">
                     {item.step}
                   </div>
                   <h3 className="text-xl font-bold mb-3 border-b border-primary/10 pb-2 group-hover:text-primary transition-colors">{item.title}</h3>
@@ -772,7 +826,7 @@ export default function LandingPage() {
                 {/* Connector line */}
                 {index < 2 && (
                   <div className="hidden md:block absolute top-1/2 left-full w-full h-1 bg-primary/30 z-0 -translate-y-1/2">
-                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2 bg-white rounded-full p-1 shadow-md border border-primary/20">
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2 bg-card rounded-full p-1 shadow-md border border-primary/20">
                       <ChevronRight className="h-6 w-6 text-primary" />
                     </div>
                   </div>
@@ -793,7 +847,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-muted/30 border-y border-border/40">
+      <section id="pricing" className="py-20 bg-muted/30 dark:bg-slate-900/60 border-y border-border/40">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -878,7 +932,7 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 bg-muted/50 border-b border-border/40">
+      <section id="testimonials" className="py-20 bg-muted/50 dark:bg-slate-900/60 border-b border-border/40">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <motion.div
@@ -954,7 +1008,7 @@ export default function LandingPage() {
       </section>
 
       {/* Blog Posts */}
-      <section id="blog" className="py-20 bg-muted/30 border-b border-border/40">
+      <section id="blog" className="py-20 bg-muted/30 dark:bg-slate-900/60 border-b border-border/40">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <div className="inline-block mb-4 px-5 py-2 bg-primary/15 rounded-full shadow-sm border border-primary/20">
@@ -987,7 +1041,7 @@ export default function LandingPage() {
                 </div>
                 <div className="p-6 flex flex-col flex-grow">
                   <div className="mb-auto">
-                  <div className="inline-block px-3 py-1.5 bg-primary/15 text-primary rounded-full text-xs font-medium mb-3 shadow-sm border border-primary/20">
+                  <div className="inline-block px-3 py-1.5 bg-primary/15 text-primary dark:text-blue-300 rounded-full text-xs font-medium mb-3 shadow-sm border border-primary/20">
                     {post.category}
                   </div>
                     <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">
@@ -1056,7 +1110,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-10 pb-6 bg-muted/70 border-t border-border/40">
+      <footer className="py-10 pb-6 bg-muted/70 dark:bg-slate-950 border-t border-border/40">
         <div className="container mx-auto px-8 md:px-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>

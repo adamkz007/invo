@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Open_Sans } from "next/font/google";
+import { Newsreader, Geist } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/providers/toast-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -8,16 +8,15 @@ import { PWAProvider } from "@/components/providers/pwa-provider";
 import { OrganizationSchema, WebsiteSchema } from "@/components/seo/structured-data";
 import { NavigationSkeletonOverlay } from "@/components/navigation/navigation-skeleton-overlay";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  weight: ["400"],
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
   subsets: ["latin"],
   display: 'swap',
   preload: false,
 });
 
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
   display: 'swap',
   preload: true,
@@ -120,7 +119,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${fraunces.variable} ${openSans.variable} font-sans antialiased`}
+        className={`${newsreader.variable} ${geist.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"

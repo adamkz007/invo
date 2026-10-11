@@ -18,8 +18,8 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-open-sans)", "sans-serif"],
-        serif: ["var(--font-fraunces)", "serif"],
+        sans: ["var(--font-geist)", "sans-serif"],
+        serif: ["var(--font-newsreader)", "serif"],
       },
       colors: {
         border: "var(--border)",
