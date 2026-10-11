@@ -9,26 +9,33 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
-    console.log('API: /api/user/me called');
     
     // Get authenticated user from request
     const user = await getUserFromRequest(req);
-    console.log('User from request:', user ? 'Found user' : 'No user found');
     
     if (!user) {
-      console.log('API: Unauthorized - No user found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get complete user data from database
     const userData = await prisma.user.findUnique({
-      where: { id: user.id }
+      where: { id: user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        subscriptionStatus: true,
+        stripePriceId: true,
+        stripeSubscriptionId: true,
+        stripeCustomerId: true,
+        trialStartDate: true,
+        trialEndDate: true,
+        currentPeriodEnd: true,
+      },
     });
 
-    console.log('API: User data from database:', userData ? 'Found' : 'Not found');
-
     if (!userData) {
-      console.log('API: User not found in database');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
@@ -57,8 +64,6 @@ export async function GET(req: NextRequest) {
       stripeCustomerId: userData.stripeCustomerId,
       billingPlan,
     };
-
-    console.log('API: Returning user data with subscription info');
     return NextResponse.json(publicUserData);
   } catch (error) {
     console.error('Error fetching user data:', error);

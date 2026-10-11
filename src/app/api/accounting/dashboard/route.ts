@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { toNumber } from '@/lib/decimal';
+import { getCashAccountIds } from '@/lib/accounting/balances';
 
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -31,56 +32,42 @@ export async function GET(req: NextRequest) {
       },
     } : {};
 
-    const [openInvoices, invoicesInRange, expensesInRange, bankAccounts] = await Promise.all([
+    const [openInvoices, invoicesInRange, expensesInRange, cashAccountIds] = await Promise.all([
       // Open invoices for accounts receivable (not yet fully paid)
-      prisma.invoice.findMany({
+      prisma.invoice.aggregate({
         where: { userId: user.id, status: { in: ['DRAFT', 'SENT', 'PARTIAL', 'OVERDUE'] } },
-        select: { total: true, paidAmount: true },
+        _sum: { total: true, paidAmount: true },
       }),
       // All invoices in date range for revenue (excluding cancelled and drafts)
-      prisma.invoice.findMany({
-        where: { 
-          userId: user.id, 
+      prisma.invoice.aggregate({
+        where: {
+          userId: user.id,
           status: { notIn: ['CANCELLED', 'DRAFT'] },
-          ...(invoicesDateWhere as any) 
+          ...(invoicesDateWhere as any),
         },
-        select: { total: true },
+        _sum: { total: true },
       }),
-      prisma.expense.findMany({
+      prisma.expense.aggregate({
         where: { userId: user.id, ...(expensesDateWhere as any) },
-        select: { total: true },
+        _sum: { total: true },
       }),
-      prisma.bankAccount.findMany({ where: { userId: user.id }, select: { glAccountId: true } }),
+      getCashAccountIds(user.id),
     ]);
 
-    const accountsReceivableTotal = openInvoices.reduce((sum, inv) => sum + (toNumber(inv.total) - toNumber(inv.paidAmount || 0)), 0);
+    const accountsReceivableTotal = toNumber(openInvoices._sum.total || 0) - toNumber(openInvoices._sum.paidAmount || 0);
     // Revenue now reflects total amount invoiced (excluding cancelled and draft invoices)
-    const revenueTotal = invoicesInRange.reduce((sum, inv) => sum + toNumber(inv.total), 0);
-    const expensesTotal = expensesInRange.reduce((sum, e) => sum + toNumber(e.total), 0);
+    const revenueTotal = toNumber(invoicesInRange._sum.total || 0);
+    const expensesTotal = toNumber(expensesInRange._sum.total || 0);
 
     // Cash balance as-of end date (or now if not provided)
     const cashAsOf = end ?? new Date();
-    const cashAccountIds = bankAccounts.map(b => b.glAccountId).filter(Boolean) as string[];
-    const additionalCash = await prisma.account.findMany({
-      where: { userId: user.id, type: 'ASSET', OR: [
-        { name: { contains: 'Cash', mode: 'insensitive' } },
-        { name: { contains: 'Bank', mode: 'insensitive' } },
-        { code: { equals: '1000' } },
-      ] },
-      select: { id: true },
-    });
-    const allCashIds = Array.from(new Set([...
-      cashAccountIds,
-      ...additionalCash.map(a => a.id),
-    ]));
-
     let cashBalance = 0;
-    if (allCashIds.length > 0) {
-      const lines = await prisma.journalLine.findMany({
-        where: { accountId: { in: allCashIds }, entry: { userId: user.id, date: { lte: cashAsOf } } },
-        select: { debit: true, credit: true },
+    if (cashAccountIds.length > 0) {
+      const cash = await prisma.journalLine.aggregate({
+        where: { accountId: { in: cashAccountIds }, entry: { userId: user.id, date: { lte: cashAsOf } } },
+        _sum: { debit: true, credit: true },
       });
-      cashBalance = lines.reduce((sum, l) => sum + Number(l.debit || 0) - Number(l.credit || 0), 0);
+      cashBalance = Number(cash._sum.debit || 0) - Number(cash._sum.credit || 0);
     }
 
     return NextResponse.json({ accountsReceivableTotal, revenueMonth: revenueTotal, cashBalance, expensesMonth: expensesTotal });

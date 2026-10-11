@@ -2,7 +2,15 @@ import { prisma, testConnection } from '../lib/prisma';
 
 async function main() {
   console.log('Testing database connection...');
-  console.log('DATABASE_URL:', process.env.DATABASE_URL);
+  const rawUrl = process.env.DATABASE_URL;
+  let maskedUrl = rawUrl ? '(unparseable)' : '(not set)';
+  if (rawUrl) {
+    try {
+      const parsed = new URL(rawUrl);
+      maskedUrl = `${parsed.protocol}//***@${parsed.host}${parsed.pathname}`;
+    } catch {}
+  }
+  console.log('DATABASE_URL:', maskedUrl);
   
   const connected = await testConnection();
   

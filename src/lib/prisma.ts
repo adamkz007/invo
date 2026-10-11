@@ -23,7 +23,7 @@ function getDatabaseUrl(): string | undefined {
   try {
     const parsed = new URL(url);
     if (!parsed.searchParams.has('connection_limit')) {
-      parsed.searchParams.set('connection_limit', '1');
+      parsed.searchParams.set('connection_limit', process.env.PRISMA_CONNECTION_LIMIT || '3');
     }
     return parsed.toString();
   } catch {
@@ -136,13 +136,13 @@ export async function testConnection() {
 
 // Helper function to batch database operations
 export async function batchTransactions<T>(operations: (() => Promise<T>)[]): Promise<T[]> {
-  return prisma.$transaction(async () => {
+  return (await prisma.$transaction(async (): Promise<T[]> => {
     const results: T[] = [];
     for (const operation of operations) {
       results.push(await operation());
     }
     return results;
-  });
+  })) as T[];
 }
 
 // Clean up Prisma connection when the application is shutting down

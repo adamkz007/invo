@@ -65,34 +65,25 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const pathname = usePathname();
   const { settings } = useSettings();
 
-  const fetchCompanyDetails = useCallback(async () => {
-    try {
-      const response = await fetch('/api/company');
-      if (response.ok) {
-        const data = await response.json();
-        if (data) {
-          setCompanyDetails(data);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching company details:', error);
-    }
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
 
     async function loadSession() {
       try {
-        const response = await fetch('/api/user/me');
-        if (!response.ok) {
+        // Fire both requests together; company data is optional.
+        const [userResponse, companyResponse] = await Promise.all([
+          fetch('/api/user/me'),
+          fetch('/api/company').catch(() => null),
+        ]);
+        if (!userResponse.ok) {
           if (!cancelled) {
             router.push('/login');
           }
           return;
         }
 
-        const userData = await response.json();
+        const userData = await userResponse.json();
+        const company = companyResponse?.ok ? await companyResponse.json().catch(() => null) : null;
         if (cancelled) {
           return;
         }
@@ -102,7 +93,9 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           name: userData.name,
           email: userData.email,
         });
-        await fetchCompanyDetails();
+        if (company) {
+          setCompanyDetails(company);
+        }
       } catch (error) {
         console.error('Error loading session:', error);
         if (!cancelled) {
@@ -120,7 +113,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
     return () => {
       cancelled = true;
     };
-  }, [router, fetchCompanyDetails]);
+  }, [router]);
 
   const handleLogout = useCallback(async () => {
     try {

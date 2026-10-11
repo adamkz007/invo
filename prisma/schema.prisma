@@ -133,6 +133,7 @@ model Customer {
   peppolSchemeId          String?   // PEPPOL Scheme ID (e.g., 0195 for MY)
 
   @@index([userId, createdAt])
+  @@index([userId, name])
 }
 
 model Product {
@@ -185,6 +186,8 @@ model Invoice {
 
   @@index([userId, createdAt])
   @@index([userId, status])
+  @@index([userId, issueDate])
+  @@index([userId, status, issueDate])
   @@index([customerId])
 }
 
@@ -273,6 +276,7 @@ model Receipt {
   items         ReceiptItem[]
 
   @@index([userId, createdAt])
+  @@index([userId, receiptDate])
 }
 
 model ReceiptItem {
@@ -364,6 +368,7 @@ model JournalLine {
 
   @@index([accountId])
   @@index([entryId])
+  @@index([accountId, entryId])
 }
 
 model TaxRate {
@@ -460,6 +465,7 @@ model AuditLog {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([entity, entityId])
+  @@index([userId, timestamp])
 }
 
 // POS Models

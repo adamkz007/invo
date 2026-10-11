@@ -144,17 +144,18 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
   const { start: currentYearStart, end: currentYearEnd } = getYearRange(0);
   const { start: previousYearStart, end: previousYearEnd } = getYearRange(-1);
 
-  const [totalsRow, products, invoiceTotals, invoiceGroups, recentInvoices, receiptTotals] = await Promise.all([
+  const [totalsRow, inventoryRow, invoiceTotals, invoiceGroups, recentInvoices, receiptTotals] = await Promise.all([
     prisma.$queryRaw<EntityCountRow[]>`
       SELECT
         (SELECT COUNT(*)::bigint FROM "Invoice" WHERE "userId" = ${userId}) AS invoices,
         (SELECT COUNT(*)::bigint FROM "Customer" WHERE "userId" = ${userId}) AS customers,
         (SELECT COUNT(*)::bigint FROM "Product" WHERE "userId" = ${userId}) AS products
     `,
-    prisma.product.findMany({
-      where: { userId },
-      select: { id: true, price: true, quantity: true, disableStockManagement: true },
-    }),
+    prisma.$queryRaw<Array<{ value: Prisma.Decimal | null }>>`
+      SELECT COALESCE(SUM("price" * "quantity"), 0) AS value
+      FROM "Product"
+      WHERE "userId" = ${userId} AND "disableStockManagement" = false
+    `,
     prisma.invoice.aggregate({
       where: { userId },
       _sum: {
@@ -195,10 +196,7 @@ async function computeDashboardOverview(userId: string): Promise<DashboardOvervi
     }),
   ]);
 
-  const inventoryValue = products.reduce((sum, product) => {
-    if (product.disableStockManagement) return sum;
-    return sum + toNumber(product.price) * product.quantity;
-  }, 0);
+  const inventoryValue = coerceDecimal(inventoryRow[0]?.value);
 
   const statusTotals = invoiceGroups.reduce(
     (acc, group) => {
