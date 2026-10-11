@@ -667,7 +667,7 @@ export function DashboardClient({ initialStats, initialCompany }: DashboardClien
                       <div className="space-y-1 min-w-0">
                         <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground/80">{invoice.invoiceNumber}</p>
                         <p className="text-base font-bold dark:text-foreground/90">{invoice.customerName}</p>
-                        <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">Date: {invoice.date}</p>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">Date: {format(new Date(invoice.date), 'MMM dd, yyyy')}</p>
                       </div>
                       <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
                         <p className="text-sm font-medium dark:text-foreground/90">{formatCurrency(invoice.amount, settings)}</p>
