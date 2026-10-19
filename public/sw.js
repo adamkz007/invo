@@ -1,5 +1,5 @@
 // This is a service worker for PWA support with improved routing
-const CACHE_NAME = 'invo-cache-v1';
+const CACHE_NAME = 'invo-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
