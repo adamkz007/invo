@@ -1528,6 +1528,15 @@ export async function downloadReceiptPDF(
   const pageHeight = doc.internal.pageSize.height;
   const margin = 5; // Smaller margins for receipt
   const contentWidth = pageWidth - (margin * 2);
+
+  // Draw centered text wrapped to the receipt width so long lines don't overflow the edges
+  const drawCenteredWrapped = (text: string, y: number, lineHeight: number): number => {
+    const lines: string[] = doc.splitTextToSize(text, contentWidth);
+    lines.forEach((line, i) => {
+      doc.text(line, pageWidth / 2, y + i * lineHeight, { align: 'center' });
+    });
+    return y + lines.length * lineHeight;
+  };
   
   // Set monospace font for the whole receipt
   doc.setFont('courier', 'normal');
@@ -1588,30 +1597,28 @@ export async function downloadReceiptPDF(
   const companyHeaderText = companyDetails && companyDetails.legalName
     ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
     : 'Receipt';
-  doc.text(companyHeaderText, pageWidth / 2, margin + 5, { align: 'center' });
+  let yPos = drawCenteredWrapped(companyHeaderText, margin + 5, 4.5);
 
   // Company address (centered)
   doc.setFontSize(8);
   doc.setFont('courier', 'normal');
   
-  let yPos = margin + 10;
+  yPos += 0.5;
   
   const companyAddress = formatCompanyAddress(companyDetails);
   
   if (companyAddress) {
     const addressLines = companyAddress.split('\n');
     addressLines.forEach(line => {
-      doc.text(line, pageWidth / 2, yPos, { align: 'center' });
-      yPos += 4;
+      yPos = drawCenteredWrapped(line, yPos, 4);
     });
   } else {
-    doc.text('address', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
+    yPos = drawCenteredWrapped('address', yPos, 4);
   }
   
   // Phone number
-  doc.text(companyDetails?.phoneNumber || '888-888-8888', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 8;
+  yPos = drawCenteredWrapped(companyDetails?.phoneNumber || '888-888-8888', yPos, 4);
+  yPos += 4;
   
   // Receipt number (centered and bold) - use proper logic for invoice vs cash receipts
   doc.setFontSize(10);
@@ -1633,8 +1640,8 @@ export async function downloadReceiptPDF(
       : 'RCT-UNKNOWN';
   }
   
-  doc.text(`Receipt No.: ${receiptNumber}`, pageWidth / 2, yPos, { align: 'center' });
-  yPos += 8;
+  yPos = drawCenteredWrapped(`Receipt No.: ${receiptNumber}`, yPos, 4.5);
+  yPos += 3.5;
   
   // Host and date information
   doc.setFontSize(8);
@@ -1642,18 +1649,22 @@ export async function downloadReceiptPDF(
   
   // Get current user/host name - replace with actual user data if available
   const hostName = companyDetails ? companyDetails.ownerName : 'Host';
-  doc.text(`Host: ${hostName}`, margin, yPos);
   
   // Transaction date and time
   const issueDate = new Date(invoice.issueDate);
   const formattedDate = formatDate(issueDate);
   const formattedTime = formatTime(issueDate);
   
+  // Wrap the host name so it never runs into the time column
+  const hostMaxWidth = contentWidth - doc.getTextWidth(formattedTime) - 2;
+  const hostLines: string[] = doc.splitTextToSize(`Host: ${hostName}`, hostMaxWidth);
+  doc.text(hostLines, margin, yPos);
+  
   // Make sure date and time fit on the same line for narrow receipt
   doc.text(formattedDate, pageWidth - margin, yPos - 4, { align: 'right' });
   doc.text(formattedTime, pageWidth - margin, yPos, { align: 'right' });
   
-  yPos += 4;
+  yPos += 4 + (hostLines.length - 1) * doc.getLineHeight() / doc.internal.scaleFactor;
   
   // Draw a horizontal line
   doc.setDrawColor(100, 100, 100);
@@ -1741,7 +1752,10 @@ export async function downloadReceiptPDF(
         doc.text(quantityText, margin, yPos);
         doc.setFont('courier', 'normal');
         
-        const lines = doc.splitTextToSize(itemName, pageWidth - margin - 18);
+        doc.setFont('courier', 'bold');
+        const priceWidth = doc.getTextWidth(priceText);
+        doc.setFont('courier', 'normal');
+        const lines = doc.splitTextToSize(itemName, Math.max(contentWidth - 8 - priceWidth - 2, 15));
         doc.text(lines[0], margin + 8, yPos);
         
         // Bold price
@@ -1898,8 +1912,8 @@ export async function downloadReceiptPDF(
   const companyFooterText = companyDetails && companyDetails.legalName
     ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
     : 'Thank you for your business';
-  doc.text(companyFooterText, pageWidth / 2, yPos, { align: 'center' });
-  yPos += 10;
+  yPos = drawCenteredWrapped(companyFooterText, yPos, 4);
+  yPos += 6;
   
   // Add "Powered by Invo" at the bottom
   doc.setFontSize(8);
