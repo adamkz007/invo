@@ -1515,363 +1515,19 @@ export async function downloadReceiptPDF(
   settings: AppSettings = defaultSettings,
   receiptData?: any // Optional receipt-specific data
 ): Promise<void> {
-  // Create a new PDF document with elongated receipt size (80mm width, taller height)
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: [80, 200], // Custom elongated receipt size (width, height)
-    compress: true
-  });
-  
-  // Set up document properties
-  const pageWidth = doc.internal.pageSize.width;
-  const pageHeight = doc.internal.pageSize.height;
+  // Receipt page size (80mm wide). The height grows to fit the content, with this minimum
+  const pageWidth = 80;
+  const minPageHeight = 200;
   const margin = 5; // Smaller margins for receipt
   const contentWidth = pageWidth - (margin * 2);
 
-  // Draw centered text wrapped to the receipt width so long lines don't overflow the edges
-  const drawCenteredWrapped = (text: string, y: number, lineHeight: number): number => {
-    const lines: string[] = doc.splitTextToSize(text, contentWidth);
-    lines.forEach((line, i) => {
-      doc.text(line, pageWidth / 2, y + i * lineHeight, { align: 'center' });
-    });
-    return y + lines.length * lineHeight;
-  };
-  
-  // Set monospace font for the whole receipt
-  doc.setFont('courier', 'normal');
-  
-  // Format dates properly with validation
-  const formatDate = (date: Date | string) => {
-    try {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      if (isNaN(dateObj.getTime())) {
-        return new Date().toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit' 
-        });
-      }
-      return dateObj.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit' 
-      });
-    } catch (error) {
-      return new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit' 
-      });
-    }
-  };
-  
-  const formatTime = (date: Date | string) => {
-    try {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      if (isNaN(dateObj.getTime())) {
-        return new Date().toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit', 
-          hour12: true 
-        });
-      }
-      return dateObj.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: true 
-      });
-    } catch (error) {
-      return new Date().toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: true 
-      });
-    }
-  };
-  
-  // Company header & BRN (centered)
-  doc.setFontSize(10);
-  doc.setFont('courier', 'bold');
-  // Add null check for companyDetails
-  const companyHeaderText = companyDetails && companyDetails.legalName
-    ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
-    : 'Receipt';
-  let yPos = drawCenteredWrapped(companyHeaderText, margin + 5, 4.5);
+  const createReceiptDoc = (height: number) => new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [pageWidth, height],
+    compress: true
+  });
 
-  // Company address (centered)
-  doc.setFontSize(8);
-  doc.setFont('courier', 'normal');
-  
-  yPos += 0.5;
-  
-  const companyAddress = formatCompanyAddress(companyDetails);
-  
-  if (companyAddress) {
-    const addressLines = companyAddress.split('\n');
-    addressLines.forEach(line => {
-      yPos = drawCenteredWrapped(line, yPos, 4);
-    });
-  } else {
-    yPos = drawCenteredWrapped('address', yPos, 4);
-  }
-  
-  // Phone number
-  yPos = drawCenteredWrapped(companyDetails?.phoneNumber || '888-888-8888', yPos, 4);
-  yPos += 4;
-  
-  // Receipt number (centered and bold) - use proper logic for invoice vs cash receipts
-  doc.setFontSize(10);
-  doc.setFont('courier', 'bold');
-  
-  // Determine receipt number based on receipt type
-  let receiptNumber: string;
-  if (receiptData?.receiptNumber) {
-    // This is a standalone receipt - use the receipt number
-    receiptNumber = receiptData.receiptNumber;
-  } else if ((invoice as any).receiptNumber) {
-    // This is a receipt object passed as invoice - use its receipt number
-    receiptNumber = (invoice as any).receiptNumber;
-  } else {
-    // This is from an invoice - use the invoice number with RCT prefix
-    // Add null check to prevent TypeError
-    receiptNumber = invoice.invoiceNumber 
-      ? `RCT-${invoice.invoiceNumber.replace(/^INV-/, '')}` 
-      : 'RCT-UNKNOWN';
-  }
-  
-  yPos = drawCenteredWrapped(`Receipt No.: ${receiptNumber}`, yPos, 4.5);
-  yPos += 3.5;
-  
-  // Host and date information
-  doc.setFontSize(8);
-  doc.setFont('courier', 'normal');
-  
-  // Get current user/host name - replace with actual user data if available
-  const hostName = companyDetails ? companyDetails.ownerName : 'Host';
-  
-  // Transaction date and time
-  const issueDate = new Date(invoice.issueDate);
-  const formattedDate = formatDate(issueDate);
-  const formattedTime = formatTime(issueDate);
-  
-  // Wrap the host name so it never runs into the time column
-  const hostMaxWidth = contentWidth - doc.getTextWidth(formattedTime) - 2;
-  const hostLines: string[] = doc.splitTextToSize(`Host: ${hostName}`, hostMaxWidth);
-  doc.text(hostLines, margin, yPos);
-  
-  // Make sure date and time fit on the same line for narrow receipt
-  doc.text(formattedDate, pageWidth - margin, yPos - 4, { align: 'right' });
-  doc.text(formattedTime, pageWidth - margin, yPos, { align: 'right' });
-  
-  yPos += 4 + (hostLines.length - 1) * doc.getLineHeight() / doc.internal.scaleFactor;
-  
-  // Draw a horizontal line
-  doc.setDrawColor(100, 100, 100);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  
-  yPos += 8;
-  
-  // Column headers
-  doc.setFont('courier', 'bold');
-  doc.text('Qty', margin, yPos);
-  doc.text('Item', margin + 8, yPos);
-  doc.text('Price', pageWidth - margin, yPos, { align: 'right' });
-  
-  yPos += 4;
-  
-  // Draw another horizontal line
-  doc.setDrawColor(100, 100, 100);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  
-  yPos += 6;
-  
-  // List items
-  doc.setFont('courier', 'normal');
-  
-  if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
-    invoice.items.forEach(item => {
-      const quantityText = item.quantity.toString();
-      const priceText = formatCurrency(item.unitPrice * item.quantity, settings);
-      // Enhanced product name resolution with better fallbacks
-      let itemName = '';
-      
-      // First try to get name from item.product
-      if (item.product && item.product.name) {
-        itemName = item.product.name;
-      }
-      // Then try item description
-      else if (item.description) {
-        itemName = item.description;
-      }
-      // Then try to find product in receiptData items
-      else if (receiptData?.items && Array.isArray(receiptData.items)) {
-        // Log for debugging
-        console.log('Looking for product match in receiptData items');
-        console.log('Item:', JSON.stringify(item));
-        
-        // Try multiple matching strategies
-        let matchingItem = null;
-        
-        // First try matching by product ID if available
-        if (item.product && 'id' in item.product) {
-          matchingItem = receiptData.items.find((rItem: any) => 
-            (rItem.product?.id === (item.product as any).id));
-        }
-        
-        // If no match, try matching by productId property if it exists
-         // Use type assertion to handle potential missing property
-         const itemProductId = (item as any).productId;
-         if (!matchingItem && itemProductId) {
-           matchingItem = receiptData.items.find((rItem: any) => 
-             (rItem.productId === itemProductId || rItem.product?.id === itemProductId));
-         }
-        
-        // If we found a match with a product name, use it
-        if (matchingItem?.product?.name) {
-          itemName = matchingItem.product.name;
-        }
-      }
-      
-      // If still no name, use product ID or default with more descriptive fallback
-      if (!itemName) {
-        if (item.product && 'id' in item.product) {
-           itemName = `Product #${(item.product as any).id}`;
-         } else if ((item as any).productId) {
-           itemName = `Product #${(item as any).productId}`;
-         } else {
-           itemName = 'Product Item';
-         }
-      }
-      const unitPriceText = formatCurrency(item.unitPrice, settings);
-      
-      // Handle long item names by wrapping if needed
-      if (itemName.length > 15) {
-        // Bold quantity
-        doc.setFont('courier', 'bold');
-        doc.text(quantityText, margin, yPos);
-        doc.setFont('courier', 'normal');
-        
-        doc.setFont('courier', 'bold');
-        const priceWidth = doc.getTextWidth(priceText);
-        doc.setFont('courier', 'normal');
-        const lines = doc.splitTextToSize(itemName, Math.max(contentWidth - 8 - priceWidth - 2, 15));
-        doc.text(lines[0], margin + 8, yPos);
-        
-        // Bold price
-        doc.setFont('courier', 'bold');
-        doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
-        doc.setFont('courier', 'normal');
-        
-        // If there are more lines, add them
-        if (lines.length > 1) {
-          for (let i = 1; i < lines.length; i++) {
-            yPos += 4;
-            doc.text(lines[i], margin + 8, yPos);
-          }
-        }
-        
-        // Add unit price underneath
-        yPos += 4;
-        doc.text(`@ ${unitPriceText} each`, margin + 8, yPos);
-      } else {
-        // Bold quantity
-        doc.setFont('courier', 'bold');
-        doc.text(quantityText, margin, yPos);
-        doc.setFont('courier', 'normal');
-        
-        doc.text(itemName, margin + 8, yPos);
-        
-        // Bold total price
-        doc.setFont('courier', 'bold');
-        doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
-        doc.setFont('courier', 'normal');
-        
-        // Add unit price underneath
-        yPos += 4;
-        doc.text(`@ ${unitPriceText} each`, margin + 8, yPos);
-      }
-      
-      yPos += 6;
-    });
-  } else {
-    // No items - display a message
-    doc.setFont('courier', 'italic');
-    doc.setTextColor(100, 100, 100);
-    doc.text('No items in this receipt', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 10;
-    doc.setFont('courier', 'normal');
-    doc.setTextColor(80, 80, 80);
-  }
-  
-  // Draw another horizontal line
-  doc.setDrawColor(100, 100, 100);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  
-  yPos += 8;
-  
-  // Payment details - Changed from VISA to CASH
-  doc.text('CASH', margin, yPos);
-  doc.text('Sale', pageWidth - margin, yPos, { align: 'right' });
-  
-  yPos += 8;
-  
-  // Totals - Calculate from items if not provided (for receipt objects)
-  let subtotal = invoice.subtotal;
-  let taxAmount = invoice.taxAmount;
-  const total = invoice.total || 0;
-  
-  // If subtotal or taxAmount are not provided, calculate them from items
-  if (subtotal === undefined || subtotal === null || taxAmount === undefined || taxAmount === null) {
-    // Calculate subtotal from items
-    const calculatedSubtotal = invoice.items?.reduce((sum: number, item: any) => {
-      return sum + (item.quantity * item.unitPrice);
-    }, 0) || 0;
-    
-    // If we have a tax rate, calculate tax from subtotal
-    if (invoice.taxRate && invoice.taxRate > 0) {
-      subtotal = calculatedSubtotal;
-      taxAmount = calculatedSubtotal * (invoice.taxRate / 100);
-    } else {
-      // No tax rate available, assume no tax
-      subtotal = total;
-      taxAmount = 0;
-    }
-  }
-  
-  // Ensure values are numbers and not NaN
-  subtotal = subtotal || 0;
-  taxAmount = taxAmount || 0;
-  
-  // Display Subtotal first, then Tax (standard order)
-  // Subtotal
-  doc.text('Subtotal', margin, yPos);
-  doc.text(formatCurrency(subtotal, settings), pageWidth - margin, yPos, { align: 'right' });
-  yPos += 6;
-  
-  // Tax (only show if there is tax)
-  if (taxAmount > 0) {
-    doc.text('Tax', margin, yPos);
-    doc.text(formatCurrency(taxAmount, settings), pageWidth - margin, yPos, { align: 'right' });
-    yPos += 6;
-  }
-  
-  // Total
-  doc.setFont('courier', 'bold');
-  doc.text('Total:', margin, yPos);
-  doc.text(formatCurrency(total, settings), pageWidth - margin, yPos, { align: 'right' });
-  yPos += 8;
-  
-  // Transaction information
-  doc.setFont('courier', 'normal');
-  doc.text('Transaction Type:', margin, yPos);
-  doc.text('Sale', pageWidth - margin, yPos, { align: 'right' });
-  yPos += 6;
-  
-  doc.text('Authorization:', margin, yPos);
-  doc.text('APPROVED', pageWidth - margin, yPos, { align: 'right' });
-  yPos += 6;
-  
   // Generate a deterministic but unique payment code and ID for the receipt
   // based on the invoice ID to ensure they're unique per invoice but consistent
   // on repeated generation
@@ -1883,120 +1539,469 @@ export async function downloadReceiptPDF(
   
   const paymentId = parseInt(invoice.id.replace(/\D/g, '').substring(0, 8) || '0') 
     + Math.floor(Math.random() * 10000000);
+
+  // jsPDF fixes text coordinates against the page height at draw time, so the page can't be
+  // resized afterwards. Draws the receipt onto the given doc and returns the bottom y position.
+  const renderReceipt = async (doc: jsPDF): Promise<number> => {
+    // Draw centered text wrapped to the receipt width so long lines don't overflow the edges
+    const drawCenteredWrapped = (text: string, y: number, lineHeight: number): number => {
+      const lines: string[] = doc.splitTextToSize(text, contentWidth);
+      lines.forEach((line, i) => {
+        doc.text(line, pageWidth / 2, y + i * lineHeight, { align: 'center' });
+      });
+      return y + lines.length * lineHeight;
+    };
   
-  doc.text('Payment Code:', margin, yPos);
-  doc.text(paymentCode.toString(), pageWidth - margin, yPos, { align: 'right' });
-  yPos += 6;
+    // Set monospace font for the whole receipt
+    doc.setFont('courier', 'normal');
   
-  doc.text('Payment ID:', margin, yPos);
-  doc.text(paymentId.toString(), pageWidth - margin, yPos, { align: 'right' });
-  yPos += 10;
-  
-  // Total after tip (no tip field)
-  doc.setFont('courier', 'bold');
-  doc.text('=Total:', margin, yPos);
-  doc.text(formatCurrency(total, settings), pageWidth - margin, yPos, { align: 'right' });
-  yPos += 12;
-  
-  // Signature line
-  doc.text('X ___________________', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 12;
-  
-  // Footer
-  doc.setFont('courier', 'normal');
-  doc.text('Customer Copy', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 6;
-  doc.text('Thanks for visiting', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 6;
-  // Add null check for companyDetails
-  const companyFooterText = companyDetails && companyDetails.legalName
-    ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
-    : 'Thank you for your business';
-  yPos = drawCenteredWrapped(companyFooterText, yPos, 4);
-  yPos += 6;
-  
-  // Add "Powered by Invo" at the bottom
-  doc.setFontSize(8);
-  doc.setFont('courier', 'bold');
-  
-  // Try to load the Invo logo
-  try {
-    // In a browser environment, load the logo
-    let logoUrl = window.location.origin + '/icons/Invo_Logo_Transparent.png';
-    
-    // Use custom logo if provided in company details
-    if (companyDetails?.logoUrl) {
-      logoUrl = companyDetails.logoUrl;
-    }
-    
-    // Try to load the logo image with proper error handling
-    let img;
-    try {
-      img = await loadLogoImage(logoUrl);
-      
-      // Position the logo to the left of "Powered by Invo" text
-      const logoWidth = 4; // Smaller for receipt
-      const textWidth = 25; // Approximate text width
-      const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
-      const startX = (pageWidth / 2) - (combinedWidth / 2);
-      
-      // Add logo on the left
-      doc.addImage(img, 'PNG', startX, yPos - 3, logoWidth, 4);
-      
-      // Add text to the right of the logo with a small gap
-      doc.text('Powered by Invo', startX + logoWidth + 2, yPos, { align: 'left' });
-    } catch (logoError) {
-      console.warn('Primary logo loading failed, trying alternate path:', logoError);
-      
-      // Try alternative path (relative URL)
+    // Format dates properly with validation
+    const formatDate = (date: Date | string) => {
       try {
-        const altLogoUrl = '/icons/Invo_Logo_Transparent.png';
-        img = await loadLogoImage(altLogoUrl);
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+        if (isNaN(dateObj.getTime())) {
+          return new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit' 
+          });
+        }
+        return dateObj.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+      } catch (error) {
+        return new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit' 
+        });
+      }
+    };
+  
+    const formatTime = (date: Date | string) => {
+      try {
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+        if (isNaN(dateObj.getTime())) {
+          return new Date().toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+        }
+        return dateObj.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+      } catch (error) {
+        return new Date().toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+      }
+    };
+  
+    // Company header & BRN (centered)
+    doc.setFontSize(10);
+    doc.setFont('courier', 'bold');
+    // Add null check for companyDetails
+    const companyHeaderText = companyDetails && companyDetails.legalName
+      ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
+      : 'Receipt';
+    let yPos = drawCenteredWrapped(companyHeaderText, margin + 5, 4.5);
+
+    // Company address (centered)
+    doc.setFontSize(8);
+    doc.setFont('courier', 'normal');
+  
+    yPos += 0.5;
+  
+    const companyAddress = formatCompanyAddress(companyDetails);
+  
+    if (companyAddress) {
+      const addressLines = companyAddress.split('\n');
+      addressLines.forEach(line => {
+        yPos = drawCenteredWrapped(line, yPos, 4);
+      });
+    } else {
+      yPos = drawCenteredWrapped('address', yPos, 4);
+    }
+  
+    // Phone number
+    yPos = drawCenteredWrapped(companyDetails?.phoneNumber || '888-888-8888', yPos, 4);
+    yPos += 4;
+  
+    // Receipt number (centered and bold) - use proper logic for invoice vs cash receipts
+    doc.setFontSize(10);
+    doc.setFont('courier', 'bold');
+  
+    // Determine receipt number based on receipt type
+    let receiptNumber: string;
+    if (receiptData?.receiptNumber) {
+      // This is a standalone receipt - use the receipt number
+      receiptNumber = receiptData.receiptNumber;
+    } else if ((invoice as any).receiptNumber) {
+      // This is a receipt object passed as invoice - use its receipt number
+      receiptNumber = (invoice as any).receiptNumber;
+    } else {
+      // This is from an invoice - use the invoice number with RCT prefix
+      // Add null check to prevent TypeError
+      receiptNumber = invoice.invoiceNumber 
+        ? `RCT-${invoice.invoiceNumber.replace(/^INV-/, '')}` 
+        : 'RCT-UNKNOWN';
+    }
+  
+    yPos = drawCenteredWrapped(`Receipt No.: ${receiptNumber}`, yPos, 4.5);
+    yPos += 3.5;
+  
+    // Host and date information
+    doc.setFontSize(8);
+    doc.setFont('courier', 'normal');
+  
+    // Get current user/host name - replace with actual user data if available
+    const hostName = companyDetails ? companyDetails.ownerName : 'Host';
+  
+    // Transaction date and time
+    const issueDate = new Date(invoice.issueDate);
+    const formattedDate = formatDate(issueDate);
+    const formattedTime = formatTime(issueDate);
+  
+    // Wrap the host name so it never runs into the time column
+    const hostMaxWidth = contentWidth - doc.getTextWidth(formattedTime) - 2;
+    const hostLines: string[] = doc.splitTextToSize(`Host: ${hostName}`, hostMaxWidth);
+    doc.text(hostLines, margin, yPos);
+  
+    // Make sure date and time fit on the same line for narrow receipt
+    doc.text(formattedDate, pageWidth - margin, yPos - 4, { align: 'right' });
+    doc.text(formattedTime, pageWidth - margin, yPos, { align: 'right' });
+  
+    yPos += 4 + (hostLines.length - 1) * doc.getLineHeight() / doc.internal.scaleFactor;
+  
+    // Draw a horizontal line
+    doc.setDrawColor(100, 100, 100);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+  
+    yPos += 8;
+  
+    // Column headers
+    doc.setFont('courier', 'bold');
+    doc.text('Qty', margin, yPos);
+    doc.text('Item', margin + 8, yPos);
+    doc.text('Price', pageWidth - margin, yPos, { align: 'right' });
+  
+    yPos += 4;
+  
+    // Draw another horizontal line
+    doc.setDrawColor(100, 100, 100);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+  
+    yPos += 6;
+  
+    // List items
+    doc.setFont('courier', 'normal');
+  
+    if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
+      invoice.items.forEach(item => {
+        const quantityText = item.quantity.toString();
+        const priceText = formatCurrency(item.unitPrice * item.quantity, settings);
+        // Enhanced product name resolution with better fallbacks
+        let itemName = '';
+      
+        // First try to get name from item.product
+        if (item.product && item.product.name) {
+          itemName = item.product.name;
+        }
+        // Then try item description
+        else if (item.description) {
+          itemName = item.description;
+        }
+        // Then try to find product in receiptData items
+        else if (receiptData?.items && Array.isArray(receiptData.items)) {
+          // Log for debugging
+          console.log('Looking for product match in receiptData items');
+          console.log('Item:', JSON.stringify(item));
         
+          // Try multiple matching strategies
+          let matchingItem = null;
+        
+          // First try matching by product ID if available
+          if (item.product && 'id' in item.product) {
+            matchingItem = receiptData.items.find((rItem: any) => 
+              (rItem.product?.id === (item.product as any).id));
+          }
+        
+          // If no match, try matching by productId property if it exists
+           // Use type assertion to handle potential missing property
+           const itemProductId = (item as any).productId;
+           if (!matchingItem && itemProductId) {
+             matchingItem = receiptData.items.find((rItem: any) => 
+               (rItem.productId === itemProductId || rItem.product?.id === itemProductId));
+           }
+        
+          // If we found a match with a product name, use it
+          if (matchingItem?.product?.name) {
+            itemName = matchingItem.product.name;
+          }
+        }
+      
+        // If still no name, use product ID or default with more descriptive fallback
+        if (!itemName) {
+          if (item.product && 'id' in item.product) {
+             itemName = `Product #${(item.product as any).id}`;
+           } else if ((item as any).productId) {
+             itemName = `Product #${(item as any).productId}`;
+           } else {
+             itemName = 'Product Item';
+           }
+        }
+        const unitPriceText = formatCurrency(item.unitPrice, settings);
+      
+        // Handle long item names by wrapping if needed
+        if (itemName.length > 15) {
+          // Bold quantity
+          doc.setFont('courier', 'bold');
+          doc.text(quantityText, margin, yPos);
+          doc.setFont('courier', 'normal');
+        
+          doc.setFont('courier', 'bold');
+          const priceWidth = doc.getTextWidth(priceText);
+          doc.setFont('courier', 'normal');
+          const lines = doc.splitTextToSize(itemName, Math.max(contentWidth - 8 - priceWidth - 2, 15));
+          doc.text(lines[0], margin + 8, yPos);
+        
+          // Bold price
+          doc.setFont('courier', 'bold');
+          doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
+          doc.setFont('courier', 'normal');
+        
+          // If there are more lines, add them
+          if (lines.length > 1) {
+            for (let i = 1; i < lines.length; i++) {
+              yPos += 4;
+              doc.text(lines[i], margin + 8, yPos);
+            }
+          }
+        
+          // Add unit price underneath
+          yPos += 4;
+          doc.text(`@ ${unitPriceText} each`, margin + 8, yPos);
+        } else {
+          // Bold quantity
+          doc.setFont('courier', 'bold');
+          doc.text(quantityText, margin, yPos);
+          doc.setFont('courier', 'normal');
+        
+          doc.text(itemName, margin + 8, yPos);
+        
+          // Bold total price
+          doc.setFont('courier', 'bold');
+          doc.text(priceText, pageWidth - margin, yPos, { align: 'right' });
+          doc.setFont('courier', 'normal');
+        
+          // Add unit price underneath
+          yPos += 4;
+          doc.text(`@ ${unitPriceText} each`, margin + 8, yPos);
+        }
+      
+        yPos += 6;
+      });
+    } else {
+      // No items - display a message
+      doc.setFont('courier', 'italic');
+      doc.setTextColor(100, 100, 100);
+      doc.text('No items in this receipt', pageWidth / 2, yPos, { align: 'center' });
+      yPos += 10;
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(80, 80, 80);
+    }
+  
+    // Draw another horizontal line
+    doc.setDrawColor(100, 100, 100);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+  
+    yPos += 8;
+  
+    // Payment details - Changed from VISA to CASH
+    doc.text('CASH', margin, yPos);
+    doc.text('Sale', pageWidth - margin, yPos, { align: 'right' });
+  
+    yPos += 8;
+  
+    // Totals - Calculate from items if not provided (for receipt objects)
+    let subtotal = invoice.subtotal;
+    let taxAmount = invoice.taxAmount;
+    const total = invoice.total || 0;
+  
+    // If subtotal or taxAmount are not provided, calculate them from items
+    if (subtotal === undefined || subtotal === null || taxAmount === undefined || taxAmount === null) {
+      // Calculate subtotal from items
+      const calculatedSubtotal = invoice.items?.reduce((sum: number, item: any) => {
+        return sum + (item.quantity * item.unitPrice);
+      }, 0) || 0;
+    
+      // If we have a tax rate, calculate tax from subtotal
+      if (invoice.taxRate && invoice.taxRate > 0) {
+        subtotal = calculatedSubtotal;
+        taxAmount = calculatedSubtotal * (invoice.taxRate / 100);
+      } else {
+        // No tax rate available, assume no tax
+        subtotal = total;
+        taxAmount = 0;
+      }
+    }
+  
+    // Ensure values are numbers and not NaN
+    subtotal = subtotal || 0;
+    taxAmount = taxAmount || 0;
+  
+    // Display Subtotal first, then Tax (standard order)
+    // Subtotal
+    doc.text('Subtotal', margin, yPos);
+    doc.text(formatCurrency(subtotal, settings), pageWidth - margin, yPos, { align: 'right' });
+    yPos += 6;
+  
+    // Tax (only show if there is tax)
+    if (taxAmount > 0) {
+      doc.text('Tax', margin, yPos);
+      doc.text(formatCurrency(taxAmount, settings), pageWidth - margin, yPos, { align: 'right' });
+      yPos += 6;
+    }
+  
+    // Total
+    doc.setFont('courier', 'bold');
+    doc.text('Total:', margin, yPos);
+    doc.text(formatCurrency(total, settings), pageWidth - margin, yPos, { align: 'right' });
+    yPos += 8;
+  
+    // Transaction information
+    doc.setFont('courier', 'normal');
+    doc.text('Transaction Type:', margin, yPos);
+    doc.text('Sale', pageWidth - margin, yPos, { align: 'right' });
+    yPos += 6;
+  
+    doc.text('Authorization:', margin, yPos);
+    doc.text('APPROVED', pageWidth - margin, yPos, { align: 'right' });
+    yPos += 6;
+  
+  
+    doc.text('Payment Code:', margin, yPos);
+    doc.text(paymentCode.toString(), pageWidth - margin, yPos, { align: 'right' });
+    yPos += 6;
+  
+    doc.text('Payment ID:', margin, yPos);
+    doc.text(paymentId.toString(), pageWidth - margin, yPos, { align: 'right' });
+    yPos += 10;
+  
+    // Total after tip (no tip field)
+    doc.setFont('courier', 'bold');
+    doc.text('=Total:', margin, yPos);
+    doc.text(formatCurrency(total, settings), pageWidth - margin, yPos, { align: 'right' });
+    yPos += 12;
+  
+    // Signature line
+    doc.text('X ___________________', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 12;
+  
+    // Footer
+    doc.setFont('courier', 'normal');
+    doc.text('Customer Copy', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 6;
+    doc.text('Thanks for visiting', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 6;
+    // Add null check for companyDetails
+    const companyFooterText = companyDetails && companyDetails.legalName
+      ? `${companyDetails.legalName}${companyDetails.registrationNumber ? ` (${companyDetails.registrationNumber})` : ''}`
+      : 'Thank you for your business';
+    yPos = drawCenteredWrapped(companyFooterText, yPos, 4);
+    yPos += 6;
+  
+    // Add "Powered by Invo" at the bottom
+    doc.setFontSize(8);
+    doc.setFont('courier', 'bold');
+  
+    // Try to load the Invo logo
+    try {
+      // In a browser environment, load the logo
+      let logoUrl = window.location.origin + '/icons/Invo_Logo_Transparent.png';
+    
+      // Use custom logo if provided in company details
+      if (companyDetails?.logoUrl) {
+        logoUrl = companyDetails.logoUrl;
+      }
+    
+      // Try to load the logo image with proper error handling
+      let img;
+      try {
+        img = await loadLogoImage(logoUrl);
+      
         // Position the logo to the left of "Powered by Invo" text
         const logoWidth = 4; // Smaller for receipt
         const textWidth = 25; // Approximate text width
         const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
         const startX = (pageWidth / 2) - (combinedWidth / 2);
-        
+      
         // Add logo on the left
         doc.addImage(img, 'PNG', startX, yPos - 3, logoWidth, 4);
-        
+      
         // Add text to the right of the logo with a small gap
         doc.text('Powered by Invo', startX + logoWidth + 2, yPos, { align: 'left' });
-      } catch (altLogoError) {
-        console.warn('Alternative logo loading failed, using data URL fallback:', altLogoError);
-        
-        // Try using the embedded data URL as a last resort
+      } catch (logoError) {
+        console.warn('Primary logo loading failed, trying alternate path:', logoError);
+      
+        // Try alternative path (relative URL)
         try {
+          const altLogoUrl = '/icons/Invo_Logo_Transparent.png';
+          img = await loadLogoImage(altLogoUrl);
+        
           // Position the logo to the left of "Powered by Invo" text
           const logoWidth = 4; // Smaller for receipt
           const textWidth = 25; // Approximate text width
           const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
           const startX = (pageWidth / 2) - (combinedWidth / 2);
-          
+        
           // Add logo on the left
-          doc.addImage(FALLBACK_LOGO_DATA_URL, 'PNG', startX, yPos - 3, logoWidth, 4);
-          
+          doc.addImage(img, 'PNG', startX, yPos - 3, logoWidth, 4);
+        
           // Add text to the right of the logo with a small gap
           doc.text('Powered by Invo', startX + logoWidth + 2, yPos, { align: 'left' });
-        } catch (dataUrlError) {
-          // All attempts failed, fall back to text only
-          throw dataUrlError;
+        } catch (altLogoError) {
+          console.warn('Alternative logo loading failed, using data URL fallback:', altLogoError);
+        
+          // Try using the embedded data URL as a last resort
+          try {
+            // Position the logo to the left of "Powered by Invo" text
+            const logoWidth = 4; // Smaller for receipt
+            const textWidth = 25; // Approximate text width
+            const combinedWidth = logoWidth + 2 + textWidth; // Logo + spacing + text
+            const startX = (pageWidth / 2) - (combinedWidth / 2);
+          
+            // Add logo on the left
+            doc.addImage(FALLBACK_LOGO_DATA_URL, 'PNG', startX, yPos - 3, logoWidth, 4);
+          
+            // Add text to the right of the logo with a small gap
+            doc.text('Powered by Invo', startX + logoWidth + 2, yPos, { align: 'left' });
+          } catch (dataUrlError) {
+            // All attempts failed, fall back to text only
+            throw dataUrlError;
+          }
         }
       }
+    } catch (error) {
+      console.error('Error adding logo to receipt PDF, using text only:', error);
+      // If image loading fails, just show text
+      doc.text('Powered by Invo', pageWidth / 2, yPos, { align: 'center' });
     }
-  } catch (error) {
-    console.error('Error adding logo to receipt PDF, using text only:', error);
-    // If image loading fails, just show text
-    doc.text('Powered by Invo', pageWidth / 2, yPos, { align: 'center' });
-  }
-  
-  // Determine if we need to add more pages based on content height
-  if (yPos > pageHeight - margin) {
-    // Add extra length to the page if needed
-    doc.internal.pageSize.height = yPos + margin + 10;
-  }
+
+    return yPos;
+  };
+
+  // Measure on an oversized page, then render onto a page tall enough for all content
+  const contentBottom = await renderReceipt(createReceiptDoc(5000));
+  const doc = createReceiptDoc(Math.max(minPageHeight, Math.ceil(contentBottom + margin * 2)));
+  await renderReceipt(doc);
   
   // Save the PDF with proper receipt number format
   // Add null check to prevent TypeError
