@@ -14,6 +14,14 @@ export default function ChangelogPage() {
         <p className="text-muted-foreground mb-8">See what's new and improved in Invo.</p>
         <div className="space-y-10">
           <div>
+            <h2 className="text-xl font-bold mb-2">30 Oct 2026</h2>
+            <p className="text-sm font-medium text-primary mb-2">v1.2.3</p>
+            <ul className="list-disc pl-6 space-y-2 text-base">
+              <li>Logo, UI &amp; typography improvements</li>
+              <li>Speed optimization</li>
+            </ul>
+          </div>
+          <div>
             <h2 className="text-xl font-bold mb-2">9 May 2026</h2>
             <p className="text-sm font-medium text-primary mb-2">v1.2.2</p>
             <ul className="list-disc pl-6 space-y-2 text-base">

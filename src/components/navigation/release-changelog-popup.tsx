@@ -6,14 +6,13 @@ import { Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const RELEASE_ID = '2026-05-09-v1.2.2';
-const RELEASE_DATE_LABEL = '9 May 2026';
-const RELEASE_VERSION_LABEL = 'v1.2.2';
+const RELEASE_ID = '2026-10-30-v1.2.3';
+const RELEASE_DATE_LABEL = '30 Oct 2026';
+const RELEASE_VERSION_LABEL = 'v1.2.3';
 const RELEASE_STORAGE_KEY = 'invo:release-popup:last-seen';
 const RELEASE_UPDATES = [
-  'Improved codebase',
-  'Improved card view invoices',
-  'Preliminary Accounting module released',
+  'Logo, UI & typography improvements',
+  'Speed optimization',
 ];
 
 interface ReleaseChangelogPopupProps {
