@@ -1,15 +1,15 @@
 // This is a service worker for PWA support with improved routing
-const CACHE_NAME = 'invo-cache-v2';
+const CACHE_NAME = 'invo-cache-v3';
 const STATIC_ASSETS = [
   '/',
-  '/manifest.json',
-  '/favicon.ico',
-  '/apple-touch-icon.png',
-  '/favicon-16x16.png',
-  '/favicon-32x32.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/icons/maskable-icon.png',
+  '/manifest.json?v=3',
+  '/favicon.ico?v=3',
+  '/apple-touch-icon.png?v=3',
+  '/favicon-16x16.png?v=3',
+  '/favicon-32x32.png?v=3',
+  '/icons/icon-192x192.png?v=3',
+  '/icons/icon-512x512.png?v=3',
+  '/icons/maskable-icon.png?v=3',
   // Add more static assets to cache as needed
 ];
 

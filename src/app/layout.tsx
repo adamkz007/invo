@@ -22,6 +22,9 @@ const geist = Geist({
   preload: true,
 });
 
+// Bump when the app icons change: browsers and home-screen shortcuts cache icons by URL
+const ICON_VERSION = 'v=3';
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://invo.my'),
   title: {
@@ -79,23 +82,17 @@ export const metadata: Metadata = {
       'ms-MY': 'https://invo.my/ms',
     },
   },
-  manifest: '/manifest.json',
+  manifest: `/manifest.json?${ICON_VERSION}`,
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: `/favicon.ico?${ICON_VERSION}`, sizes: 'any' },
+      { url: `/favicon-32x32.png?${ICON_VERSION}`, sizes: '32x32', type: 'image/png' },
+      { url: `/favicon-16x16.png?${ICON_VERSION}`, sizes: '16x16', type: 'image/png' },
+      { url: `/icons/icon-192x192.png?${ICON_VERSION}`, sizes: '192x192', type: 'image/png' },
+      { url: `/icons/icon-512x512.png?${ICON_VERSION}`, sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
-    other: [
-      {
-        rel: 'mask-icon',
-        url: '/icons/maskable-icon.png',
-      },
+      { url: `/apple-touch-icon.png?${ICON_VERSION}`, sizes: '180x180', type: 'image/png' },
     ],
   },
   appleWebApp: {
